@@ -20,7 +20,6 @@ import (
 	"dbmcloud/src/controller/ai"
 	"dbmcloud/src/controller/alarm"
 	"dbmcloud/src/controller/audit"
-	"dbmcloud/src/controller/change"
 	"dbmcloud/src/controller/dashboard"
 	"dbmcloud/src/controller/dataquality"
 	"dbmcloud/src/controller/datasource"
@@ -32,7 +31,6 @@ import (
 	"dbmcloud/src/controller/query"
 	"dbmcloud/src/controller/safe"
 	"dbmcloud/src/controller/sensitive"
-	"dbmcloud/src/controller/setting"
 	"dbmcloud/src/controller/task"
 	"dbmcloud/src/controller/users"
 	"dbmcloud/src/middleware"
@@ -180,8 +178,6 @@ func Router() *gin.Engine {
 		v1.POST("/alarm/test/send_wechat", alarm.DoSendWechatTest)
 		v1.POST("/alarm/test/send_weburl", alarm.DoSendWebhookTest)
 
-
-
 		v1.GET("/meta/env/list", meta.MetaEnvList)
 		v1.POST("/meta/env/list", meta.MetaEnvList)
 		v1.PUT("/meta/env/list", meta.MetaEnvList)
@@ -242,26 +238,6 @@ func Router() *gin.Engine {
 			modelsGroup.PUT(":id", ai.UpdateModel)
 			modelsGroup.DELETE(":id", ai.DeleteModel)
 		}
-
-		// 变更查询相关接口
-		v1.GET("/change/test", change.TestChangeAPI)                   // 变更API测试
-		v1.POST("/change/release/list", change.QueryReleaseList)       // 发布清单查询
-		v1.POST("/change/workorder/list", change.QueryWorkOrderList)   // 运维变更查询
-		v1.POST("/change/autochange/list", change.QueryAutoChangeList) // 自动化变更查询
-		v1.GET("/change/dashboard", change.GetChangeDashboard)         // 变更发布统计
-
-		// 网站地址配置相关接口
-		v1.GET("/setting/website/list", setting.WebsiteConfigList)
-		v1.POST("/setting/website/list", setting.WebsiteConfigList)
-		v1.PUT("/setting/website/list", setting.WebsiteConfigList)
-		v1.DELETE("/setting/website/list", setting.WebsiteConfigList)
-
-		// API接口配置相关接口
-		v1.GET("/setting/api/list", setting.ApiConfigList)
-		v1.POST("/setting/api/list", setting.ApiConfigList)
-		v1.PUT("/setting/api/list", setting.ApiConfigList)
-		v1.DELETE("/setting/api/list", setting.ApiConfigList)
-
 	}
 
 	return r

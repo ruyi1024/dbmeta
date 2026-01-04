@@ -166,12 +166,6 @@ export default [
     component: './ai/chat/rules/',
   },
   {
-    name: 'aimodel',
-    icon: 'RobotOutlined',
-    path: '/ai/ai_models',
-    component: './ai/ai_models/',
-  },
-  {
     name: 'aiAnalysis',
     icon: 'FileTextOutlined',
     path: '/task/analysis',
@@ -298,20 +292,6 @@ export default [
         icon: 'ChromeOutlined',
         access: 'canAdmin',
       },
-            {
-              path: '/setting/website',
-              name: 'website',
-              component: './setting/website',
-              icon: 'GlobalOutlined',
-              access: 'canAdmin',
-            },
-            {
-              path: '/setting/api',
-              name: 'api',
-              component: './setting/api',
-              icon: 'ApiOutlined',
-              access: 'canAdmin',
-            },
       {
         path: '/setting/datasource_type',
         name: 'datasource_type',
@@ -324,6 +304,13 @@ export default [
         name: 'datasource',
         component: './setting/datasource',
         icon: 'CloudOutlined',
+        access: 'canAdmin',
+      },
+      {
+        path: '/setting/ai_models',
+        name: 'ai_models',
+        component: './ai/ai_models/',
+        icon: 'RobotOutlined',
         access: 'canAdmin',
       },
 
