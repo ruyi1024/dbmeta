@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>前端智能体显示测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .agent-item { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .agent-icon { font-size: 24px; margin-right: 10px; }
+        .agent-name { font-weight: bold; color: #1a365d; }
+        .agent-desc { color: #64748b; margin-top: 5px; }
+        .test-result { background: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; color: #cc0000; }
+        .success { background: #e6ffe6; color: #006600; }
+    </style>
+</head>
+<body>
+    <h1>前端智能体数据显示测试</h1>
+    
+    <div id="testResult" class="test-result">正在测试...</div>
+    
+    <h2>模拟后端返回的数据：</h2>
+    <pre id="mockData"></pre>
+    
+    <h2>解析后的智能体列表：</h2>
+    <div id="agentsList"></div>
+
+    <script>
+        // 模拟后端返回的数据
+        const mockApiResponse = {
+            "data": [
+                {
+                    "ID": "query_agent",
+                    "Name": "AI查数智能体",
+                    "Icon": "🔮",
+                    "Description": "专业的数据查询智能体，帮助您进行复杂的数据分析和查询",
+                    "ApiKey": "app-iTtlyrvIDHagUQ63t2wrKnV9",
+                    "Enabled": true,
+                    "WelcomeMessage": "您好！我是AI查数智能体🔮，专注于帮助您进行数据查询和分析。我可以协助您编写SQL查询、优化查询性能、解释查询结果等。请告诉我您需要什么帮助！",
+                    "CustomQuestions": [
+                        "如何优化慢查询？",
+                        "数据库索引策略有哪些？",
+                        "如何分析查询执行计划？",
+                        "数据库连接池配置建议"
+                    ],
+                    "GuideQuestions": [
+                        "我想查询用户数据",
+                        "帮我分析数据库性能",
+                        "如何编写复杂SQL查询",
+                        "数据库优化建议"
+                    ]
+                },
+                {
+                    "ID": "analysis_agent",
+                    "Name": "AI分析智能体",
+                    "Icon": "📊",
+                    "Description": "专业的数据分析智能体，提供深度数据分析和洞察",
+                    "ApiKey": "app-iTtlyrvIDHagUQ63t2wrKnV9",
+                    "Enabled": true,
+                    "WelcomeMessage": "您好！我是AI分析智能体📊，专业提供数据分析和商业洞察服务。我可以帮助您分析数据趋势、制作数据可视化图表、发现业务指标异常等。有什么数据需要分析吗？",
+                    "CustomQuestions": [
+                        "如何进行数据建模？",
+                        "异常数据检测方法",
+                        "数据趋势分析技巧",
+                        "业务指标监控方案"
+                    ],
+                    "GuideQuestions": [
+                        "分析销售数据趋势",
+                        "用户行为数据分析",
+                        "业务KPI指标分析",
+                        "数据异常诊断"
+                    ]
+                },
+                {
+                    "ID": "report_agent",
+                    "Name": "AI报表智能体",
+                    "Icon": "📈",
+                    "Description": "专业的报表生成智能体，快速生成各类数据报表",
+                    "ApiKey": "app-zzzzzzzzzzzz",
+                    "Enabled": true,
+                    "WelcomeMessage": "您好！我是AI报表智能体📈，专注于自动化报表生成和数据可视化。我可以帮助您创建各种类型的报表、设计数据看板、自动化报表流程等。需要生成什么报表吗？",
+                    "CustomQuestions": [
+                        "如何设计数据看板？",
+                        "报表自动化方案",
+                        "数据可视化最佳实践",
+                        "多维度报表设计"
+                    ],
+                    "GuideQuestions": [
+                        "生成销售业绩报表",
+                        "创建运营数据看板",
+                        "制作财务分析报告",
+                        "设计实时监控报表"
+                    ]
+                }
+            ],
+            "success": true
+        };
+
+        // 显示模拟数据
+        document.getElementById('mockData').textContent = JSON.stringify(mockApiResponse, null, 2);
+
+        // 模拟前端解析过程
+        function testDataParsing() {
+            const resultDiv = document.getElementById('testResult');
+            const agentsListDiv = document.getElementById('agentsList');
+            
+            try {
+                // 检查数据结构
+                if (!mockApiResponse.success) {
+                    throw new Error('API返回success为false');
+                }
+                
+                if (!mockApiResponse.data || !Array.isArray(mockApiResponse.data)) {
+                    throw new Error('data字段不存在或不是数组');
+                }
+                
+                const agents = mockApiResponse.data;
+                
+                // 检查每个智能体的字段
+                agents.forEach((agent, index) => {
+                    if (!agent.ID) throw new Error(`智能体${index}: 缺少ID字段`);
+                    if (!agent.Name) throw new Error(`智能体${index}: 缺少Name字段`);
+                    if (!agent.Icon) throw new Error(`智能体${index}: 缺少Icon字段`);
+                    if (!agent.Description) throw new Error(`智能体${index}: 缺少Description字段`);
+                    if (!agent.ApiKey) throw new Error(`智能体${index}: 缺少ApiKey字段`);
+                    if (typeof agent.Enabled !== 'boolean') throw new Error(`智能体${index}: Enabled字段不是布尔值`);
+                    if (agent.WelcomeMessage && typeof agent.WelcomeMessage !== 'string') throw new Error(`智能体${index}: WelcomeMessage字段不是字符串`);
+                    if (agent.CustomQuestions && !Array.isArray(agent.CustomQuestions)) throw new Error(`智能体${index}: CustomQuestions字段不是数组`);
+                    if (agent.GuideQuestions && !Array.isArray(agent.GuideQuestions)) throw new Error(`智能体${index}: GuideQuestions字段不是数组`);
+                });
+                
+                // 渲染智能体列表
+                agentsListDiv.innerHTML = '';
+                agents.forEach(agent => {
+                    const agentDiv = document.createElement('div');
+                    agentDiv.className = 'agent-item';
+                    agentDiv.innerHTML = `
+                        <div>
+                            <span class="agent-icon">${agent.Icon}</span>
+                            <span class="agent-name">${agent.Name}</span>
+                            <span style="color: #888;">(ID: ${agent.ID})</span>
+                        </div>
+                        <div class="agent-desc">${agent.Description}</div>
+                        ${agent.WelcomeMessage ? `<div style="margin-top: 8px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 13px;"><strong>欢迎语:</strong> ${agent.WelcomeMessage}</div>` : ''}
+                        ${agent.CustomQuestions && agent.CustomQuestions.length > 0 ? `<div style="margin-top: 8px;"><strong>自定义问题:</strong><ul style="margin: 4px 0; padding-left: 20px;">${agent.CustomQuestions.map(q => `<li style="font-size: 12px;">${q}</li>`).join('')}</ul></div>` : ''}
+                        ${agent.GuideQuestions && agent.GuideQuestions.length > 0 ? `<div style="margin-top: 8px;"><strong>引导问题:</strong><ul style="margin: 4px 0; padding-left: 20px;">${agent.GuideQuestions.map(q => `<li style="font-size: 12px;">${q}</li>`).join('')}</ul></div>` : ''}
+                        <div style="margin-top: 8px; font-size: 12px; color: #999;">
+                            状态: ${agent.Enabled ? '启用' : '禁用'} | API Key: ${agent.ApiKey}
+                        </div>
+                    `;
+                    agentsListDiv.appendChild(agentDiv);
+                });
+                
+                resultDiv.className = 'test-result success';
+                resultDiv.textContent = `✅ 测试成功！解析到 ${agents.length} 个智能体，字段结构正确。`;
+                
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.textContent = `❌ 测试失败：${error.message}`;
+            }
+        }
+
+        // 执行测试
+        testDataParsing();
+
+        // 模拟实际API调用
+        function testRealAPI() {
+            fetch('/api/v1/ai/agents', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('实际API响应:', data);
+                if (JSON.stringify(data) === JSON.stringify(mockApiResponse)) {
+                    console.log('✅ 实际API响应与预期一致');
+                } else {
+                    console.log('⚠️ 实际API响应与预期不一致');
+                    console.log('差异:', {expected: mockApiResponse, actual: data});
+                }
+            })
+            .catch(error => {
+                console.error('实际API调用失败:', error);
+            });
+        }
+
+        // 延迟调用实际API以避免过快调用
+        setTimeout(testRealAPI, 2000);
+    </script>
+</body>
+</html> 

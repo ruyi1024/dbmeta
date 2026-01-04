@@ -1,0 +1,287 @@
+/*
+Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
+You may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    https://www.gnu.org/licenses/gpl-3.0.html
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package ai
+
+import (
+	"dbmcloud/log"
+	"dbmcloud/src/model"
+	"dbmcloud/src/service"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+// GetModels 获取模型列表
+func GetModels(c *gin.Context) {
+	models, err := service.GetAllModels()
+	if err != nil {
+		log.Error("获取模型列表失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "获取模型列表失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data":    models,
+	})
+}
+
+// GetEnabledModels 获取启用的模型列表
+func GetEnabledModels(c *gin.Context) {
+	models, err := service.GetEnabledModels()
+	if err != nil {
+		log.Error("获取启用的模型列表失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "获取启用的模型列表失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data":    models,
+	})
+}
+
+// CreateModel 创建模型配置
+func CreateModel(c *gin.Context) {
+	var aiModel model.AIModel
+	if err := c.ShouldBindJSON(&aiModel); err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "请求参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 验证必填字段
+	if aiModel.Name == "" || aiModel.Provider == "" || aiModel.ApiUrl == "" || aiModel.ModelName == "" {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "名称、提供商、API地址和模型名称不能为空",
+		})
+		return
+	}
+
+	err := service.CreateModel(&aiModel)
+	if err != nil {
+		log.Error("创建模型失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "创建模型失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 刷新缓存
+	service.RefreshModelsCache()
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"data":    aiModel,
+		"message": "创建成功",
+	})
+}
+
+// UpdateModel 更新模型配置
+func UpdateModel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "无效的模型ID",
+		})
+		return
+	}
+
+	var aiModel model.AIModel
+	if err := c.ShouldBindJSON(&aiModel); err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "请求参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	err = service.UpdateModel(id, &aiModel)
+	if err != nil {
+		log.Error("更新模型失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "更新模型失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 刷新缓存
+	service.RefreshModelsCache()
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "更新成功",
+	})
+}
+
+// DeleteModel 删除模型配置
+func DeleteModel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "无效的模型ID",
+		})
+		return
+	}
+
+	err = service.DeleteModel(id)
+	if err != nil {
+		log.Error("删除模型失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "删除模型失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 刷新缓存
+	service.RefreshModelsCache()
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "删除成功",
+	})
+}
+
+// ToggleModel 启用/禁用模型
+func ToggleModel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "无效的模型ID",
+		})
+		return
+	}
+
+	var req struct {
+		Enabled int8 `json:"enabled" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "请求参数错误",
+		})
+		return
+	}
+
+	if req.Enabled != 0 && req.Enabled != 1 {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "enabled参数必须为0或1",
+		})
+		return
+	}
+
+	err = service.ToggleModel(id, req.Enabled)
+	if err != nil {
+		log.Error("更新模型状态失败", zap.Error(err))
+		c.JSON(500, gin.H{
+			"success": false,
+			"message": "更新模型状态失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 刷新缓存
+	service.RefreshModelsCache()
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "更新成功",
+	})
+}
+
+// TestModel 测试模型连接
+func TestModel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "无效的模型ID",
+		})
+		return
+	}
+
+	aiModel, err := service.GetModelById(id)
+	if err != nil {
+		c.JSON(404, gin.H{
+			"success": false,
+			"message": "模型不存在",
+		})
+		return
+	}
+
+	// 验证配置
+	if err := service.TestModelConnection(aiModel); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "配置验证失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 尝试创建客户端并测试连接
+	client, err := service.NewAIClient(aiModel)
+	if err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "创建客户端失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 测试连接
+	if err := client.TestConnection(); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "连接测试失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "连接测试成功",
+	})
+}

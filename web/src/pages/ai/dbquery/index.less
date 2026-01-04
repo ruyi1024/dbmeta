@@ -1,0 +1,173 @@
+.dbQueryContainer {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: calc(100vh - 120px);
+
+  .queryCard {
+    max-width: 1400px;
+    margin: 0 auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .inputSection {
+      display: flex;
+      justify-content: center;
+      padding: 20px 0;
+
+      .inputWrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: 1200px;
+        width: 100%;
+
+        .databaseSelect {
+          min-width: 200px;
+          height: 44px;
+          font-size: 16px;
+
+          :global(.ant-select-selector) {
+            height: 44px;
+            border-radius: 24px;
+            border: 1px solid #dfe1e5;
+            transition: all 0.3s;
+
+            &:hover {
+              border-color: #dfe1e5;
+            }
+          }
+
+          :global(.ant-select-selection-item) {
+            line-height: 42px;
+            font-size: 16px;
+          }
+
+          :global(.ant-select-selection-placeholder) {
+            line-height: 42px;
+            font-size: 16px;
+          }
+
+          &:hover :global(.ant-select-selector) {
+            box-shadow: 0 2px 5px 1px rgba(64, 60, 67, 0.16);
+            border-color: #dfe1e5;
+          }
+
+          &:focus-within :global(.ant-select-selector) {
+            border-color: #4285f4;
+            box-shadow: 0 2px 5px 1px rgba(66, 133, 244, 0.28);
+          }
+        }
+
+        .textInput {
+          flex: 1;
+          font-size: 16px;
+          height: 44px;
+          border-radius: 24px;
+          padding: 0 20px;
+          border: 1px solid #dfe1e5;
+          transition: all 0.3s;
+
+          &:hover {
+            box-shadow: 0 2px 5px 1px rgba(64, 60, 67, 0.16);
+            border-color: #dfe1e5;
+          }
+
+          &:focus,
+          &.ant-input-focused {
+            border-color: #4285f4;
+            box-shadow: 0 2px 5px 1px rgba(66, 133, 244, 0.28);
+            outline: none;
+          }
+
+          :global(.ant-input) {
+            font-size: 16px;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+
+            &:focus {
+              box-shadow: none;
+            }
+          }
+        }
+
+        .sendButton {
+          height: 44px;
+          min-width: 120px;
+          border-radius: 24px;
+          font-size: 15px;
+          font-weight: 500;
+          padding: 0 24px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+          transition: all 0.3s;
+
+          &:hover:not(:disabled) {
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
+          }
+
+          &:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+          }
+        }
+      }
+    }
+
+    .sqlCard {
+      margin-top: 16px;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+
+      .sqlContent {
+        margin-top: 12px;
+        padding: 12px;
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        overflow-x: auto;
+
+        pre {
+          margin: 0;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+          font-size: 13px;
+          line-height: 1.6;
+          color: #333;
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+      }
+    }
+
+    .resultCard {
+      margin-top: 16px;
+
+      :global(.ant-card-head) {
+        background: #fafafa;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      :global(.ant-table) {
+        font-size: 13px;
+      }
+
+      :global(.ant-table-thead > tr > th) {
+        background: #fafafa;
+        font-weight: 600;
+      }
+    }
+
+    .emptyCard {
+      margin-top: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .loadingContainer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 0;
+    }
+  }
+}
+

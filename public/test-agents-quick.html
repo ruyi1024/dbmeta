@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>快速测试智能体API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+        .agent-item { border: 1px solid #ccc; padding: 10px; margin: 5px 0; border-radius: 5px; background: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 AIDBA 智能体API快速测试</h1>
+        
+        <button class="test-button" onclick="testAgentsAPI()">🧪 测试智能体API</button>
+        <button class="test-button" onclick="testFrontendIntegration()">🖥️ 测试前端集成</button>
+        
+        <div id="apiResult" class="result-box" style="display: none;">
+            <h3>API测试结果</h3>
+            <div id="apiContent"></div>
+        </div>
+        
+        <div id="frontendResult" class="result-box" style="display: none;">
+            <h3>前端集成测试</h3>
+            <div id="frontendContent"></div>
+        </div>
+        
+        <div id="agentsList" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        async function testAgentsAPI() {
+            const resultDiv = document.getElementById('apiResult');
+            const contentDiv = document.getElementById('apiContent');
+            
+            resultDiv.style.display = 'block';
+            contentDiv.innerHTML = '正在测试...';
+            
+            try {
+                const response = await fetch('/api/v1/ai/agents', {
+                    credentials: 'include'
+                });
+                
+                console.log('API响应状态:', response.status);
+                const data = await response.json();
+                console.log('API响应数据:', data);
+                
+                if (data.success) {
+                    resultDiv.className = 'result-box success';
+                    contentDiv.innerHTML = `
+                        <p>✅ API调用成功！</p>
+                        <p>📊 找到 ${data.data ? data.data.length : 0} 个智能体</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    
+                    // 显示智能体列表
+                    displayAgents(data.data || []);
+                } else {
+                    resultDiv.className = 'result-box error';
+                    contentDiv.innerHTML = `
+                        <p>❌ API返回失败</p>
+                        <p>错误信息: ${data.message || '未知错误'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('API测试失败:', error);
+                resultDiv.className = 'result-box error';
+                contentDiv.innerHTML = `
+                    <p>❌ API调用失败</p>
+                    <p>错误: ${error.message}</p>
+                    <p>请检查:</p>
+                    <ul>
+                        <li>后端服务是否正在运行 (端口8088)</li>
+                        <li>配置文件是否正确</li>
+                        <li>浏览器控制台是否有其他错误</li>
+                    </ul>
+                `;
+            }
+        }
+        
+        function displayAgents(agents) {
+            const listDiv = document.getElementById('agentsList');
+            
+            if (agents.length === 0) {
+                listDiv.innerHTML = '<p>❌ 没有找到启用的智能体</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = '<h3>🤖 智能体列表</h3>';
+            agents.forEach(agent => {
+                const agentDiv = document.createElement('div');
+                agentDiv.className = 'agent-item';
+                agentDiv.innerHTML = `
+                    <h4>${agent.Icon} ${agent.Name}</h4>
+                    <p><strong>ID:</strong> ${agent.ID}</p>
+                    <p><strong>描述:</strong> ${agent.Description}</p>
+                    <p><strong>状态:</strong> ${agent.Enabled ? '✅ 启用' : '❌ 禁用'}</p>
+                    <p><strong>API Key:</strong> ${agent.ApiKey ? '✅ 已配置' : '❌ 未配置'}</p>
+                `;
+                listDiv.appendChild(agentDiv);
+            });
+        }
+        
+        async function testFrontendIntegration() {
+            const resultDiv = document.getElementById('frontendResult');
+            const contentDiv = document.getElementById('frontendContent');
+            
+            resultDiv.style.display = 'block';
+            contentDiv.innerHTML = '正在测试前端集成...';
+            
+            try {
+                // 模拟前端加载智能体的过程
+                const response = await fetch('/api/v1/ai/agents', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    // 检查数据结构是否符合前端期望
+                    const agents = data.data;
+                    const requiredFields = ['ID', 'Name', 'Icon', 'Description', 'ApiKey', 'Enabled'];
+                    const optionalFields = ['WelcomeMessage', 'CustomQuestions', 'GuideQuestions'];
+                    
+                    let validationResults = [];
+                    
+                    agents.forEach((agent, index) => {
+                        // 检查必需字段
+                        requiredFields.forEach(field => {
+                            if (!(field in agent)) {
+                                validationResults.push(`❌ 智能体${index+1}: 缺少字段 ${field}`);
+                            }
+                        });
+                        
+                        // 检查字段类型
+                        if (typeof agent.Enabled !== 'boolean') {
+                            validationResults.push(`❌ 智能体${index+1}: Enabled字段不是布尔值`);
+                        }
+                        
+                        if (agent.CustomQuestions && !Array.isArray(agent.CustomQuestions)) {
+                            validationResults.push(`❌ 智能体${index+1}: CustomQuestions不是数组`);
+                        }
+                        
+                        if (agent.GuideQuestions && !Array.isArray(agent.GuideQuestions)) {
+                            validationResults.push(`❌ 智能体${index+1}: GuideQuestions不是数组`);
+                        }
+                    });
+                    
+                    if (validationResults.length === 0) {
+                        resultDiv.className = 'result-box success';
+                        contentDiv.innerHTML = `
+                            <p>✅ 前端集成测试成功！</p>
+                            <p>📊 所有 ${agents.length} 个智能体的数据结构都正确</p>
+                            <p>🎯 可以正常在前端界面显示</p>
+                        `;
+                    } else {
+                        resultDiv.className = 'result-box error';
+                        contentDiv.innerHTML = `
+                            <p>❌ 数据结构验证失败</p>
+                            <ul>${validationResults.map(r => `<li>${r}</li>`).join('')}</ul>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'result-box error';
+                    contentDiv.innerHTML = `
+                        <p>❌ 前端集成测试失败</p>
+                        <p>API返回的数据不符合预期格式</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result-box error';
+                contentDiv.innerHTML = `
+                    <p>❌ 前端集成测试失败</p>
+                    <p>错误: ${error.message}</p>
+                `;
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.addEventListener('load', () => {
+            console.log('页面加载完成，开始自动测试...');
+            testAgentsAPI();
+        });
+    </script>
+</body>
+</html> 

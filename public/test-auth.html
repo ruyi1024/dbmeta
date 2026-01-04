@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试智能体API - 带认证</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        .result { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 5px; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        input, select { padding: 5px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>AIDBA 智能体API测试 - 带认证</h1>
+    
+    <div class="test-section">
+        <h3>1. 登录测试</h3>
+        <input type="text" id="username" placeholder="用户名" value="admin">
+        <input type="password" id="password" placeholder="密码" value="admin">
+        <button onclick="testLogin()">登录</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 获取智能体列表</h3>
+        <button onclick="testAgents()">获取智能体列表</button>
+        <div id="agentsResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 测试智能体对话</h3>
+        <select id="testAgentSelect">
+            <option value="">选择智能体</option>
+        </select>
+        <input type="text" id="testQuestion" placeholder="输入问题" value="你好">
+        <button onclick="testAgentChat()">发送消息</button>
+        <div id="chatResult" class="result"></div>
+    </div>
+
+    <script>
+        // 登录测试
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            try {
+                const response = await fetch('/api/v1/login/account', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result ' + (data.success ? 'success' : 'error');
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    // 登录成功后自动获取智能体列表
+                    setTimeout(testAgents, 1000);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '登录失败: ' + error.message;
+            }
+        }
+        
+        // 获取智能体列表
+        async function testAgents() {
+            const resultDiv = document.getElementById('agentsResult');
+            const selectElement = document.getElementById('testAgentSelect');
+            
+            try {
+                const response = await fetch('/api/v1/ai/agents', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result ' + (data.success ? 'success' : 'error');
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // 更新选择框
+                selectElement.innerHTML = '<option value="">选择智能体</option>';
+                if (data.success && data.data) {
+                    data.data.forEach(agent => {
+                        const option = document.createElement('option');
+                        option.value = agent.id;
+                        option.textContent = `${agent.icon} ${agent.name}`;
+                        selectElement.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '获取智能体列表失败: ' + error.message;
+            }
+        }
+        
+        // 测试智能体对话
+        async function testAgentChat() {
+            const agentId = document.getElementById('testAgentSelect').value;
+            const question = document.getElementById('testQuestion').value;
+            const resultDiv = document.getElementById('chatResult');
+            
+            if (!agentId || !question) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '请选择智能体并输入问题';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/ai/dify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        question: question,
+                        agentId: agentId
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result ' + (data.success ? 'success' : 'error');
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '智能体对话失败: ' + error.message;
+            }
+        }
+        
+        // 页面加载时检查是否已登录
+        window.onload = function() {
+            // 先尝试获取智能体列表，看是否已经登录
+            testAgents();
+        };
+    </script>
+</body>
+</html> 

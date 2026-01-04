@@ -1,0 +1,182 @@
+/* @import '~antd/lib/style/themes/default.less'; */
+
+.metaDashboard {
+  min-height: calc(100vh - 64px);
+  background: #f7fafc;
+  
+  .ant-pro-page-container-children-content {
+    margin: 0;
+    padding: 24px;
+  }
+  
+  .ant-page-header {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    
+    .ant-page-header-heading-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+}
+
+.statisticsSection {
+  margin-bottom: 32px;
+  
+  .statisticGroup {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 16px;
+    
+    .ant-pro-statistic-card {
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+      
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+        border-color: #e6f7ff;
+        background: #fafafa;
+      }
+      
+      .ant-pro-statistic-card-statistic {
+        .ant-pro-statistic-card-title {
+          font-size: 14px;
+          color: #595959;
+          font-weight: 500;
+          margin-bottom: 8px;
+          
+          .anticon {
+            font-size: 16px;
+            margin-right: 8px;
+          }
+        }
+        
+        .ant-statistic-content {
+          .ant-statistic-content-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #262626;
+            line-height: 1.2;
+          }
+        }
+      }
+    }
+    
+    .ant-pro-statistic-card-divider {
+      margin: 0 8px;
+      background: #f0f0f0;
+    }
+  }
+  
+  .statisticCard {
+    transition: all 0.3s ease;
+  }
+}
+
+.chartsSection {
+  .chartCard {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+    height: 100%;
+    
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      transform: translateY(-2px);
+      border-color: #d9d9d9;
+    }
+    
+    .ant-card-head {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 16px 24px;
+      min-height: 56px;
+      
+      .ant-card-head-title {
+        padding: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #262626;
+        
+        .anticon {
+          font-size: 18px;
+          margin-right: 8px;
+        }
+      }
+    }
+    
+    .ant-card-body {
+      padding: 24px;
+    }
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .metaDashboard {
+    .ant-pro-page-container-children-content {
+      padding: 16px;
+    }
+    
+    .ant-page-header {
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+  }
+  
+  .statisticsSection {
+    margin-bottom: 24px;
+    
+    .statisticGroup {
+      padding: 12px;
+      
+      .ant-pro-statistic-card {
+        .ant-pro-statistic-card-statistic {
+          .ant-pro-statistic-card-title {
+            font-size: 13px;
+          }
+          
+          .ant-statistic-content {
+            .ant-statistic-content-value {
+              font-size: 24px;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  .chartsSection {
+    .chartCard {
+      .ant-card-head {
+        padding: 12px 16px;
+        
+        .ant-card-head-title {
+          font-size: 14px;
+        }
+      }
+      
+      .ant-card-body {
+        padding: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .statisticsSection {
+    .statisticGroup {
+      .ant-pro-statistic-card-divider {
+        display: none;
+      }
+    }
+  }
+}
