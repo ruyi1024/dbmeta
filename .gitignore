@@ -1,8 +1,8 @@
 setting.yml
-/static/*
 /vendor/*
 **/vendor
 ./vendor
+/web/dist/*
 .idea
 main
 nohup.out
