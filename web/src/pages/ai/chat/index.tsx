@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { PageContainer } from '@ant-design/pro-layout';
-import { message, Segmented } from 'antd';
+import { message } from 'antd';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { chatQuery, createSession, ChatQueryRequest } from './services/chatQuery';
@@ -46,8 +46,8 @@ const AIChat: React.FC = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [currentSessionId, setCurrentSessionId] = useState(`session_${Date.now()}`);
   
-  // 模式切换状态
-  const [mode, setMode] = useState<'chat' | 'agent'>('chat');
+  // 模式切换状态 - 固定为agent模式
+  const [mode, setMode] = useState<'chat' | 'agent'>('agent');
   
   // Agent模式相关状态
   const [agentSessionId, setAgentSessionId] = useState<string>('');
@@ -1603,36 +1603,12 @@ const AIChat: React.FC = () => {
 
           {/* 输入区域 */}
           <div className={styles.inputArea}>
-            {/* 模式切换按钮 */}
-            <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
-              <Segmented
-                options={[
-                  { label: '💬 聊天', value: 'chat' },
-                  { label: '🤖 Agent', value: 'agent' }
-                ]}
-                value={mode}
-                onChange={(value: string | number) => {
-                  const newMode = value as 'chat' | 'agent';
-                  setMode(newMode);
-                  if (newMode === 'agent' && !agentSessionId) {
-                    createAgentSession();
-                  }
-                }}
-                style={{
-                  background: '#f0f0f0',
-                  borderRadius: '8px',
-                  padding: '4px'
-                }}
-              />
-            </div>
-
-
             <div className={styles.inputWrapper}>
               <textarea
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={mode === 'agent' ? '请输入您的问题，Agent可以帮您查询数据库...' : '请输入您的问题...'}
+                placeholder="请输入您的问题，Agent可以帮您查询数据库..."
                 className={styles.textArea}
                 disabled={loading}
                 rows={1}

@@ -1,4 +1,4 @@
-import { PlusOutlined, FormOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
+import { PlusOutlined, FormOutlined, DeleteOutlined, FileTextOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { Button, Divider, message, Popconfirm, Select, Modal } from 'antd';
 import React, { useState, useRef } from 'react';
 import { PageContainer } from '@ant-design/pro-layout';
@@ -6,7 +6,7 @@ import ProTable, { ProColumns, ActionType } from '@ant-design/pro-table';
 import CreateForm from './components/CreateForm';
 import UpdateForm from './components/UpdateForm';
 import { TableListItem } from './data.d';
-import { query, update, add, remove, queryTaskLogs } from './service';
+import { query, update, add, remove, queryTaskLogs, executeTask } from './service';
 import { useAccess } from 'umi';
 import { Badge } from 'antd';
 
@@ -84,6 +84,23 @@ const TableList: React.FC<{}> = () => {
   const handleViewLogs = (taskKey: string, taskName: string) => {
     setCurrentTask({ taskKey, taskName });
     setLogModalVisible(true);
+  };
+
+  // 手工运行任务
+  const handleExecuteTask = async (taskKey: string, taskName: string) => {
+    const hide = message.loading('正在执行任务...');
+    try {
+      const response = await executeTask(taskKey);
+      hide();
+      if (response.success) {
+        message.success(`任务【${taskName}】已开始执行`);
+      } else {
+        message.error(response.msg || '执行失败');
+      }
+    } catch (error) {
+      hide();
+      message.error('执行失败，请重试');
+    }
   };
 
 
@@ -218,6 +235,14 @@ const TableList: React.FC<{}> = () => {
             <a><DeleteOutlined />删除</a>
           </Popconfirm>
           <Divider type="vertical" />
+          {record.enable === 1 && (
+            <>
+              <a onClick={() => handleExecuteTask(record.task_key, record.task_name)}>
+                <PlayCircleOutlined />手工运行
+              </a>
+              <Divider type="vertical" />
+            </>
+          )}
           <a onClick={() => handleViewLogs(record.task_key, record.task_name)}>
             <FileTextOutlined />查看运行日志
           </a>

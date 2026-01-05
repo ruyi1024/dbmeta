@@ -627,3 +627,43 @@ type PumpkinTableSize struct {
 func (PumpkinTableSize) TableName() string {
 	return "pumpkin_table_size"
 }
+
+// PumpkinTableGrowth 表容量增长数据
+type PumpkinTableGrowth struct {
+	Id             int64     `gorm:"primarykey" json:"id"`
+	DatasourceType string    `gorm:"size:50" json:"datasource_type"`
+	Host           string    `gorm:"size:100" json:"host"`
+	Port           string    `gorm:"size:10" json:"port"`
+	DatabaseName   string    `gorm:"size:50" json:"database_name"`
+	TableNameX     string    `gorm:"column:table_name;size:50" json:"table_name"`
+	TableSize      int64     `gorm:"default:0" json:"table_size"`      // 表总大小(字节)
+	TableRows      int64     `gorm:"default:0" json:"table_rows"`      // 表行数
+	TableSizeIncr  int64     `gorm:"default:0" json:"table_size_incr"` // 表大小增量(字节)
+	TableRowsIncr  *int64    `gorm:"default:0" json:"table_rows_incr"` // 表行数增量
+	CreatedAt      time.Time `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt      time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (PumpkinTableGrowth) TableName() string {
+	return "pumpkin_table_growth"
+}
+
+// PumpkinDatabaseGrowth 数据库容量增长数据
+type PumpkinDatabaseGrowth struct {
+	Id               int64     `gorm:"primarykey" json:"id"`
+	DatasourceType   string    `gorm:"size:50" json:"datasource_type"`
+	Host             string    `gorm:"size:100" json:"host"`
+	Port             string    `gorm:"size:10" json:"port"`
+	DatabaseName     string    `gorm:"size:50" json:"database_name"`
+	DatabaseSize     int64     `gorm:"default:0" json:"database_size"`      // 数据库总大小(字节)
+	DatabaseRows     int64     `gorm:"default:0" json:"database_rows"`      // 数据库总行数
+	TableCount       int64     `gorm:"default:0" json:"table_count"`        // 数据库表数量
+	DatabaseSizeIncr int64     `gorm:"default:0" json:"database_size_incr"` // 数据库大小增量(字节)
+	DatabaseRowsIncr int64     `gorm:"default:0" json:"database_rows_incr"` // 数据库行数增量
+	CreatedAt        time.Time `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt        time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (PumpkinDatabaseGrowth) TableName() string {
+	return "pumpkin_database_growth"
+}

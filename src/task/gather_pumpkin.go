@@ -311,3 +311,8 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 
 	return nil
 }
+
+// ExecutePumpkinTask 导出函数，用于手动执行任务
+func ExecutePumpkinTask() {
+	doPumpkinTask()
+}

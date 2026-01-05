@@ -427,75 +427,78 @@ func DoQuery(c *gin.Context) {
 
 		//敏感信息检查和处理
 		var db = database.DB
-		fmt.Println(queryTableList)
-		for _, table := range queryTableList {
-			//如果使用db.table方式查询，需要获取真实db进行鉴权，pg不行，pg使用schema.table方式查询
-			matchDian := regexp.MustCompile(`\.`).FindAllStringSubmatch(table, -1)
-			if len(matchDian) > 0 && datasourceType != "PostgreSQL" {
-				dbTb := strings.Split(table, ".")
-				databaseName = dbTb[0]
-				table = dbTb[1]
-			}
-			var sensitiveList []model.SensitiveMeta
-			//获取敏感表和字段信息
-			db.Where("datasource_type=?", datasourceType).Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("table_name=?", table).Find(&sensitiveList)
-			if len(dataList) > 0 && len(sensitiveList) > 0 {
-				//判断查询字段是否包含敏感表
-				for _, x := range sensitiveList {
-					fmt.Println(sensitiveList)
-					sensitiveColumn := x.ColumnName
-					sensitiveRule := x.RuleKey
-					fmt.Println(sensitiveColumn)
-					fmt.Println(sensitiveRule)
-					for _, column := range columnList {
-						if column == sensitiveColumn {
-							//敏感数据脱敏
-							for _, data := range dataList {
-								if data[column] != nil {
-									str := data[column].(string)
-									strCnt := utf8.RuneCountInString(str) //获取字符数，len获取到的是字节数
-									fmt.Println(str)
-									fmt.Println(strCnt)
-									if sensitiveRule == "realname" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`^[\x{4e00}-\x{9fa2}]{1}`)
-										data[column] = reg.FindString(str) + "**"
-									} else if sensitiveRule == "email" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.*)@`)
-										data[column] = reg.ReplaceAllString(str, "******")
-									} else if sensitiveRule == "mobile" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{4})$`)
-										data[column] = reg.ReplaceAllString(str, "****")
-									} else if sensitiveRule == "id_number" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{6})$`)
-										data[column] = reg.ReplaceAllString(str, "******")
-									} else if sensitiveRule == "bank_card" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{6})$`)
-										data[column] = reg.ReplaceAllString(str, "******")
-									} else if sensitiveRule == "car_number" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{3})$`)
-										data[column] = reg.ReplaceAllString(str, "***")
-									} else if sensitiveRule == "password" && !strings.Contains(str, "**") {
-										data[column] = "******"
-									} else if sensitiveRule == "address" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`[0-9]`)
-										data[column] = reg.ReplaceAllString(str, "*")
-									} else if sensitiveRule == "ip" && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`.[0-9]{1,3}.[0-9]{1,3}$`)
-										data[column] = reg.ReplaceAllString(str, ".***.***")
-									} else if strCnt <= 4 && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{2})$`)
-										data[column] = reg.ReplaceAllString(str, "**")
-									} else if strCnt <= 8 && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{3})$`)
-										data[column] = reg.ReplaceAllString(str, "***")
-									} else if strCnt <= 12 && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{4})$`)
-										data[column] = reg.ReplaceAllString(str, "****")
-									} else if strCnt > 12 && !strings.Contains(str, "**") {
-										reg, _ := regexp.Compile(`(.{6})$`)
-										data[column] = reg.ReplaceAllString(str, "******")
-									}
 
+		// 如果不是管理员，才进行敏感数据脱敏
+		if admin != true {
+			for _, table := range queryTableList {
+				//如果使用db.table方式查询，需要获取真实db进行鉴权，pg不行，pg使用schema.table方式查询
+				matchDian := regexp.MustCompile(`\.`).FindAllStringSubmatch(table, -1)
+				if len(matchDian) > 0 && datasourceType != "PostgreSQL" {
+					dbTb := strings.Split(table, ".")
+					databaseName = dbTb[0]
+					table = dbTb[1]
+				}
+				var sensitiveList []model.SensitiveMeta
+				//获取敏感表和字段信息
+				db.Where("datasource_type=?", datasourceType).Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("table_name=?", table).Find(&sensitiveList)
+				if len(dataList) > 0 && len(sensitiveList) > 0 {
+					//判断查询字段是否包含敏感表
+					for _, x := range sensitiveList {
+						fmt.Println(sensitiveList)
+						sensitiveColumn := x.ColumnName
+						sensitiveRule := x.RuleKey
+						fmt.Println(sensitiveColumn)
+						fmt.Println(sensitiveRule)
+						for _, column := range columnList {
+							if column == sensitiveColumn {
+								//敏感数据脱敏
+								for _, data := range dataList {
+									if data[column] != nil {
+										str := data[column].(string)
+										strCnt := utf8.RuneCountInString(str) //获取字符数，len获取到的是字节数
+										fmt.Println(str)
+										fmt.Println(strCnt)
+										if sensitiveRule == "realname" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`^[\x{4e00}-\x{9fa2}]{1}`)
+											data[column] = reg.FindString(str) + "**"
+										} else if sensitiveRule == "email" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.*)@`)
+											data[column] = reg.ReplaceAllString(str, "******")
+										} else if sensitiveRule == "mobile" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{4})$`)
+											data[column] = reg.ReplaceAllString(str, "****")
+										} else if sensitiveRule == "id_number" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{6})$`)
+											data[column] = reg.ReplaceAllString(str, "******")
+										} else if sensitiveRule == "bank_card" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{6})$`)
+											data[column] = reg.ReplaceAllString(str, "******")
+										} else if sensitiveRule == "car_number" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{3})$`)
+											data[column] = reg.ReplaceAllString(str, "***")
+										} else if sensitiveRule == "password" && !strings.Contains(str, "**") {
+											data[column] = "******"
+										} else if sensitiveRule == "address" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`[0-9]`)
+											data[column] = reg.ReplaceAllString(str, "*")
+										} else if sensitiveRule == "ip" && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`.[0-9]{1,3}.[0-9]{1,3}$`)
+											data[column] = reg.ReplaceAllString(str, ".***.***")
+										} else if strCnt <= 4 && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{2})$`)
+											data[column] = reg.ReplaceAllString(str, "**")
+										} else if strCnt <= 8 && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{3})$`)
+											data[column] = reg.ReplaceAllString(str, "***")
+										} else if strCnt <= 12 && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{4})$`)
+											data[column] = reg.ReplaceAllString(str, "****")
+										} else if strCnt > 12 && !strings.Contains(str, "**") {
+											reg, _ := regexp.Compile(`(.{6})$`)
+											data[column] = reg.ReplaceAllString(str, "******")
+										}
+
+									}
 								}
 							}
 						}

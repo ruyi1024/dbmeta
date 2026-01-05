@@ -127,11 +127,9 @@ func InitDb() *gorm.DB {
 			log.Error("db sync error.", zap.Error(err))
 		}
 		aesPassword, _ := aes.AesPassEncode(setting.Setting.Password, setting.Setting.DbPassKey)
-		aesCkPassword, _ := aes.AesPassEncode(setting.Setting.ClickhousePassword, setting.Setting.DbPassKey)
 		aesRdsPassword, _ := aes.AesPassEncode(setting.Setting.RedisPassword, setting.Setting.DbPassKey)
-		db.Create(&model.Datasource{Id: 1, Name: "LEPUS-MySQL", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "MySQL", Host: setting.Setting.Host, Port: setting.Setting.Port, User: setting.Setting.User, Pass: aesPassword, Enable: 1, DbmetaEnable: 1, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
-		db.Create(&model.Datasource{Id: 2, Name: "LEPUS-ClickHouse", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "ClickHouse", Host: setting.Setting.ClickhouseHost, Port: setting.Setting.ClickhousePort, User: setting.Setting.ClickhouseUser, Pass: aesCkPassword, Enable: 1, DbmetaEnable: 1, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
-		db.Create(&model.Datasource{Id: 3, Name: "LEPUS-Redis", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "Redis", Host: setting.Setting.RedisHost, Port: setting.Setting.RedisPort, User: "", Pass: aesRdsPassword, Enable: 1, DbmetaEnable: 0, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
+		db.Create(&model.Datasource{Id: 1, Name: "DBMETA-MySQL", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "MySQL", Host: setting.Setting.Host, Port: setting.Setting.Port, User: setting.Setting.User, Pass: aesPassword, Enable: 1, DbmetaEnable: 1, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
+		db.Create(&model.Datasource{Id: 3, Name: "DBMETA-Redis", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "Redis", Host: setting.Setting.RedisHost, Port: setting.Setting.RedisPort, User: "", Pass: aesRdsPassword, Enable: 1, DbmetaEnable: 0, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
 
 	}
 
@@ -407,6 +405,8 @@ func InitDb() *gorm.DB {
 		{TaskKey: "ai_apply_table_comment", TaskName: "AI应用表注释", TaskDescription: "将待应用的AI注释应用到实际数据表", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_apply_column_comment", TaskName: "AI应用字段注释", TaskDescription: "将待应用的AI注释应用到实际数据字段", Crontab: "*/30 * * * *"},
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
+		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
+		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "*/30 * * * *"},
 	}
 
 	for _, task := range defaultTasks {
@@ -432,11 +432,13 @@ func InitDb() *gorm.DB {
 		{HeartbeatKey: "check_datasource", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_dbmeta", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_sensitive", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "gather_pumpkin", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_apply_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_apply_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "data_quality_ai_analysis", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "gather_pumpkin_growth", HeartbeatTime: t, HeartbeatEndTime: t},
 	}
 
 	for _, heartbeat := range defaultHeartbeats {
@@ -599,6 +601,14 @@ func InitDb() *gorm.DB {
 		if err = db.AutoMigrate(&model.AIModel{}); err != nil {
 			log.Error("db sync error.", zap.Error(err))
 		}
+	}
+
+	// Pumpkin growth tables
+	if err = db.AutoMigrate(&model.PumpkinTableGrowth{}); err != nil {
+		log.Error("db sync PumpkinTableGrowth error.", zap.Error(err))
+	}
+	if err = db.AutoMigrate(&model.PumpkinDatabaseGrowth{}); err != nil {
+		log.Error("db sync PumpkinDatabaseGrowth error.", zap.Error(err))
 	}
 
 	return db

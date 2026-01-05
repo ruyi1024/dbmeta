@@ -28,6 +28,7 @@ import (
 	"dbmcloud/src/controller/meta"
 	"dbmcloud/src/controller/monitor"
 	"dbmcloud/src/controller/privilege"
+	"dbmcloud/src/controller/pumpkin"
 	"dbmcloud/src/controller/query"
 	"dbmcloud/src/controller/safe"
 	"dbmcloud/src/controller/sensitive"
@@ -184,6 +185,7 @@ func Router() *gin.Engine {
 		v1.DELETE("/meta/env/list", meta.MetaEnvList)
 
 		v1.GET("/task/list", task.TaskList)
+		v1.POST("/task/option/execute", task.ExecuteTask)
 
 		v1.GET("/audit/query_log", audit.GetQueryLog)
 		v1.GET("/safe/dashboard/info", safe.DashboardInfo)
@@ -204,6 +206,15 @@ func Router() *gin.Engine {
 
 		v1.GET("/dashbaord/websocket", dashboard.EventWS)
 		v1.GET("/dashbaord/info", dashboard.MetaInfo)
+
+		// 数据容量相关接口
+		v1.GET("/pumpkin/capacity/stats", pumpkin.GetCapacityStats)
+		v1.GET("/pumpkin/capacity/database/top10/chart", pumpkin.GetDatabaseCapacityTop10Chart)
+		v1.GET("/pumpkin/capacity/database/top10", pumpkin.GetDatabaseCapacityTop10)
+		v1.GET("/pumpkin/capacity/table/top10", pumpkin.GetTableCapacityTop10)
+		v1.GET("/pumpkin/capacity/table/growth", pumpkin.GetTableCapacityGrowth)
+		v1.GET("/pumpkin/capacity/table/fragmentation/top10", pumpkin.GetTableFragmentationTop10)
+		v1.GET("/pumpkin/capacity/table/rows/top10", pumpkin.GetTableRowsTop10)
 
 		// AI相关接口
 		v1.POST("/ai/chat", ai.Chat)

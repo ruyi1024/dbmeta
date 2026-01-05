@@ -4,8 +4,8 @@ const Settings: LayoutSettings & {
   pwa?: boolean;
   logo?: string;
 } = {
-  //navTheme: 'light',
-  navTheme: 'dark',
+  navTheme: 'light',
+  //navTheme: 'dark',
   primaryColor: '#006699',
   layout: 'top',
   contentWidth: 'Fluid',
@@ -15,10 +15,10 @@ const Settings: LayoutSettings & {
   headerHeight: 48,
   //collapsed: true,
   splitMenus: false,
-  title: 'AIDBA',
+  title: 'DBMETA',
   pwa: false,
-  logo: '/logo.png',
-  iconfontUrl: 'https://www.lepus.cc',
+  logo: '/logo-db.png',
+  iconfontUrl: 'https://www.dbmeta.com',
 };
 
 export default Settings;

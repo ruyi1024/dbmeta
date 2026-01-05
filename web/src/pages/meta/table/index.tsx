@@ -161,7 +161,7 @@ const TableList: React.FC<{}> = () => {
   ];
 
   return (
-    <PageContainer>
+    <>
       <ProTable<TableListItem>
         headerTitle="数据表列表"
         actionRef={actionRef}
@@ -195,7 +195,7 @@ const TableList: React.FC<{}> = () => {
           </Button>,
         ]}
       />
-    </PageContainer>
+    </>
   );
 };
 

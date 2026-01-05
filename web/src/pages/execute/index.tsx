@@ -1,4 +1,4 @@
-import { BorderLeftOutlined, HeartOutlined, RightSquareOutlined, TableOutlined, UnorderedListOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { BorderLeftOutlined, HeartOutlined, RightSquareOutlined, TableOutlined, UnorderedListOutlined, ThunderboltOutlined, DeleteOutlined } from '@ant-design/icons';
 import { PageContainer, ProColumns, ProTable } from '@ant-design/pro-components';
 import { Card, Tabs, Form, Select, Button, Input, message, Table, Alert, Space, List, Row, Col, AutoComplete, Drawer, Modal } from 'antd';
 
@@ -26,18 +26,7 @@ import { saveAs } from 'file-saver';
 
 import WaterMarkContent from '@/components/WaterMarkContent'
 
-const favoriteColumns: ProColumns[] = [
-  {
-    title: '收藏时间',
-    dataIndex: 'gmt_created',
-  },
-  {
-    title: '收藏内容',
-    dataIndex: 'content',
-    copyable: true,
-    tip: '点击复制图标可以复制完整SQL'
-  }
-]
+// favoriteColumns 将在组件内部定义，以便访问组件状态
 
 
 const Index: React.FC = () => {
@@ -332,7 +321,12 @@ const Index: React.FC = () => {
       message.warning("选择数据源后才能打开收藏夹");
       return;
     }
-    fetch('/api/v1/favorite/list?datasource=' + datasource + '&datasource_type=' + type + '&database=' + database)
+    // 构建查询参数，确保包含数据库名条件
+    let queryParams = 'datasource=' + datasource + '&datasource_type=' + type;
+    if (database && database !== '') {
+      queryParams += '&database_name=' + database;
+    }
+    fetch('/api/v1/favorite/list?' + queryParams)
       .then((response) => response.json())
       .then((json) => setFavoriteList(json.data == null ? [] : json.data))
       .catch((error) => {
@@ -346,6 +340,88 @@ const Index: React.FC = () => {
     setFavoriteList([]);
     setOpenFavorite(false);
   }
+
+  //刷新收藏夹列表
+  const refreshFavoriteList = () => {
+    if (type == "" || datasource == "") {
+      return;
+    }
+    // 构建查询参数，确保包含数据库名条件
+    let queryParams = 'datasource=' + datasource + '&datasource_type=' + type;
+    if (database && database !== '') {
+      queryParams += '&database_name=' + database;
+    }
+    fetch('/api/v1/favorite/list?' + queryParams)
+      .then((response) => response.json())
+      .then((json) => setFavoriteList(json.data == null ? [] : json.data))
+      .catch((error) => {
+        console.log('fetch favorite list failed', error);
+      });
+  }
+
+  //删除收藏的SQL
+  const deleteFavorite = (id: number) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '确定要删除这条收藏的SQL吗？',
+      onOk: () => {
+        const headers = new Headers();
+        headers.append('Content-Type', 'application/json');
+        fetch('/api/v1/favorite/list', {
+          method: 'DELETE',
+          headers: headers,
+          body: JSON.stringify({ id: id }),
+        })
+          .then((response) => response.json())
+          .then((json) => {
+            if (json.success) {
+              message.success('删除成功');
+              // 刷新收藏夹列表
+              refreshFavoriteList();
+            } else {
+              message.error('删除失败：' + (json.msg || '未知错误'));
+            }
+          })
+          .catch((error) => {
+            console.log('delete favorite failed', error);
+            message.error('删除失败');
+          });
+      },
+    });
+  }
+
+  //收藏夹表格列定义
+  const favoriteColumns: ProColumns[] = [
+    {
+      title: '收藏时间',
+      dataIndex: 'gmt_created',
+      width: 260,
+    },
+    {
+      title: '收藏内容',
+      dataIndex: 'content',
+      copyable: true,
+      tip: '点击复制图标可以复制完整SQL',
+      ellipsis: true,
+    },
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 80,
+      render: (_, record) => [
+        <Button
+          key="delete"
+          type="link"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => deleteFavorite(record.id)}
+        >
+          删除
+        </Button>,
+      ],
+    },
+  ]
 
 
   //表单提交查询执行请求
@@ -535,7 +611,7 @@ const Index: React.FC = () => {
 
 
   return (
-    (<PageContainer>
+    (<PageContainer title="数据查询平台">
       <WaterMarkContent text={currentUserinfo.chineseName + "-" + currentDate}>
         <Row style={{ marginTop: '10px' }}><Col span={24}><Card>
           <Form
@@ -788,7 +864,7 @@ const Index: React.FC = () => {
         <Drawer
           title="SQL收藏夹"
           placement='right'
-          width={800}
+          width={1200}
           onClose={closeDrawer}
           open={openFavorite}
           extra={

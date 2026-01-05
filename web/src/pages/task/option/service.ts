@@ -46,3 +46,12 @@ export async function queryTaskLogs(params?: TaskLogParams) {
     params,
   });
 }
+
+export async function executeTask(taskKey: string) {
+  return request('/api/v1/task/option/execute', {
+    method: 'POST',
+    data: {
+      task_key: taskKey,
+    },
+  });
+}

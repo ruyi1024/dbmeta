@@ -29,49 +29,18 @@ export default [
     path: '/execute/',
     component: './execute/',
   },
+
   {
     name: 'meta',
-    icon: 'database',
-    path: '/meta',
-    routes: [
-      { path: '/meta', redirect: '/meta/dashboard' },
-      {
-        path: '/meta/dashboard',
-        name: 'dashboard',
-        component: './meta/dashboard',
-        icon: 'BlockOutlined',
-      },
-      {
-        path: '/meta/instance',
-        name: 'instance',
-        component: './meta/instance',
-        icon: 'BlockOutlined',
-      },
-      {
-        path: '/meta/database',
-        name: 'database',
-        component: './meta/database',
-        icon: 'BlockOutlined',
-      },
-      {
-        path: '/meta/table',
-        name: 'table',
-        component: './meta/table',
-        icon: 'BlockOutlined',
-      },
-      {
-        path: '/meta/column',
-        name: 'column',
-        component: './meta/column',
-        icon: 'BlockOutlined',
-      },
-      {
-        path: '/meta/quality',
-        name: 'quality',
-        component: './meta/quality',
-        icon: 'BlockOutlined',
-      },
-    ],
+    icon: 'DatabaseOutlined',
+    path: '/meta/',
+    component: './meta/',
+  },
+  {
+    name: 'pumpkin',
+    icon: 'BarChartOutlined',
+    path: '/pumpkin',
+    component: './pumpkin/index',
   },
 
   {
@@ -152,25 +121,14 @@ export default [
       },
     ],
   },
-
-  {
-    name: 'aichat',
-    icon: 'RobotOutlined',
-    path: '/ai/chat',
-    component: './ai/chat/',
-  },
-  {
-    name: 'aichatrules',
-    icon: 'RobotOutlined',
-    path: '/ai/chat/rules',
-    component: './ai/chat/rules/',
-  },
   {
     name: 'aiAnalysis',
     icon: 'FileTextOutlined',
     path: '/task/analysis',
     component: './task/analysis',
   },
+
+  
   {
     name: 'aiDbQuery',
     icon: 'SearchOutlined',
@@ -178,7 +136,12 @@ export default [
     component: './ai/dbquery',
   },
 
-
+  {
+    name: 'aichat',
+    icon: 'RobotOutlined',
+    path: '/ai/chat',
+    component: './ai/chat/',
+  },
  
   {
     name: 'monitor',
@@ -313,7 +276,13 @@ export default [
         icon: 'RobotOutlined',
         access: 'canAdmin',
       },
-
+      {
+        path: '/setting/ai_chat_rules',
+        name: 'ai_chat_rules',
+        component: './ai/chat/rules/',
+        icon: 'FileTextOutlined',
+        access: 'canAdmin',
+      },
     ],
   },
 

@@ -1,14 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { PageContainer } from '@ant-design/pro-layout';
-import { Row, Col, Card, message, Space } from 'antd';
+import { Row, Col, Card, Space } from 'antd';
 import { 
-  PieChartTwoTone, 
-  DatabaseOutlined, 
-  CloudServerOutlined, 
-  GlobalOutlined, 
-  ServerOutlined,
-  TableOutlined,
-  UnorderedListOutlined
+  PieChartTwoTone
 } from '@ant-design/icons';
 import styles from './index.less';
 import PieChart from '@/components/Chart/PieChart';
@@ -42,13 +36,12 @@ export default (): React.ReactNode => {
           setLoading(false);
         });
     } catch (e) {
-      message.error(`get data error. ${e}`);
       setLoading(false);
     }
   }, []);
 
   return (
-    <PageContainer title="数据字典概览大盘" className={styles.metaDashboard}>
+    <>
       {/* 统计卡片区域 */}
       <div className={styles.statisticsSection}>
         <StatisticCard.Group className={styles.statisticGroup}>
@@ -192,6 +185,6 @@ export default (): React.ReactNode => {
           </Col>
         </Row>
       </div>
-    </PageContainer>
+    </>
   );
 };

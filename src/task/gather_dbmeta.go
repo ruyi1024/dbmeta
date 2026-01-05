@@ -385,3 +385,8 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 
 	return nil
 }
+
+// ExecuteDbMetaTask 导出函数，用于手动执行任务
+func ExecuteDbMetaTask() {
+	doDbMetaTask()
+}

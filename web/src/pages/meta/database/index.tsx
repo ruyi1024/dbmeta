@@ -170,7 +170,7 @@ const TableList: React.FC<{}> = () => {
   ];
 
   return (
-    <PageContainer>
+    <>
       <ProTable<TableListItem>
         {...tableProps}
         headerTitle="数据库列表"
@@ -250,7 +250,7 @@ const TableList: React.FC<{}> = () => {
           ]}
         />
       </UpdateForm>
-    </PageContainer>
+    </>
   );
 };
 

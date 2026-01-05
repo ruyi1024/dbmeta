@@ -17,6 +17,7 @@ or use it for commercial purposes after secondary development, otherwise you may
 package task
 
 import (
+	"context"
 	"dbmcloud/log"
 	"dbmcloud/setting"
 	"dbmcloud/src/database"
@@ -101,9 +102,8 @@ func doDatasourceCheck() {
 		user := datasource.User
 		pass := datasource.Pass
 		dbid := datasource.Dbid
-		env := datasource.Env
 
-		logger.Info("检查数据源", zap.Int("index", i+1), zap.Int("total", len(dataList)),
+		logger.Info("处理数据源", zap.Int("index", i+1), zap.Int("total", len(dataList)),
 			zap.String("type", datasourceType), zap.String("host", host), zap.String("port", port))
 
 		var origPass string
@@ -118,21 +118,25 @@ func doDatasourceCheck() {
 				continue
 			}
 		}
-		checkStatus := checkConnectionTask(datasourceType, env, host, port, user, origPass, dbid)
-		if checkStatus.Status == 1 {
-			successCount++
-		} else {
+
+		checkResult := doDatasourceCheckTask(datasourceType, host, port, user, origPass, dbid, datasource.Env)
+		if checkResult.Status == 0 {
+			errorMsg := fmt.Sprintf("数据源 %s:%s 连接检查失败: %s", host, port, checkResult.StatusText)
+			logger.Error(errorMsg)
+			errorDetails = append(errorDetails, errorMsg)
 			failedCount++
-			errorDetails = append(errorDetails, checkStatus.StatusText)
+		} else {
+			successCount++
 		}
 
 		// 更新进度
-		progressMsg := fmt.Sprintf("已检查 %d/%d 个数据源 (成功: %d, 失败: %d)", i+1, len(dataList), successCount, failedCount)
+		progressMsg := fmt.Sprintf("已处理 %d/%d 个数据源 (成功: %d, 失败: %d)", i+1, len(dataList), successCount, failedCount)
 		taskLogger.UpdateResult(progressMsg)
 	}
 
 	// 记录最终结果
-	finalResult := fmt.Sprintf("任务完成 - 数据源总计: %d, 连接成功: %d, 连接失败: %d", len(dataList), successCount, failedCount)
+	finalResult := fmt.Sprintf("任务完成 - 数据源总计: %d, 成功: %d, 失败: %d",
+		len(dataList), successCount, failedCount)
 	if len(errorDetails) > 0 {
 		finalResult += fmt.Sprintf("。失败详情: %s", errorDetails[0])
 		if len(errorDetails) > 1 {
@@ -150,16 +154,16 @@ func doDatasourceCheck() {
 }
 
 type CheckResult struct {
-	Status     int32
+	Status     int
 	StatusText string
 }
 
-func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid string) CheckResult {
+func doDatasourceCheckTask(datasourceType, host, port, user, pass, dbid, env string) CheckResult {
+	status := 1
+	statusText := "数据源连接正常"
 
-	var status int32 = 1
-	var statusText = "数据源服务连接正常."
 	if datasourceType == "MySQL" || datasourceType == "TiDB" || datasourceType == "Doris" || datasourceType == "MariaDB" || datasourceType == "GreatSQL" || datasourceType == "OceanBase" {
-		db, err := mysql.Connect(host, port, user, pass, "")
+		db, err := mysql.Connect(host, port, user, pass, dbid)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
@@ -167,9 +171,8 @@ func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid strin
 		} else {
 			defer db.Close()
 		}
-
-	} else if datasourceType == "ClickHouse" {
-		db, err := clickhouse.Connect(host, port, user, pass, "")
+	} else if datasourceType == "Redis" {
+		db, err := redis.Connect(host, port, pass)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
@@ -178,7 +181,7 @@ func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid strin
 			defer db.Close()
 		}
 	} else if datasourceType == "PostgreSQL" {
-		db, err := postgres.Connect(host, port, user, pass, "postgres")
+		db, err := postgres.Connect(host, port, user, pass, dbid)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
@@ -196,16 +199,7 @@ func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid strin
 			defer db.Close()
 		}
 	} else if datasourceType == "SQLServer" {
-		db, err := mssql.Connect(host, port, user, pass, "")
-		if err != nil {
-			status = 0
-			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
-			log.Logger.Error(fmt.Sprintf("Datasource check: Can't connect server on %s:%s, %s", host, port, err))
-		} else {
-			defer db.Close()
-		}
-	} else if datasourceType == "Redis" {
-		db, err := redis.Connect(host, port, pass)
+		db, err := mssql.Connect(host, port, user, pass, dbid)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
@@ -214,42 +208,33 @@ func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid strin
 			defer db.Close()
 		}
 	} else if datasourceType == "MongoDB" {
-		_, err := mongodb.Connect(host, port, user, pass, "local")
+		db, err := mongodb.Connect(host, port, user, pass, dbid)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
 			log.Logger.Error(fmt.Sprintf("Datasource check: Can't connect server on %s:%s, %s", host, port, err))
 		} else {
-			//defer db.Close()
+			defer db.Disconnect(context.Background())
 		}
-	} else {
-		return CheckResult{Status: 0, StatusText: "不支持的数据源类型"}
+	} else if datasourceType == "ClickHouse" {
+		db, err := clickhouse.Connect(host, port, user, pass, dbid)
+		if err != nil {
+			status = 0
+			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
+			log.Logger.Error(fmt.Sprintf("Datasource check: Can't connect server on %s:%s, %s", host, port, err))
+		} else {
+			defer db.Close()
+		}
 	}
 
-	var db = database.DB
-	var record model.Datasource
-	record.Status = status
-	record.StatusText = statusText
-	db.Model(&record).Select("status", "status_text").Omit("id").Where("host=?", host).Where("port=?", port).Updates(&record)
-
-	//数据源监测事件
-	eventEntity := fmt.Sprintf("%s:%s", host, port)
-	eventType := datasourceType
-	eventGroup := env
-	detail := make([]map[string]interface{}, 0)
-	detail = append(detail, map[string]interface{}{"Error": statusText})
-	events := make([]map[string]interface{}, 0)
-	event := map[string]interface{}{
-		"event_uuid":   tool.GetUUID(),
-		"event_time":   tool.GetNowTime(),
-		"event_type":   eventType,
-		"event_group":  eventGroup,
-		"event_entity": eventEntity,
-		"event_key":    "datasourceCheck",
-		"event_value":  utils.IntToDecimal(int(status)),
-		"event_tag":    "",
-		"event_unit":   "",
-		"event_detail": utils.MapToStr(detail),
+	// 创建事件
+	var events []model.Event
+	event := model.Event{
+		EventEntity: datasourceType,
+		EventKey:    "datasourceCheck",
+		EventValue:  float32(status),
+		EventDetail: statusText,
+		EventTime:   time.Now(),
 	}
 	events = append(events, event)
 
@@ -263,9 +248,25 @@ func checkConnectionTask(datasourceType, env, host, port, user, pass, dbid strin
 
 	//send event to nsq
 	//fmt.Println(events)
-	for _, event := range events {
-		mq.Send(event)
+	for range events {
+		mq.Send(map[string]interface{}{
+			"event_uuid":   tool.GetUUID(),
+			"event_time":   time.Now(),
+			"event_type":   datasourceType,
+			"event_group":  env,
+			"event_entity": fmt.Sprintf("%s:%s", host, port),
+			"event_key":    "datasourceCheck",
+			"event_value":  float32(status),
+			"event_tag":    "",
+			"event_unit":   "",
+			"event_detail": statusText,
+		})
 	}
 
 	return CheckResult{Status: status, StatusText: statusText}
+}
+
+// ExecuteDatasourceCheck 导出函数，用于手动执行任务
+func ExecuteDatasourceCheck() {
+	doDatasourceCheck()
 }

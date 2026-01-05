@@ -551,3 +551,8 @@ func getTopIssues(issues []model.DataQualityIssue, limit int) []model.DataQualit
 	}
 	return issues[:limit]
 }
+
+// ExecuteDataQualityAiAnalysis 导出函数，用于手动执行任务
+func ExecuteDataQualityAiAnalysis() {
+	doDataQualityAiAnalysis()
+}

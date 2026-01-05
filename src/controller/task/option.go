@@ -19,10 +19,12 @@ package task
 import (
 	"dbmcloud/src/database"
 	"dbmcloud/src/model"
+	taskRunner "dbmcloud/src/task"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -101,4 +103,76 @@ func OptionList(c *gin.Context) {
 		c.JSON(200, gin.H{"success": true})
 		return
 	}
+}
+
+// ExecuteTask 手动执行任务
+func ExecuteTask(c *gin.Context) {
+	var req struct {
+		TaskKey string `json:"task_key" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"msg":     "参数解析失败: " + err.Error(),
+		})
+		return
+	}
+
+	var db = database.DB
+	var taskOption model.TaskOption
+	result := db.Where("task_key = ?", req.TaskKey).First(&taskOption)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"msg":     "任务不存在",
+		})
+		return
+	}
+
+	// 检查任务是否启用
+	if taskOption.Enable != 1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"msg":     "任务未启用，无法执行",
+		})
+		return
+	}
+
+	// 根据 task_key 调用对应的任务函数
+	go func() {
+		// 更新心跳时间
+		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", req.TaskKey).Updates(map[string]interface{}{
+			"heartbeat_time": time.Now().Format("2006-01-02 15:04:05.999"),
+		})
+
+		// 调用对应的任务函数
+		switch req.TaskKey {
+		case "gather_pumpkin":
+			taskRunner.ExecutePumpkinTask()
+		case "gather_pumpkin_growth":
+			taskRunner.ExecutePumpkinGrowthTask()
+		case "gather_dbmeta":
+			taskRunner.ExecuteDbMetaTask()
+		case "check_datasource":
+			taskRunner.ExecuteDatasourceCheck()
+		case "gather_sensitive":
+			// 如果有 gather_sensitive 任务，在这里调用
+			// taskRunner.ExecuteSensitiveTask()
+		case "data_quality_ai_analysis":
+			taskRunner.ExecuteDataQualityAiAnalysis()
+		default:
+			// 其他任务可以在这里添加
+		}
+
+		// 更新心跳结束时间
+		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", req.TaskKey).Updates(map[string]interface{}{
+			"heartbeat_end_time": time.Now().Format("2006-01-02 15:04:05.999"),
+		})
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"msg":     "任务已开始执行",
+	})
 }
