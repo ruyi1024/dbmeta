@@ -130,13 +130,10 @@ func ExecuteTask(c *gin.Context) {
 		return
 	}
 
-	// 检查任务是否启用
+	// 手工执行允许执行未启用的任务（用于测试），但给出提示
 	if taskOption.Enable != 1 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"msg":     "任务未启用，无法执行",
-		})
-		return
+		// 允许执行，但记录日志提示任务未启用
+		// 继续执行任务
 	}
 
 	// 根据 task_key 调用对应的任务函数

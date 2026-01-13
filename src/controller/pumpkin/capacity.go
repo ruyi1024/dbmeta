@@ -453,54 +453,128 @@ func GetTableCapacityGrowth(c *gin.Context) {
 
 // GetCapacityStats 获取数据容量统计信息
 func GetCapacityStats(c *gin.Context) {
-	// 获取近1小时的数据
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	// 获取今天的时间范围
+	today := time.Now()
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 
-	// 总数据库数（去重）- 使用子查询
+	// 总数据库数（去重）- 从pumpkin_database_growth表统计今天每个数据库的最新记录
 	var totalDatabases int64
-	database.DB.Raw(`
-		SELECT COUNT(DISTINCT database_name) 
-		FROM pumpkin_table_size 
-		WHERE gmt_created >= ?
-	`, oneHourAgo).Scan(&totalDatabases)
+	if err := database.DB.Raw(`
+		SELECT COUNT(DISTINCT t1.database_name) 
+		FROM pumpkin_database_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, MAX(gmt_created) as max_created
+			FROM pumpkin_database_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name
+		) t2 ON t1.datasource_type = t2.datasource_type 
+			AND t1.host = t2.host 
+			AND t1.port = t2.port 
+			AND t1.database_name = t2.database_name 
+			AND t1.gmt_created = t2.max_created
+	`, todayStart).Scan(&totalDatabases).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询数据库数失败: " + err.Error()})
+		return
+	}
 
-	// 总数据表数（去重）- 使用子查询
+	// 总数据表数（去重）- 从pumpkin_table_growth表统计今天每个表的最新记录
 	var totalTables int64
-	database.DB.Raw(`
-		SELECT COUNT(DISTINCT CONCAT(database_name, '.', table_name)) 
-		FROM pumpkin_table_size 
-		WHERE gmt_created >= ?
-	`, oneHourAgo).Scan(&totalTables)
+	if err := database.DB.Raw(`
+		SELECT COUNT(DISTINCT CONCAT(t1.database_name, '.', t1.table_name)) 
+		FROM pumpkin_table_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
+			FROM pumpkin_table_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name, table_name
+		) t2 ON t1.datasource_type = t2.datasource_type 
+			AND t1.host = t2.host 
+			AND t1.port = t2.port 
+			AND t1.database_name = t2.database_name 
+			AND t1.table_name = t2.table_name 
+			AND t1.gmt_created = t2.max_created
+	`, todayStart).Scan(&totalTables).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询数据表数失败: " + err.Error()})
+		return
+	}
 
-	// 总数据量
+	// 总数据量 - 从pumpkin_database_growth表统计今天每个数据库的最新记录，然后求和
 	var totalDataSize int64
-	database.DB.Raw(`
-		SELECT COALESCE(SUM(data_size), 0) 
-		FROM pumpkin_table_size 
+	if err := database.DB.Raw(`
+		SELECT COALESCE(SUM(t1.database_size), 0) 
+		FROM pumpkin_database_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, MAX(gmt_created) as max_created
+			FROM pumpkin_database_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name
+		) t2 ON t1.datasource_type = t2.datasource_type 
+			AND t1.host = t2.host 
+			AND t1.port = t2.port 
+			AND t1.database_name = t2.database_name 
+			AND t1.gmt_created = t2.max_created
+	`, todayStart).Scan(&totalDataSize).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询总数据量失败: " + err.Error()})
+		return
+	}
+
+	// 总数据记录数 - 从pumpkin_database_growth表统计今天每个数据库的最新记录，然后求和
+	var totalRows int64
+	if err := database.DB.Raw(`
+		SELECT COALESCE(SUM(t1.database_rows), 0) 
+		FROM pumpkin_database_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, MAX(gmt_created) as max_created
+			FROM pumpkin_database_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name
+		) t2 ON t1.datasource_type = t2.datasource_type 
+			AND t1.host = t2.host 
+			AND t1.port = t2.port 
+			AND t1.database_name = t2.database_name 
+			AND t1.gmt_created = t2.max_created
+	`, todayStart).Scan(&totalRows).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询总记录数失败: " + err.Error()})
+		return
+	}
+
+	// 天增长数据量 - 从pumpkin_database_growth表统计今天的增量
+	var dailyGrowth int64
+	if err := database.DB.Raw(`
+		SELECT COALESCE(SUM(database_size_incr), 0) 
+		FROM pumpkin_database_growth 
 		WHERE gmt_created >= ?
-	`, oneHourAgo).Scan(&totalDataSize)
-
-	// 天增长数据量（获取24小时前的数据量，计算差值）
-	oneDayAgo := time.Now().Add(-24 * time.Hour)
-	var oneDayAgoDataSize int64
-	database.DB.Raw(`
-		SELECT COALESCE(SUM(data_size), 0) 
-		FROM pumpkin_table_size 
-		WHERE gmt_created >= ? AND gmt_created < ?
-	`, oneDayAgo, oneHourAgo).Scan(&oneDayAgoDataSize)
-
-	dailyGrowth := totalDataSize - oneDayAgoDataSize
+	`, todayStart).Scan(&dailyGrowth).Error; err != nil {
+		// 如果查询失败，设置为0
+		dailyGrowth = 0
+	}
 	if dailyGrowth < 0 {
 		dailyGrowth = 0
+	}
+
+	// 天增长记录数 - 从pumpkin_database_growth表统计今天的增量
+	var dailyGrowthRows int64
+	if err := database.DB.Raw(`
+		SELECT COALESCE(SUM(database_rows_incr), 0) 
+		FROM pumpkin_database_growth 
+		WHERE gmt_created >= ?
+	`, todayStart).Scan(&dailyGrowthRows).Error; err != nil {
+		// 如果查询失败，设置为0
+		dailyGrowthRows = 0
+	}
+	if dailyGrowthRows < 0 {
+		dailyGrowthRows = 0
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": map[string]interface{}{
-			"totalDatabases": totalDatabases,
-			"totalTables":    totalTables,
-			"totalDataSize":  formatSize(totalDataSize),
-			"dailyGrowth":    formatSize(dailyGrowth),
+			"totalDatabases":  totalDatabases,
+			"totalTables":     totalTables,
+			"totalDataSize":   formatSize(totalDataSize),
+			"totalRows":       totalRows,
+			"dailyGrowth":     formatSize(dailyGrowth),
+			"dailyGrowthRows": dailyGrowthRows,
 		},
 	})
 }

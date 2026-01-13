@@ -14,7 +14,9 @@ interface CapacityStats {
   totalDatabases: number;
   totalTables: number;
   totalDataSize: string;
+  totalRows: number;
   dailyGrowth: string;
+  dailyGrowthRows: number;
 }
 
 // 数据库容量Top10数据类型
@@ -55,7 +57,9 @@ const Overview: React.FC = () => {
     totalDatabases: 0,
     totalTables: 0,
     totalDataSize: '0 B',
+    totalRows: 0,
     dailyGrowth: '0 B',
+    dailyGrowthRows: 0,
   });
 
   // 将字节数转换为GB数值（用于图表显示）
@@ -143,14 +147,22 @@ const Overview: React.FC = () => {
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/v1/pumpkin/capacity/stats');
+      if (!response.ok) {
+        console.error('获取统计数据失败: HTTP', response.status, response.statusText);
+        return;
+      }
       const json = await response.json();
       if (json.success && json.data) {
         setStatsData({
-          totalDatabases: json.data.totalDatabases || 0,
-          totalTables: json.data.totalTables || 0,
+          totalDatabases: Number(json.data.totalDatabases) || 0,
+          totalTables: Number(json.data.totalTables) || 0,
           totalDataSize: json.data.totalDataSize || '0 B',
+          totalRows: Number(json.data.totalRows) || 0,
           dailyGrowth: json.data.dailyGrowth || '0 B',
+          dailyGrowthRows: Number(json.data.dailyGrowthRows) || 0,
         });
+      } else {
+        console.error('统计数据格式错误:', json);
       }
     } catch (error) {
       console.error('获取统计数据失败:', error);
@@ -261,11 +273,11 @@ const Overview: React.FC = () => {
     <div>
       {/* 数据统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={4}>
           <Card>
             <StatisticCard
               statistic={{
-                title: '总数据库',
+                title: '数据库数量',
                 value: statsData.totalDatabases,
                 prefix: <DatabaseOutlined style={{ color: '#1890ff' }} />,
                 valueStyle: { color: '#1890ff' },
@@ -273,11 +285,11 @@ const Overview: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={4}>
           <Card>
             <StatisticCard
               statistic={{
-                title: '总数据表',
+                title: '数据表数量',
                 value: statsData.totalTables,
                 prefix: <TableOutlined style={{ color: '#52c41a' }} />,
                 valueStyle: { color: '#52c41a' },
@@ -285,11 +297,11 @@ const Overview: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={4}>
           <Card>
             <StatisticCard
               statistic={{
-                title: '总数据量',
+                title: '总数据容量',
                 value: statsData.totalDataSize,
                 prefix: <HddOutlined style={{ color: '#faad14' }} />,
                 valueStyle: { color: '#faad14' },
@@ -297,7 +309,19 @@ const Overview: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={12} md={4}>
+          <Card>
+            <StatisticCard
+              statistic={{
+                title: '总数据记录',
+                value: statsData.totalRows.toLocaleString(),
+                prefix: <TableOutlined style={{ color: '#722ed1' }} />,
+                valueStyle: { color: '#722ed1' },
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={4}>
           <Card>
             <StatisticCard
               statistic={{
@@ -305,6 +329,18 @@ const Overview: React.FC = () => {
                 value: statsData.dailyGrowth,
                 prefix: <RiseOutlined style={{ color: '#f5222d' }} />,
                 valueStyle: { color: '#f5222d' },
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={4}>
+          <Card>
+            <StatisticCard
+              statistic={{
+                title: '天增长记录数',
+                value: statsData.dailyGrowthRows.toLocaleString(),
+                prefix: <RiseOutlined style={{ color: '#52c41a' }} />,
+                valueStyle: { color: '#52c41a' },
               }}
             />
           </Card>

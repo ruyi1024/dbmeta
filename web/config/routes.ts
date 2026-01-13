@@ -127,6 +127,12 @@ export default [
     path: '/task/analysis',
     component: './task/analysis',
   },
+  {
+    name: 'dataAlarm',
+    icon: 'WarningOutlined',
+    path: '/data/alarm',
+    component: './data/alarm',
+  },
 
   
   {
@@ -143,90 +149,70 @@ export default [
     component: './ai/chat/',
   },
  
-  {
-    name: 'monitor',
-    icon: 'DashboardOutlined',
-    path: '/monitor',
-    routes: [
-      { path: '/monitor', redirect: '/monitor/dashboard' },
-      {
-        name: 'dashboard',
-        icon: 'DashboardOutlined',
-        path: '/monitor/dashboard/',
-        component: './monitor/dashboard/index',
-      },
-      {
-        name: 'event',
-        icon: 'BarChartOutlined',
-        path: '/monitor/event/',
-        component: './monitor/event/index',
-      },
-      {
-        name: 'processlist',
-        icon: 'MonitorOutlined',
-        path: '/monitor/processlist/',
-        component: './monitor/processlist/simple',
-      },
-    ]
-  },
+  // {
+  //   name: 'event',
+  //   icon: 'DashboardOutlined',
+  //   path: '/event',
+  //   component: './event/index',
+  // },
 
-  {
-    name: 'alarm',
-    icon: 'WarningOutlined',
-    path: '/alarm',
-    //component: './Alarm/Index',
-    routes: [
-      { path: '/alarm', redirect: '/alarm/event' },
-      {
-        path: '/alarm/event',
-        name: 'alarmEvent',
-        component: './alarm/event',
-        icon: 'MailOutlined',
-      },
-      {
-        path: '/alarm/level',
-        name: 'alarmLevel',
-        component: './alarm/level',
-        icon: 'OrderedListOutlined',
-        //access: 'canAdmin',
-      },
-      {
-        path: '/alarm/channel',
-        name: 'alarmChannel',
-        component: './alarm/channel',
-        icon: 'UsergroupAddOutlined',
-        //access: 'canAdmin',
-      },
-      {
-        path: '/alarm/rule',
-        name: 'alarmRule',
-        component: './alarm/rule',
-        icon: 'SettingOutlined',
-        //access: 'canAdmin',
-      },
-      {
-        path: '/alarm/suggest',
-        name: 'alarmSuggest',
-        component: './alarm/suggest',
-        icon: 'HeartOutlined',
-        //access: 'canAdmin',
-      },
-      {
-        path: '/alarm/test',
-        name: 'alarmTest',
-        component: './alarm/test',
-        icon: 'HeartOutlined',
-        //access: 'canAdmin',
-      },
-      {
-        path: '/alarm/nsq',
-        name: 'nsqPage',
-        component: './alarm/nsq',
-        icon: 'HeartOutlined',
-        //access: 'canAdmin',
-      },
-    ],
-  },
+  // {
+  //   name: 'alarm',
+  //   icon: 'WarningOutlined',
+  //   path: '/alarm',
+  //   //component: './Alarm/Index',
+  //   routes: [
+  //     { path: '/alarm', redirect: '/alarm/event' },
+  //     {
+  //       path: '/alarm/event',
+  //       name: 'alarmEvent',
+  //       component: './alarm/event',
+  //       icon: 'MailOutlined',
+  //     },
+  //     {
+  //       path: '/alarm/level',
+  //       name: 'alarmLevel',
+  //       component: './alarm/level',
+  //       icon: 'OrderedListOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //     {
+  //       path: '/alarm/channel',
+  //       name: 'alarmChannel',
+  //       component: './alarm/channel',
+  //       icon: 'UsergroupAddOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //     {
+  //       path: '/alarm/rule',
+  //       name: 'alarmRule',
+  //       component: './alarm/rule',
+  //       icon: 'SettingOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //     {
+  //       path: '/alarm/suggest',
+  //       name: 'alarmSuggest',
+  //       component: './alarm/suggest',
+  //       icon: 'HeartOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //     {
+  //       path: '/alarm/test',
+  //       name: 'alarmTest',
+  //       component: './alarm/test',
+  //       icon: 'HeartOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //     {
+  //       path: '/alarm/nsq',
+  //       name: 'nsqPage',
+  //       component: './alarm/nsq',
+  //       icon: 'HeartOutlined',
+  //       //access: 'canAdmin',
+  //     },
+  //   ],
+  // },
   {
     name: 'userManager',
     icon: 'UserOutlined',
@@ -234,6 +220,15 @@ export default [
     component: './UserManager/index',
     access: 'canAdmin',
   },
+
+  {
+    name: 'task',
+    icon: 'MenuUnfoldOutlined',
+    path: '/task',
+    component: './task/index',
+    access: 'canAdmin',
+  },
+  
   {
     name: 'setting',
     icon: 'SettingOutlined',
@@ -286,40 +281,6 @@ export default [
     ],
   },
 
-  {
-    name: 'task',
-    icon: 'MenuUnfoldOutlined',
-    path: '/task',
-    routes: [
-      { path: '/task', redirect: '/task/option' },
-      {
-        path: '/task/option',
-        name: 'option',
-        component: './task/option',
-        icon: 'OrderedListOutlined',
-      },
-      {
-        path: '/task/heartbeat',
-        name: 'heartbeat',
-        component: './task/heartbeat',
-        icon: 'HeatMapOutlined',
-      },
-    ],
-  },
-  {
-    name: 'change',
-    icon: 'SwapOutlined',
-    path: '/change',
-    routes: [
-      { path: '/change', redirect: '/change/query' },
-      {
-        path: '/change/query',
-        name: 'query',
-        component: './change/query',
-        icon: 'SearchOutlined',
-      },
-    ],
-  },
   {
     name: 'support',
     icon: 'BulbOutlined',

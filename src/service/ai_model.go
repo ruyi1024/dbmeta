@@ -131,12 +131,40 @@ func ToggleModel(id int, enabled int8) error {
 }
 
 // GetDecryptedApiKey 获取解密后的API密钥
+// 如果解密失败，会尝试判断是否为未加密的原始密钥（比如在测试配置时）
 func GetDecryptedApiKey(aiModel *model.AIModel) (string, error) {
 	if aiModel.ApiKey == "" {
 		return "", nil
 	}
+
+	// 先检查是否是有效的十六进制字符串（加密后的格式）
+	// 加密后的字符串是十六进制编码，只包含 0-9, a-f, A-F
+	isHexString := true
+	for _, char := range aiModel.ApiKey {
+		if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
+			isHexString = false
+			break
+		}
+	}
+
+	// 如果看起来不像十六进制字符串（比如包含 sk- 前缀或其他字符），可能是未加密的原始密钥
+	if !isHexString {
+		return aiModel.ApiKey, nil
+	}
+
+	// 尝试解密
 	decryptedKey, err := utils.AesPassDecode(aiModel.ApiKey, setting.Setting.DbPassKey)
 	if err != nil {
+		// 解密失败，可能是未加密的原始密钥（虽然看起来像十六进制，但实际不是加密数据）
+		// 或者加密格式不正确
+		// 对于测试配置场景，如果解密失败，尝试返回原始值
+		// 但需要判断：如果长度很短（<32字符），可能是未加密的；如果很长，可能是加密格式错误
+		keyLen := len(aiModel.ApiKey)
+		if keyLen < 32 {
+			// 短字符串，可能是未加密的原始密钥
+			return aiModel.ApiKey, nil
+		}
+		// 长字符串但解密失败，返回错误
 		return "", fmt.Errorf("解密API密钥失败: %v", err)
 	}
 	return decryptedKey, nil

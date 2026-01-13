@@ -97,7 +97,24 @@ func alarm(value string) {
 	eventKey := event["event_key"].(string)
 	//eventTag := event["event_tag"].(string)
 	eventEntity := event["event_entity"].(string)
-	eventValue := utils.StrToFloat64(event["event_value"].(string))
+
+	// 处理 event_value，可能是 string 或 float64
+	var eventValue float64
+	switch v := event["event_value"].(type) {
+	case string:
+		eventValue = utils.StrToFloat64(v)
+	case float64:
+		eventValue = v
+	case float32:
+		eventValue = float64(v)
+	case int:
+		eventValue = float64(v)
+	case int64:
+		eventValue = float64(v)
+	default:
+		log.Logger.Warn(fmt.Sprintf("unexpected event_value type: %T, value: %v", v, v))
+		eventValue = 0
+	}
 
 	// 处理传统规则告警
 	alarmRuleList := getAlarmRule(eventType, eventGroup, eventEntity, eventKey)
@@ -175,7 +192,25 @@ func sendAlarm(event, rule map[string]interface{}, match bool) {
 	eventGroup := event["event_group"].(string)
 	eventKey := event["event_key"].(string)
 	eventEntity := event["event_entity"].(string)
-	eventValue := utils.StrToFloat64(event["event_value"].(string))
+
+	// 处理 event_value，可能是 string 或 float64
+	var eventValue float64
+	switch v := event["event_value"].(type) {
+	case string:
+		eventValue = utils.StrToFloat64(v)
+	case float64:
+		eventValue = v
+	case float32:
+		eventValue = float64(v)
+	case int:
+		eventValue = float64(v)
+	case int64:
+		eventValue = float64(v)
+	default:
+		log.Logger.Warn(fmt.Sprintf("unexpected event_value type: %T, value: %v", v, v))
+		eventValue = 0
+	}
+
 	eventTag := event["event_tag"].(string)
 	eventUnit := event["event_unit"].(string)
 	/*

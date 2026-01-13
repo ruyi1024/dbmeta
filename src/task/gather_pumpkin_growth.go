@@ -232,51 +232,24 @@ func calculateTableGrowth(time24HoursAgoStr, nowStr string) error {
 			tableRowsIncr = current.TableRows
 		}
 
-		// 创建或更新增长记录
-		var growth model.PumpkinTableGrowth
-		result := db.Where("datasource_type = ? AND host = ? AND port = ? AND database_name = ? AND table_name = ?",
-			current.DatasourceType, current.Host, current.Port, current.DatabaseName, current.TableName).
-			First(&growth)
-
-		if result.Error != nil {
-			// 记录不存在，创建新记录
-			// 使用 Table().Create() 来确保使用正确的列名
-			growthData := map[string]interface{}{
-				"datasource_type": current.DatasourceType,
-				"host":            current.Host,
-				"port":            current.Port,
-				"database_name":   current.DatabaseName,
-				"table_name":      current.TableName,
-				"table_size":      current.TableSize,
-				"table_rows":      current.TableRows,
-				"table_size_incr": tableSizeIncr,
-				"table_rows_incr": tableRowsIncr,
-				"gmt_created":     time.Now(),
-				"gmt_updated":     time.Now(),
-			}
-			if err := db.Table("pumpkin_table_growth").Create(growthData).Error; err != nil {
-				logger.Error("创建表容量增长记录失败", zap.Error(err), zap.String("table", current.TableName))
-				failedCount++
-				continue
-			}
-		} else {
-			// 记录存在，更新
-			// 使用 Table().Where().Updates() 来确保使用正确的列名
-			if err := db.Table("pumpkin_table_growth").
-				Where("datasource_type = ? AND host = ? AND port = ? AND database_name = ? AND table_name = ?",
-					current.DatasourceType, current.Host, current.Port, current.DatabaseName, current.TableName).
-				Updates(map[string]interface{}{
-					"table_name":      current.TableName,
-					"table_size":      current.TableSize,
-					"table_rows":      current.TableRows,
-					"table_size_incr": tableSizeIncr,
-					"table_rows_incr": tableRowsIncr,
-					"gmt_updated":     time.Now(),
-				}).Error; err != nil {
-				logger.Error("更新表容量增长记录失败", zap.Error(err), zap.String("table", current.TableName))
-				failedCount++
-				continue
-			}
+		// 插入新的增长记录（每次都插入新记录，不更新）
+		growthData := map[string]interface{}{
+			"datasource_type": current.DatasourceType,
+			"host":            current.Host,
+			"port":            current.Port,
+			"database_name":   current.DatabaseName,
+			"table_name":      current.TableName,
+			"table_size":      current.TableSize,
+			"table_rows":      current.TableRows,
+			"table_size_incr": tableSizeIncr,
+			"table_rows_incr": tableRowsIncr,
+			"gmt_created":     time.Now(),
+			"gmt_updated":     time.Now(),
+		}
+		if err := db.Table("pumpkin_table_growth").Create(growthData).Error; err != nil {
+			logger.Error("插入表容量增长记录失败", zap.Error(err), zap.String("table", current.TableName))
+			failedCount++
+			continue
 		}
 		successCount++
 	}
@@ -291,6 +264,9 @@ func calculateDatabaseGrowth(nowStr string) error {
 	logger := log.Logger
 
 	// 从 pumpkin_table_growth 聚合计算数据库容量增长
+	// 查询今天的数据（每次执行任务都会插入新记录）
+	today := time.Now()
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	aggregateSQL := `
 		SELECT 
 			datasource_type,
@@ -303,7 +279,7 @@ func calculateDatabaseGrowth(nowStr string) error {
 			SUM(table_size_incr) as database_size_incr,
 			COALESCE(SUM(table_rows_incr), 0) as database_rows_incr
 		FROM pumpkin_table_growth
-		WHERE gmt_updated >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
+		WHERE gmt_created >= ?
 		GROUP BY datasource_type, host, port, database_name
 	`
 
@@ -319,7 +295,7 @@ func calculateDatabaseGrowth(nowStr string) error {
 		DatabaseRowsIncr int64  `gorm:"column:database_rows_incr"`
 	}
 
-	if err := db.Raw(aggregateSQL).Scan(&aggregateData).Error; err != nil {
+	if err := db.Raw(aggregateSQL, todayStart).Scan(&aggregateData).Error; err != nil {
 		return fmt.Errorf("聚合数据库容量增长数据失败: %v", err)
 	}
 
@@ -329,43 +305,24 @@ func calculateDatabaseGrowth(nowStr string) error {
 	failedCount := 0
 
 	for _, item := range aggregateData {
-		// 创建或更新数据库容量增长记录
-		var growth model.PumpkinDatabaseGrowth
-		result := db.Where("datasource_type = ? AND host = ? AND port = ? AND database_name = ?",
-			item.DatasourceType, item.Host, item.Port, item.DatabaseName).
-			First(&growth)
-
-		growth.DatasourceType = item.DatasourceType
-		growth.Host = item.Host
-		growth.Port = item.Port
-		growth.DatabaseName = item.DatabaseName
-		growth.DatabaseSize = item.DatabaseSize
-		growth.DatabaseRows = item.DatabaseRows
-		growth.TableCount = item.TableCount
-		growth.DatabaseSizeIncr = item.DatabaseSizeIncr
-		growth.DatabaseRowsIncr = item.DatabaseRowsIncr
-
-		if result.Error != nil {
-			// 记录不存在，创建新记录
-			if err := db.Create(&growth).Error; err != nil {
-				logger.Error("创建数据库容量增长记录失败", zap.Error(err), zap.String("database", item.DatabaseName))
-				failedCount++
-				continue
-			}
-		} else {
-			// 记录存在，更新
-			if err := db.Model(&growth).Updates(map[string]interface{}{
-				"database_size":      item.DatabaseSize,
-				"database_rows":      item.DatabaseRows,
-				"table_count":        item.TableCount,
-				"database_size_incr": item.DatabaseSizeIncr,
-				"database_rows_incr": item.DatabaseRowsIncr,
-				"gmt_updated":        time.Now(),
-			}).Error; err != nil {
-				logger.Error("更新数据库容量增长记录失败", zap.Error(err), zap.String("database", item.DatabaseName))
-				failedCount++
-				continue
-			}
+		// 插入新的数据库容量增长记录（每次都插入新记录，不更新）
+		growth := model.PumpkinDatabaseGrowth{
+			DatasourceType:   item.DatasourceType,
+			Host:             item.Host,
+			Port:             item.Port,
+			DatabaseName:     item.DatabaseName,
+			DatabaseSize:     item.DatabaseSize,
+			DatabaseRows:     item.DatabaseRows,
+			TableCount:       item.TableCount,
+			DatabaseSizeIncr: item.DatabaseSizeIncr,
+			DatabaseRowsIncr: item.DatabaseRowsIncr,
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
+		}
+		if err := db.Create(&growth).Error; err != nil {
+			logger.Error("插入数据库容量增长记录失败", zap.Error(err), zap.String("database", item.DatabaseName))
+			failedCount++
+			continue
 		}
 		successCount++
 	}

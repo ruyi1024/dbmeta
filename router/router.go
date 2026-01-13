@@ -21,6 +21,7 @@ import (
 	"dbmcloud/src/controller/alarm"
 	"dbmcloud/src/controller/audit"
 	"dbmcloud/src/controller/dashboard"
+	"dbmcloud/src/controller/data"
 	"dbmcloud/src/controller/dataquality"
 	"dbmcloud/src/controller/datasource"
 	"dbmcloud/src/controller/event"
@@ -83,9 +84,9 @@ func Router() *gin.Engine {
 		v1.POST("/task/option", task.OptionList)
 		v1.PUT("/task/option", task.OptionList)
 		v1.DELETE("/task/option", task.OptionList)
-		v1.GET("/task/heartbeat", task.HeartbeatList)
 		v1.GET("/task/log", task.TaskLogList)
 		v1.GET("/task/log/stats", task.TaskLogStats)
+		v1.GET("/task/today/stats", task.TaskTodayStats)
 
 		// 大模型分析任务相关路由
 		v1.GET("/task/analysis/list", task.AnalysisTaskList)
@@ -99,6 +100,20 @@ func Router() *gin.Engine {
 		v1.POST("/task/analysis/test-dify", task.TestDifyConnection)
 		v1.GET("/task/analysis/datasource-type", task.GetDatasourceTypeList)
 		v1.GET("/task/analysis/datasource", task.GetDatasourceList)
+
+		// 数据告警相关接口
+		v1.GET("/data/alarm/list", data.DataAlarmList)
+		v1.POST("/data/alarm/create", data.DataAlarmList)
+		v1.PUT("/data/alarm/update", data.DataAlarmList)
+		v1.DELETE("/data/alarm/delete/:id", data.DataAlarmList)
+		v1.PUT("/data/alarm/toggle-status", data.ToggleDataAlarmStatus)
+		v1.POST("/data/alarm/execute", data.ExecuteDataAlarm)
+		v1.GET("/data/alarm/logs", data.DataAlarmLogs)
+		v1.GET("/data/alarm/detail/:id", data.GetDataAlarmDetail)
+		v1.POST("/data/alarm/test-sql", data.TestSqlQuery)
+		v1.GET("/data/alarm/datasource-type", data.GetDatasourceTypeList)
+		v1.GET("/data/alarm/datasource", data.GetDatasourceList)
+		v1.GET("/data/alarm/database", data.GetDatabaseList)
 
 		v1.GET("/privilege/list", privilege.List)
 		v1.POST("/privilege/grant", privilege.DoGrant)
@@ -146,7 +161,6 @@ func Router() *gin.Engine {
 		v1.GET("/monitor/dashbaord/info", monitor.MetaInfo)
 		v1.GET("/monitor/mysql/status", monitor.MySQLStatus)
 		v1.POST("/monitor/mysql/chart", monitor.MySQLChart)
-		v1.POST("/monitor/processlist", monitor.GetProcessList)
 
 		v1.GET("/alarm/channel", alarm.ChannelList)
 		v1.POST("/alarm/channel", alarm.ChannelList)
@@ -244,11 +258,13 @@ func Router() *gin.Engine {
 			modelsGroup.GET("", ai.GetModels)
 			modelsGroup.GET("enabled", ai.GetEnabledModels)
 			modelsGroup.POST("", ai.CreateModel)
-			modelsGroup.POST(":id/test", ai.TestModel)
-			modelsGroup.PUT(":id/toggle", ai.ToggleModel)
 			modelsGroup.PUT(":id", ai.UpdateModel)
 			modelsGroup.DELETE(":id", ai.DeleteModel)
+			modelsGroup.PUT(":id/toggle", ai.ToggleModel)
+			modelsGroup.POST(":id/test", ai.TestModel)
 		}
+		// 测试配置接口使用不同的路径前缀，避免与 :id 路由冲突
+		v1.POST("/ai/model/test-config", ai.TestModelConfig)
 	}
 
 	return r

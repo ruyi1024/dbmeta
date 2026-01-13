@@ -5,6 +5,7 @@ import (
 	"dbmcloud/src/model"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -186,6 +187,162 @@ func TaskLogStats(c *gin.Context) {
 			"success": true,
 			"msg":     "OK",
 			"data":    stats,
+		})
+		return
+	}
+}
+
+// TaskTodayStats 获取今日任务执行统计（按小时）
+func TaskTodayStats(c *gin.Context) {
+	method := c.Request.Method
+	if method == "GET" {
+		var db = database.DB
+
+		// 获取今天的开始时间
+		now := time.Now()
+		todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		type HourStat struct {
+			Bucket  string
+			Total   int64
+			Failed  int64
+			Success int64
+		}
+
+		// 计算起止时间
+		hourNow := now.Truncate(time.Hour)
+		start24h := hourNow.Add(-23 * time.Hour) // 连续24个小时
+
+		// 今日按小时统计
+		rowsToday, err := db.Raw(`
+			SELECT 
+				DATE_FORMAT(gmt_created, '%H:00') as bucket,
+				COUNT(*) as total,
+				SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+				SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+			FROM task_log 
+			WHERE gmt_created >= ?
+			GROUP BY DATE_FORMAT(gmt_created, '%H:00')
+			ORDER BY bucket ASC
+		`, todayStart).Rows()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询统计失败: " + err.Error()})
+			return
+		}
+		defer rowsToday.Close()
+
+		todayMap := make(map[string]HourStat)
+		for rowsToday.Next() {
+			var stat HourStat
+			rowsToday.Scan(&stat.Bucket, &stat.Total, &stat.Failed, &stat.Success)
+			todayMap[stat.Bucket] = stat
+		}
+
+		// 最近24小时（滚动）统计
+		rows24h, err := db.Raw(`
+			SELECT 
+				DATE_FORMAT(gmt_created, '%m-%d %H:00') as bucket,
+				COUNT(*) as total,
+				SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+				SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+			FROM task_log 
+			WHERE gmt_created >= ?
+			GROUP BY DATE_FORMAT(gmt_created, '%m-%d %H:00')
+			ORDER BY bucket ASC
+		`, start24h).Rows()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": "查询24小时统计失败: " + err.Error()})
+			return
+		}
+		defer rows24h.Close()
+
+		h24Map := make(map[string]HourStat)
+		for rows24h.Next() {
+			var stat HourStat
+			rows24h.Scan(&stat.Bucket, &stat.Total, &stat.Failed, &stat.Success)
+			h24Map[stat.Bucket] = stat
+		}
+
+		// 今日总计、失败总计
+		var todayTotal, todayFailedTotal, todaySuccessTotal int64
+		for _, stat := range todayMap {
+			todayTotal += stat.Total
+			todayFailedTotal += stat.Failed
+			todaySuccessTotal += stat.Success
+		}
+
+		// 最新执行时间（今日）
+		var lastTaskLog model.TaskLog
+		var lastExecuteTime string
+		result := db.Where("gmt_created >= ?", todayStart).Order("gmt_created DESC").First(&lastTaskLog)
+		if result.Error == nil {
+			lastExecuteTime = lastTaskLog.CreatedAt.Format("2006-01-02 15:04:05")
+		}
+
+		// 构建今日趋势（0-23点）
+		todayTrend := make([]map[string]interface{}, 0, 24)
+		todayFailedTrend := make([]map[string]interface{}, 0, 24)
+		successRateTrend := make([]map[string]interface{}, 0, 24)
+		for i := 0; i < 24; i++ {
+			bucket := fmt.Sprintf("%02d:00", i)
+			stat := todayMap[bucket]
+			todayTrend = append(todayTrend, map[string]interface{}{
+				"x": bucket,
+				"y": stat.Total,
+			})
+			todayFailedTrend = append(todayFailedTrend, map[string]interface{}{
+				"x": bucket,
+				"y": stat.Failed,
+			})
+			var rate float64
+			if stat.Total > 0 {
+				rate = math.Round(float64(stat.Success) / float64(stat.Total) * 100)
+			}
+			successRateTrend = append(successRateTrend, map[string]interface{}{
+				"x": bucket,
+				"y": rate,
+			})
+		}
+
+		// 滚动24小时趋势
+		h24Trend := make([]map[string]interface{}, 0, 24)
+		slotTime := start24h
+		for i := 0; i < 24; i++ {
+			bucket := slotTime.Format("01-02 15:00")
+			stat := h24Map[bucket]
+			h24Trend = append(h24Trend, map[string]interface{}{
+				"x": bucket,
+				"y": stat.Total,
+			})
+			slotTime = slotTime.Add(time.Hour)
+		}
+
+		// 24小时总执行次数
+		var h24Total int64
+		for _, stat := range h24Map {
+			h24Total += stat.Total
+		}
+
+		// 成功率
+		var successRate float64
+		if todayTotal > 0 {
+			successRate = math.Round(float64(todaySuccessTotal) / float64(todayTotal) * 100)
+		}
+		successRateStr := fmt.Sprintf("%.0f%%", successRate)
+
+		c.JSON(http.StatusOK, gin.H{
+			"success":          true,
+			"msg":              "OK",
+			"todayTotal":       todayTotal,
+			"todayFailedTotal": todayFailedTotal,
+			"todayTrend":       todayTrend,
+			"todayFailedTrend": todayFailedTrend,
+			"hour24Total":      h24Total,
+			"hour24Trend":      h24Trend,
+			"successRate":      successRate,
+			"successRateStr":   successRateStr,
+			"successRateTrend": successRateTrend,
+			"lastExecuteTime":  lastExecuteTime,
 		})
 		return
 	}

@@ -28,6 +28,61 @@ import WaterMarkContent from '@/components/WaterMarkContent'
 
 // favoriteColumns 将在组件内部定义，以便访问组件状态
 
+// 可调整列宽的列头组件
+const ResizableHeaderCell = (props: any) => {
+  const { onResize, width, ...restProps } = props;
+
+  if (!width) {
+    return <th {...restProps} />;
+  }
+
+  return (
+    <th {...restProps} style={{ position: 'relative', width, minWidth: width }}>
+      {restProps.children}
+      {onResize && (
+        <span
+          className="react-resizable-handle"
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = width;
+            const minWidth = 50;
+
+            const handleMouseMove = (e: MouseEvent) => {
+              const diff = e.clientX - startX;
+              const newWidth = Math.max(minWidth, startWidth + diff);
+              onResize(e as any, { size: { width: newWidth } });
+            };
+
+            const handleMouseUp = () => {
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: '5px',
+            cursor: 'col-resize',
+            userSelect: 'none',
+            touchAction: 'none',
+            zIndex: 1,
+            backgroundColor: 'transparent',
+          }}
+        />
+      )}
+    </th>
+  );
+};
+
 
 const Index: React.FC = () => {
 
@@ -63,6 +118,7 @@ const Index: React.FC = () => {
   const [tableDataSuccess, setTableDataSuccess] = useState<boolean>(false);
   const [tableDataMsg, setTableDataMsg] = useState<any>("");
   const [queryTimes, setQueryTimes] = useState<number>(0);
+  const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({});
 
   const [currentUserinfo, setCurrentUserinfo] = useState({ "chineseName": "", "username": "" });
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -440,6 +496,18 @@ const Index: React.FC = () => {
       .then((json) => {
         console.info(json.data);
         setLoading(false);
+        // 初始化列宽（如果还没有设置）
+        if (json.columns && Array.isArray(json.columns)) {
+          const initialWidths: { [key: string]: number } = {};
+          json.columns.forEach((col: any) => {
+            if (col.dataIndex && !columnWidths[col.dataIndex]) {
+              initialWidths[col.dataIndex] = col.width || 150;
+            }
+          });
+          if (Object.keys(initialWidths).length > 0) {
+            setColumnWidths(prev => ({ ...prev, ...initialWidths }));
+          }
+        }
         return (
           setTableDataSuccess(json.success),
           setTableDataMsg(json.msg),
@@ -848,11 +916,39 @@ const Index: React.FC = () => {
                   <Table
                     bordered
                     loading={loading}
-                    scroll={{ scrollToFirstRowOnChange: true, x: 100 }}
+                    scroll={{ 
+                      scrollToFirstRowOnChange: true, 
+                      x: 'max-content',
+                      y: 'calc(100vh - 250px)' // 设置表格最大高度，表头会自动固定（原300px减少45px，相当于高度增加15%）
+                    }}
                     className={styles.tableStyle}
                     dataSource={tableDataList}
-                    columns={tableDataColumn}
+                    columns={tableDataColumn ? tableDataColumn.map((col: any) => {
+                      const dataIndex = col.dataIndex || col.key;
+                      const currentWidth = columnWidths[dataIndex] || col.width || 150;
+                      return {
+                        ...col,
+                        width: currentWidth,
+                        onHeaderCell: (column: any) => ({
+                          width: currentWidth,
+                          onResize: (e: MouseEvent, { size }: { size: { width: number } }) => {
+                            setColumnWidths((prev) => ({
+                              ...prev,
+                              [dataIndex]: size.width,
+                            }));
+                          },
+                        }),
+                      };
+                    }) : []}
                     size={'small'}
+                    sticky={{ 
+                      offsetHeader: 64 // 距离顶部64px（菜单高度），表头固定在此位置
+                    }}
+                    components={{
+                      header: {
+                        cell: ResizableHeaderCell,
+                      },
+                    }}
                   />
                 </div>
               }

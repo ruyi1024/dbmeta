@@ -611,6 +611,15 @@ func InitDb() *gorm.DB {
 		log.Error("db sync PumpkinDatabaseGrowth error.", zap.Error(err))
 	}
 
+	// Data Alarm tables
+	// 即使表已存在，也执行AutoMigrate以添加新字段
+	if err = db.AutoMigrate(&model.DataAlarm{}); err != nil {
+		log.Error("db sync DataAlarm error.", zap.Error(err))
+	}
+	if err = db.AutoMigrate(&model.DataAlarmLog{}); err != nil {
+		log.Error("db sync DataAlarmLog error.", zap.Error(err))
+	}
+
 	return db
 }
 

@@ -278,13 +278,15 @@ func (ApiConfig) TableName() string {
 }
 
 type TaskOption struct {
-	TaskKey         string    `gorm:"size:50;primarykey" json:"task_key"`
-	TaskName        string    `gorm:"size:50," json:"task_name"`
-	TaskDescription string    `gorm:"size:500," json:"task_description"`
-	Crontab         string    `gorm:"size:100," json:"crontab"`
-	Enable          int8      `gorm:"default:1" json:"enable"`
-	CreatedAt       time.Time `gorm:"column:gmt_created" json:"gmt_created"`
-	UpdatedAt       time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+	TaskKey         string     `gorm:"size:50;primarykey" json:"task_key"`
+	TaskName        string     `gorm:"size:50," json:"task_name"`
+	TaskDescription string     `gorm:"size:500," json:"task_description"`
+	Crontab         string     `gorm:"size:100," json:"crontab"`
+	Enable          int8       `gorm:"default:1" json:"enable"`
+	LastRunTime     *time.Time `gorm:"column:last_run_time" json:"last_run_time"`
+	NextRunTime     *time.Time `gorm:"column:next_run_time" json:"next_run_time"`
+	CreatedAt       time.Time  `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt       time.Time  `gorm:"column:gmt_updated" json:"gmt_updated"`
 }
 
 func (TaskOption) TableName() string {
@@ -399,6 +401,10 @@ type Event struct {
 	EventUnit   string    `gorm:"" json:"event_unit"`
 	EventDetail string    `gorm:"" json:"event_detail"`
 	CreatedAt   time.Time `gorm:"column:gmt_created;autoCreateTime" json:"gmt_created"`
+}
+
+func (Event) TableName() string {
+	return "events"
 }
 
 type EventsDescription struct {

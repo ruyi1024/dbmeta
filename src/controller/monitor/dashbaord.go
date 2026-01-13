@@ -166,13 +166,19 @@ func MetaInfo(c *gin.Context) {
 	// data = make(map[string]interface{})
 	// data["nodeCount"] = nodeCount[0]["count"]
 	// data["clusterCount"] = clusterCount[0]["count"]
-	// data["hostCount"] = hostCount[0]["count"]
+	// data["hostCount"] = hostCount[0]["host"]
 	// data["idcCount"] = idcCount[0]["count"]
 	// data["envCount"] = envCount[0]["count"]
 	// data["moduleCount"] = moduleCount[0]["count"]
 
-	//var mydb = database.DB
-	var ckdb = database.CK
+	var mydb = database.DB
+	if mydb == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"msg":     "数据库连接未初始化",
+		})
+		return
+	}
 
 	//pie chart data
 	type EventPie struct {
@@ -180,7 +186,7 @@ func MetaInfo(c *gin.Context) {
 		Count     int
 	}
 	var eventPieResult []EventPie
-	ckdb.Model(&model.Event{}).Select("event_type as event_type,count(*) as count").Where("event_time>addMinutes(now(),-5)").Group("event_type").Find(&eventPieResult)
+	mydb.Model(&model.Event{}).Select("event_type as event_type,count(*) as count").Where("event_time > DATE_SUB(NOW(), INTERVAL 5 MINUTE)").Group("event_type").Find(&eventPieResult)
 	pieDataList := make([]map[string]interface{}, 0)
 	for _, item := range eventPieResult {
 		pieData := make(map[string]interface{})
@@ -198,7 +204,7 @@ func MetaInfo(c *gin.Context) {
 		Count     int
 	}
 	var eventLineResult []EventLine
-	ckdb.Model(&model.Event{}).Select("toString(toStartOfInterval(event_time,interval 1 minute)) as line_time ,event_type as event_type,count(*) as count").Where("event_time >addHours(now(),-1)").Group("line_time,event_type").Order("line_time asc").Find(&eventLineResult)
+	mydb.Model(&model.Event{}).Select("DATE_FORMAT(event_time, '%Y-%m-%d %H:%i:00') as line_time, event_type as event_type, count(*) as count").Where("event_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)").Group("line_time, event_type").Order("line_time asc").Find(&eventLineResult)
 	//fmt.Println(eventLineResult)
 	lineDataList := make([]map[string]interface{}, 0)
 	for _, item := range eventLineResult {

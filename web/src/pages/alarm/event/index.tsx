@@ -8,7 +8,7 @@ import { TableListItem } from './data.d';
 import { queryEvent, queryAlarmAnalysis } from './service';
 import Tag from 'antd/es/tag';
 import { batchUpdateAlarmStatus } from "@/services/alarm/alarm";
-import EventInfoView from "@/pages/monitor/event/eventInfo";
+import EventInfoView from "@/pages/event/event/eventInfo";
 
 
 const TableList: React.FC<any> = () => {

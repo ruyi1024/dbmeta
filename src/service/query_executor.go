@@ -81,8 +81,8 @@ func ValidateSQL(sqlQuery string) error {
 	return nil
 }
 
-// ExecuteQuery 执行查询
-func ExecuteQuery(sqlQuery string, datasourceId int) ([]map[string]interface{}, error) {
+// ExecuteQuery 执行查询（支持可选的数据库名）
+func ExecuteQuery(sqlQuery string, datasourceId int, databaseName ...string) ([]map[string]interface{}, error) {
 	// 验证SQL
 	if err := ValidateSQL(sqlQuery); err != nil {
 		return nil, err
@@ -108,12 +108,27 @@ func ExecuteQuery(sqlQuery string, datasourceId int) ([]map[string]interface{}, 
 		}
 	}
 
+	// 获取数据库名（如果提供）
+	var dbName string
+	if len(databaseName) > 0 && databaseName[0] != "" {
+		dbName = databaseName[0]
+	}
+
 	// 连接数据库
-	dbConn, err := connectToDatabase(&datasource, origPass)
+	dbConn, err := connectToDatabase(&datasource, origPass, dbName)
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败: %v", err)
 	}
 	defer dbConn.Close()
+
+	// 如果提供了数据库名，执行 USE database 语句（对于MySQL等需要显式选择数据库的情况）
+	if dbName != "" && (strings.ToUpper(datasource.Type) == "MYSQL" || strings.ToUpper(datasource.Type) == "MARIADB" || strings.ToUpper(datasource.Type) == "GREATSQL" || strings.ToUpper(datasource.Type) == "TIDB" || strings.ToUpper(datasource.Type) == "DORIS" || strings.ToUpper(datasource.Type) == "OCEANBASE") {
+		useSQL := fmt.Sprintf("USE `%s`", dbName)
+		_, err = dbConn.Exec(useSQL)
+		if err != nil {
+			return nil, fmt.Errorf("选择数据库失败: %v", err)
+		}
+	}
 
 	// 添加LIMIT限制（如果SQL中没有LIMIT）
 	sqlQuery = addLimitIfNeeded(sqlQuery, MaxQueryRows)

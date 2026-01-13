@@ -428,16 +428,72 @@ type DeepSeekClient struct {
 	*BaseClient
 }
 
+// normalizeDeepSeekModelName 规范化DeepSeek模型名称
+func normalizeDeepSeekModelName(modelName string) string {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	
+	// 模型名称映射表
+	modelMap := map[string]string{
+		"deepseek-v3.2":     "deepseek-chat",
+		"deepseek-v3":       "deepseek-chat",
+		"deepseek-chat-v3":  "deepseek-chat",
+		"deepseek-chat-v2":  "deepseek-chat",
+		"deepseek-reasoner": "deepseek-reasoner",
+		"deepseek-r1":       "deepseek-reasoner",
+		"deepseek-coder":    "deepseek-coder",
+	}
+	
+	// 如果找到映射，返回映射后的名称
+	if mapped, ok := modelMap[modelName]; ok {
+		return mapped
+	}
+	
+	// 如果已经是正确的格式（以 deepseek- 开头），直接返回
+	if strings.HasPrefix(modelName, "deepseek-") {
+		return modelName
+	}
+	
+	// 默认返回 deepseek-chat
+	return "deepseek-chat"
+}
+
 // Chat 实现非流式聊天
 func (c *DeepSeekClient) Chat(messages []Message, options *ChatOptions) (*ChatResponse, error) {
+	// 规范化模型名称
+	normalizedModelName := normalizeDeepSeekModelName(c.Model.ModelName)
+	
+	// 创建模型副本并更新模型名称
+	modelCopy := *c.Model
+	modelCopy.ModelName = normalizedModelName
+	
 	// DeepSeek也使用OpenAI兼容接口
-	compatibleClient := &OpenAICompatibleClient{BaseClient: c.BaseClient}
+	compatibleClient := &OpenAICompatibleClient{
+		BaseClient: &BaseClient{
+			Model:   &modelCopy,
+			ApiKey:  c.ApiKey,
+			Timeout: c.Timeout,
+		},
+	}
 	return compatibleClient.Chat(messages, options)
 }
 
 // ChatStream 实现流式聊天
 func (c *DeepSeekClient) ChatStream(messages []Message, options *ChatOptions) (<-chan *StreamChunk, error) {
-	compatibleClient := &OpenAICompatibleClient{BaseClient: c.BaseClient}
+	// 规范化模型名称
+	normalizedModelName := normalizeDeepSeekModelName(c.Model.ModelName)
+	
+	// 创建模型副本并更新模型名称
+	modelCopy := *c.Model
+	modelCopy.ModelName = normalizedModelName
+	
+	// DeepSeek也使用OpenAI兼容接口
+	compatibleClient := &OpenAICompatibleClient{
+		BaseClient: &BaseClient{
+			Model:   &modelCopy,
+			ApiKey:  c.ApiKey,
+			Timeout: c.Timeout,
+		},
+	}
 	return compatibleClient.ChatStream(messages, options)
 }
 
@@ -448,7 +504,8 @@ func (c *DeepSeekClient) TestConnection() error {
 	}
 	_, err := c.Chat(testMessages, nil)
 	if err != nil {
-		return fmt.Errorf("测试AI模型连接失败 (URL: %s, Model: %s): %v", c.Model.ApiUrl, c.Model.ModelName, err)
+		normalizedModelName := normalizeDeepSeekModelName(c.Model.ModelName)
+		return fmt.Errorf("测试AI模型连接失败 (URL: %s, Model: %s -> %s): %v", c.Model.ApiUrl, c.Model.ModelName, normalizedModelName, err)
 	}
 	return nil
 }

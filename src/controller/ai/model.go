@@ -285,3 +285,53 @@ func TestModel(c *gin.Context) {
 		"message": "连接测试成功",
 	})
 }
+
+// TestModelConfig 测试模型配置（不需要id，用于创建前测试）
+func TestModelConfig(c *gin.Context) {
+	var aiModel model.AIModel
+	if err := c.ShouldBindJSON(&aiModel); err != nil {
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "请求参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 验证配置
+	if err := service.TestModelConnection(&aiModel); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "配置验证失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 尝试创建客户端并测试连接
+	// 注意：在测试配置时，API Key 可能是未加密的，GetDecryptedApiKey 会自动处理
+	client, err := service.NewAIClient(&aiModel)
+	if err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "创建客户端失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 测试连接
+	if err := client.TestConnection(); err != nil {
+		c.JSON(200, gin.H{
+			"success": false,
+			"message": "连接测试失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "连接测试成功",
+	})
+}

@@ -83,6 +83,18 @@ export async function testModel(id: number) {
   });
 }
 
+/** 测试模型配置（不需要id，用于创建前测试） */
+export async function testModelConfig(params: Partial<AIModel>) {
+  return request<{
+    success: boolean;
+    message: string;
+    error?: string;
+  }>('/api/v1/ai/model/test-config', {
+    method: 'POST',
+    data: params,
+  });
+}
+
 /** 启用/禁用模型 */
 export async function toggleModel(id: number, enabled: number) {
   return request<{

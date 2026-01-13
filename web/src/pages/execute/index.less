@@ -6,3 +6,37 @@
   background: @input-bg;
   box-shadow: @card-shadow;
 }
+
+.react-resizable-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  z-index: 1;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.react-resizable-handle:hover {
+  background-color: #1890ff;
+}
+
+.tableStyle {
+  :global {
+    .ant-table-thead > tr > th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #fafafa;
+    }
+    
+    // 确保固定表头时，拖拽手柄也能正常工作
+    .ant-table-thead > tr > th .react-resizable-handle {
+      z-index: 11;
+    }
+  }
+}
