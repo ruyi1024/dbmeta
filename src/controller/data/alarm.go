@@ -603,8 +603,8 @@ func checkRule(dataCount int, operator string, ruleValue int) bool {
 
 // sendAlarmEmail 发送告警邮件
 func sendAlarmEmail(alarm *model.DataAlarm, dataCount int, data []map[string]interface{}) bool {
-	// 解析邮箱列表
-	emailList := strings.Split(alarm.EmailTo, ",")
+	// 解析邮箱列表（支持英文分号分隔）
+	emailList := strings.Split(alarm.EmailTo, ";")
 	var cleanEmails []string
 	for _, e := range emailList {
 		e = strings.TrimSpace(e)
