@@ -261,7 +261,7 @@ const DataAlarmList: React.FC = () => {
         pagination={{
           pageSize: 10,
         }}
-        scroll={{ x: 1810 }}
+        scroll={{ x: 1000 }}
       />
 
       {/* 告警模态框 */}
