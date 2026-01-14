@@ -1,4 +1,4 @@
-import { BorderLeftOutlined, HeartOutlined, RightSquareOutlined, TableOutlined, UnorderedListOutlined, ThunderboltOutlined, DeleteOutlined } from '@ant-design/icons';
+import { BorderLeftOutlined, HeartOutlined, RightSquareOutlined, TableOutlined, UnorderedListOutlined, ThunderboltOutlined, DeleteOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons';
 import { PageContainer, ProColumns, ProTable } from '@ant-design/pro-components';
 import { Card, Tabs, Form, Select, Button, Input, message, Table, Alert, Space, List, Row, Col, AutoComplete, Drawer, Modal } from 'antd';
 
@@ -109,16 +109,55 @@ const Index: React.FC = () => {
   const [datasource, setDatasource] = useState<string>('');
   const [database, setDatabase] = useState<string>('');
   const [table, setTable] = useState<string>('');
-  const [sqlContent, setSqlContent] = useState<string>('');
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [tableDataTotal, setTableDataTotal] = useState<number>(0)
-  const [tableDataList, setTableDataList] = useState<any>();
-  const [tableDataColumn, setTableDataColumn] = useState<any>();
-  const [tableDataSuccess, setTableDataSuccess] = useState<boolean>(false);
-  const [tableDataMsg, setTableDataMsg] = useState<any>("");
-  const [queryTimes, setQueryTimes] = useState<number>(0);
-  const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({});
+  // 标签页相关状态
+  interface TabItem {
+    key: string;
+    label: string;
+    sqlContent: string;
+    selectedSql: string; // 选中的SQL文本
+    loading: boolean;
+    tableDataTotal: number;
+    tableDataList: any;
+    tableDataColumn: any;
+    tableDataSuccess: boolean;
+    tableDataMsg: string;
+    queryTimes: number;
+    columnWidths: { [key: string]: number };
+  }
+
+  const [tabs, setTabs] = useState<TabItem[]>([
+    {
+      key: '1',
+      label: '查询 1',
+      sqlContent: '',
+      selectedSql: '', // 选中的SQL文本
+      loading: false,
+      tableDataTotal: 0,
+      tableDataList: null,
+      tableDataColumn: null,
+      tableDataSuccess: false,
+      tableDataMsg: '',
+      queryTimes: 0,
+      columnWidths: {},
+    },
+  ]);
+  const [activeTabKey, setActiveTabKey] = useState<string>('1');
+  const [tabCounter, setTabCounter] = useState<number>(2);
+
+  // 获取当前活动标签页
+  const getCurrentTab = () => tabs.find(tab => tab.key === activeTabKey) || tabs[0];
+  
+  // 兼容旧代码的getter（从当前标签页获取）
+  const sqlContent = getCurrentTab()?.sqlContent || '';
+  const loading = getCurrentTab()?.loading || false;
+  const tableDataTotal = getCurrentTab()?.tableDataTotal || 0;
+  const tableDataList = getCurrentTab()?.tableDataList;
+  const tableDataColumn = getCurrentTab()?.tableDataColumn;
+  const tableDataSuccess = getCurrentTab()?.tableDataSuccess || false;
+  const tableDataMsg = getCurrentTab()?.tableDataMsg || '';
+  const queryTimes = getCurrentTab()?.queryTimes || 0;
+  const columnWidths = getCurrentTab()?.columnWidths || {};
 
   const [currentUserinfo, setCurrentUserinfo] = useState({ "chineseName": "", "username": "" });
   const [currentDate, setCurrentDate] = useState<string>("");
@@ -161,7 +200,8 @@ const Index: React.FC = () => {
     setTableList([]);
     setDatabase("");
     setTable("");
-    setSqlContent("");
+    // 清空所有标签页的SQL内容
+    setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, sqlContent: '' })));
     form.setFieldsValue({ "datasource": "", "database": "", "table": "", "sql": "" });
     const formValue = form.getFieldsValue();
     const type = formValue.type;
@@ -180,7 +220,8 @@ const Index: React.FC = () => {
     setTableList([]);
     setDatabase("");
     setTable("");
-    setSqlContent("");
+    // 清空所有标签页的SQL内容
+    setTabs(prevTabs => prevTabs.map(tab => ({ ...tab, sqlContent: '' })));
     form.setFieldsValue({ "database": "", "table": "", "sql": "" });
     setDatasource(val);
     fetch('/api/v1/query/database?datasource=' + val + '&type=' + type)
@@ -194,7 +235,8 @@ const Index: React.FC = () => {
   //获取数据表
   const didQueryTable = (val: string) => {
     setDatabase(val);
-    setSqlContent("");
+    // 只清空当前标签页的SQL内容
+    updateTab(activeTabKey, { sqlContent: '' });
     form.setFieldsValue({ "table": "", "sql": "" });
     fetch('/api/v1/query/table?datasource=' + datasource + '&database=' + val + '&type=' + type)
       .then((response) => response.json())
@@ -227,7 +269,7 @@ const Index: React.FC = () => {
     if (type == 'MongoDB') {
       sql = "select.from('" + val + "')" + ".where('_id','!=','').limit(100)"
     }
-    setSqlContent(sql);
+    updateTab(activeTabKey, { sqlContent: sql });
     form.setFieldsValue({
       sql: sql
     });
@@ -250,19 +292,103 @@ const Index: React.FC = () => {
 
   }
 
+  // 更新标签页数据
+  const updateTab = (key: string, updates: Partial<TabItem>) => {
+    setTabs(prevTabs => 
+      prevTabs.map(tab => 
+        tab.key === key ? { ...tab, ...updates } : tab
+      )
+    );
+  }
+
+  // 新增标签页
+  const addTab = () => {
+    const newKey = tabCounter.toString();
+    const newTab: TabItem = {
+      key: newKey,
+      label: `查询 ${tabCounter}`,
+      sqlContent: '',
+      selectedSql: '',
+      loading: false,
+      tableDataTotal: 0,
+      tableDataList: null,
+      tableDataColumn: null,
+      tableDataSuccess: false,
+      tableDataMsg: '',
+      queryTimes: 0,
+      columnWidths: {},
+    };
+    setTabs(prevTabs => [...prevTabs, newTab]);
+    setActiveTabKey(newKey);
+    setTabCounter(prev => prev + 1);
+    form.setFieldsValue({ sql: '' });
+  }
+
+  // 删除标签页
+  const removeTab = (targetKey: string) => {
+    if (tabs.length === 1) {
+      message.warning('至少需要保留一个标签页');
+      return;
+    }
+    
+    const newTabs = tabs.filter(tab => tab.key !== targetKey);
+    setTabs(newTabs);
+    
+    // 如果删除的是当前活动标签，切换到其他标签
+    if (targetKey === activeTabKey) {
+      const index = tabs.findIndex(tab => tab.key === targetKey);
+      const newActiveKey = index > 0 ? tabs[index - 1].key : newTabs[0].key;
+      setActiveTabKey(newActiveKey);
+      const activeTab = newTabs.find(tab => tab.key === newActiveKey);
+      if (activeTab) {
+        form.setFieldsValue({ sql: activeTab.sqlContent });
+      }
+    }
+  }
+
+  // 切换标签页
+  const handleTabChange = (key: string) => {
+    setActiveTabKey(key);
+    const tab = tabs.find(t => t.key === key);
+    if (tab) {
+      form.setFieldsValue({ sql: tab.sqlContent });
+    }
+  }
+
   //编辑器内容改变
   const onChangeContent = (value: string) => {
     form.setFieldsValue({ "sql": value });
-    setSqlContent(value);
+    updateTab(activeTabKey, { sqlContent: value });
   }
 
-  //选择内容改变
-  // const onSelectContent = (value: string) => {
-  //   console.info("111111");
-  //   alert(value);
-  //   form.setFieldsValue({ "sql": value });
-  //   setSqlContent(value);
-  // }
+  // 选择内容改变（当用户选择SQL文本时）
+  const onSelectionChange = (selection: any) => {
+    if (!editorRef.current) {
+      return;
+    }
+    const editor = (editorRef.current as any).editor;
+    if (!editor) {
+      return;
+    }
+    
+    const selectedText = editor.getSelectedText();
+    if (selectedText && selectedText.trim()) {
+      // 有选中文本，保存选中的SQL
+      updateTab(activeTabKey, { selectedSql: selectedText.trim() });
+    } else {
+      // 没有选中文本，清空选中的SQL
+      updateTab(activeTabKey, { selectedSql: '' });
+    }
+  }
+
+  // 获取要执行的SQL（如果有选中，使用选中的；否则使用全部）
+  const getSqlToExecute = (): string => {
+    const currentTab = getCurrentTab();
+    if (currentTab?.selectedSql && currentTab.selectedSql.trim()) {
+      return currentTab.selectedSql;
+    }
+    return currentTab?.sqlContent || '';
+  }
 
   //智能生成SQL
   const handleAiGenerate = () => {
@@ -316,7 +442,7 @@ const Index: React.FC = () => {
       
       if (json.success && json.data && json.data.sql_query) {
         const generatedSQL = json.data.sql_query;
-        setSqlContent(generatedSQL);
+        updateTab(activeTabKey, { sqlContent: generatedSQL });
         form.setFieldsValue({ sql: generatedSQL });
         message.success("SQL生成成功");
         closeAiGenerate();
@@ -337,11 +463,14 @@ const Index: React.FC = () => {
       message.warning("Redis数据源不支持该功能");
       return;
     }
-    if (type == "" || database == "" || sqlContent == "") {
+    const currentTab = getCurrentTab();
+    if (type == "" || database == "" || !currentTab?.sqlContent) {
       message.warning("数据源/数据库/SQL不完整，无法格式化SQL");
       return;
     }
-    setSqlContent(format(sqlContent));
+    const formatted = format(currentTab.sqlContent);
+    updateTab(activeTabKey, { sqlContent: formatted });
+    form.setFieldsValue({ sql: formatted });
   }
 
   //收藏SQL
@@ -483,8 +612,10 @@ const Index: React.FC = () => {
   //表单提交查询执行请求
   const asyncFetch = (values: {}) => {
     console.info(values);
-    setLoading(true);
-    const params = { ...values, "query_type": "execute" };
+    updateTab(activeTabKey, { loading: true });
+    // 如果有选中的SQL，使用选中的；否则使用表单中的SQL
+    const sqlToExecute = getSqlToExecute() || values["sql"] || '';
+    const params = { ...values, "sql": sqlToExecute, "query_type": "execute" };
     const headers = new Headers();
     headers.append('Content-Type', 'application/json');
     fetch('/api/v1/query/doQuery', {
@@ -495,27 +626,49 @@ const Index: React.FC = () => {
       .then((response) => response.json())
       .then((json) => {
         console.info(json.data);
-        setLoading(false);
+        const currentTab = getCurrentTab();
         // 初始化列宽（如果还没有设置）
+        const currentWidths = currentTab?.columnWidths || {};
         if (json.columns && Array.isArray(json.columns)) {
           const initialWidths: { [key: string]: number } = {};
           json.columns.forEach((col: any) => {
-            if (col.dataIndex && !columnWidths[col.dataIndex]) {
+            if (col.dataIndex && !currentWidths[col.dataIndex]) {
               initialWidths[col.dataIndex] = col.width || 150;
             }
           });
           if (Object.keys(initialWidths).length > 0) {
-            setColumnWidths(prev => ({ ...prev, ...initialWidths }));
+            updateTab(activeTabKey, {
+              loading: false,
+              tableDataSuccess: json.success,
+              tableDataMsg: json.msg,
+              tableDataList: json.data,
+              tableDataColumn: json.columns,
+              tableDataTotal: json.total,
+              queryTimes: json.times,
+              columnWidths: { ...currentWidths, ...initialWidths },
+            });
+          } else {
+            updateTab(activeTabKey, {
+              loading: false,
+              tableDataSuccess: json.success,
+              tableDataMsg: json.msg,
+              tableDataList: json.data,
+              tableDataColumn: json.columns,
+              tableDataTotal: json.total,
+              queryTimes: json.times,
+            });
           }
+        } else {
+          updateTab(activeTabKey, {
+            loading: false,
+            tableDataSuccess: json.success,
+            tableDataMsg: json.msg,
+            tableDataList: json.data,
+            tableDataColumn: json.columns,
+            tableDataTotal: json.total,
+            queryTimes: json.times,
+          });
         }
-        return (
-          setTableDataSuccess(json.success),
-          setTableDataMsg(json.msg),
-          setTableDataList(json.data),
-          setTableDataColumn(json.columns),
-          setTableDataTotal(json.total),
-          setQueryTimes(json.times)
-        );
       })
       .catch((error) => {
         console.log('fetch data failed', error);
@@ -546,8 +699,11 @@ const Index: React.FC = () => {
       message.error('请先点击左侧表名称选择表.');
       return;
     }
-    setLoading(true);
-    const params = { "datasource_type": type, "datasource": datasource, "database": database, "table": table, "sql": sqlContent, "query_type": query_type };
+    const currentTab = getCurrentTab();
+    updateTab(activeTabKey, { loading: true });
+    // 如果有选中的SQL，使用选中的；否则使用全部SQL
+    const sqlToExecute = getSqlToExecute() || currentTab?.sqlContent || '';
+    const params = { "datasource_type": type, "datasource": datasource, "database": database, "table": table, "sql": sqlToExecute, "query_type": query_type };
     const headers = new Headers();
     headers.append('Content-Type', 'application/json');
     fetch('/api/v1/query/doQuery', {
@@ -557,15 +713,48 @@ const Index: React.FC = () => {
     })
       .then((response) => response.json())
       .then((json) => {
-        setLoading(false);
-        return (
-          setTableDataSuccess(json.success),
-          setTableDataMsg(json.msg),
-          setTableDataList(json.data),
-          setTableDataColumn(json.columns),
-          setTableDataTotal(json.total),
-          setQueryTimes(json.times)
-        );
+        const currentTab = getCurrentTab();
+        const currentWidths = currentTab?.columnWidths || {};
+        if (json.columns && Array.isArray(json.columns)) {
+          const initialWidths: { [key: string]: number } = {};
+          json.columns.forEach((col: any) => {
+            if (col.dataIndex && !currentWidths[col.dataIndex]) {
+              initialWidths[col.dataIndex] = col.width || 150;
+            }
+          });
+          if (Object.keys(initialWidths).length > 0) {
+            updateTab(activeTabKey, {
+              loading: false,
+              tableDataSuccess: json.success,
+              tableDataMsg: json.msg,
+              tableDataList: json.data,
+              tableDataColumn: json.columns,
+              tableDataTotal: json.total,
+              queryTimes: json.times,
+              columnWidths: { ...currentWidths, ...initialWidths },
+            });
+          } else {
+            updateTab(activeTabKey, {
+              loading: false,
+              tableDataSuccess: json.success,
+              tableDataMsg: json.msg,
+              tableDataList: json.data,
+              tableDataColumn: json.columns,
+              tableDataTotal: json.total,
+              queryTimes: json.times,
+            });
+          }
+        } else {
+          updateTab(activeTabKey, {
+            loading: false,
+            tableDataSuccess: json.success,
+            tableDataMsg: json.msg,
+            tableDataList: json.data,
+            tableDataColumn: json.columns,
+            tableDataTotal: json.total,
+            queryTimes: json.times,
+          });
+        }
       })
       .catch((error) => {
         console.log('fetch data failed', error);
@@ -767,15 +956,37 @@ const Index: React.FC = () => {
                   <Alert message="请选择查询数据源，再输入命令，当前支持的命令有：RANDOMKEY、EXISTS、TYPE、TTL、GET、HLEN、HKEYS、HGET、HGETALL、LLEN、LINDEX、LRANGE、SCARD、SMEMBERS、SISMEMBER、ZCARD、ZCOUNT、ZRANGE" type="info" showIcon closable />
                 </Space>
               }
-              <Form
+              
+              {/* SQL标签页 */}
+              <Tabs
+                type="editable-card"
+                activeKey={activeTabKey}
+                onChange={handleTabChange}
+                onEdit={(targetKey, action) => {
+                  if (action === 'add') {
+                    addTab();
+                  } else {
+                    removeTab(targetKey as string);
+                  }
+                }}
+                hideAdd={false}
                 style={{ marginTop: 8 }}
-                form={form}
-                onFinish={onFinish}
-                onFinishFailed={onFinishFailed}
-                initialValues={{}}
-                name={'sqlForm'}
-                layout="horizontal"
               >
+                {tabs.map(tab => (
+                  <Tabs.TabPane
+                    key={tab.key}
+                    tab={tab.label}
+                    closable={tabs.length > 1}
+                  >
+                    <Form
+                      style={{ marginTop: 8 }}
+                      form={form}
+                      onFinish={onFinish}
+                      onFinishFailed={onFinishFailed}
+                      initialValues={{}}
+                      name={'sqlForm'}
+                      layout="horizontal"
+                    >
 
                 <Form.Item
                   name={'sql'}
@@ -788,7 +999,7 @@ const Index: React.FC = () => {
               /> */}
                   <AceEditor
                     ref={editorRef}
-                    placeholder="请输入执行的SQL命令"
+                    placeholder="请输入执行的SQL命令（可选择部分SQL执行，未选择时执行全部）"
                     mode="mysql"
                     theme="textmate"
                     name="blah2"
@@ -802,9 +1013,8 @@ const Index: React.FC = () => {
                       $blockScrolling: false,
                     }}
                     onChange={(value) => onChangeContent(value)} //获取输入框的内容
-                    //onPaste={(value)=>onChangeContent(value)}
+                    onSelectionChange={onSelectionChange} // 监听选择变化
                     onLoad={editor => complete(editor, tableList)}
-                    //onSelection={(selectedText: string, event?: any) => onSelectContent(selectedText)}
 
                     // 设置编辑器格式化和代码提示 
                     setOptions={{
@@ -817,10 +1027,19 @@ const Index: React.FC = () => {
                       tabSize: 1,
                     }}
                   />
-                  <Button htmlType='button' type='dashed' icon={<ThunderboltOutlined />} size='small' onClick={() => handleAiGenerate()}>智能生成SQL</Button>
-                  <Button htmlType='button' type='dashed' icon={<BorderLeftOutlined />} size='small' onClick={() => beautifySql()}>格式化SQL语句</Button>
-                  <Button htmlType='button' type='dashed' icon={<HeartOutlined />} size='small' onClick={() => favoriteSql()}>加入收藏夹</Button>
-                  <Button htmlType='button' type='dashed' icon={<UnorderedListOutlined />} size='small' onClick={() => showDrawer()}>打开收藏夹</Button>
+                  <div style={{ marginTop: 8, marginBottom: 8 }}>
+                    <Space>
+                      <Button htmlType='button' type='dashed' icon={<ThunderboltOutlined />} size='small' onClick={() => handleAiGenerate()}>智能生成SQL</Button>
+                      <Button htmlType='button' type='dashed' icon={<BorderLeftOutlined />} size='small' onClick={() => beautifySql()}>格式化SQL语句</Button>
+                      <Button htmlType='button' type='dashed' icon={<HeartOutlined />} size='small' onClick={() => favoriteSql()}>加入收藏夹</Button>
+                      <Button htmlType='button' type='dashed' icon={<UnorderedListOutlined />} size='small' onClick={() => showDrawer()}>打开收藏夹</Button>
+                      {getCurrentTab()?.selectedSql && (
+                        <span style={{ color: '#1890ff', fontSize: '12px' }}>
+                          已选择SQL，将只执行选中的部分
+                        </span>
+                      )}
+                    </Space>
+                  </div>
                 </Form.Item>
 
                 <Form.Item wrapperCol={{ offset: 0, span: 16 }}>
@@ -898,9 +1117,12 @@ const Index: React.FC = () => {
                         </Button>
                       </>
                     }
-                  </Space>
-                </Form.Item>
-              </Form>
+                    </Space>
+                  </Form.Item>
+                    </Form>
+                  </Tabs.TabPane>
+                ))}
+              </Tabs>
             </Card>
 
             <Card>
@@ -932,10 +1154,9 @@ const Index: React.FC = () => {
                         onHeaderCell: (column: any) => ({
                           width: currentWidth,
                           onResize: (e: MouseEvent, { size }: { size: { width: number } }) => {
-                            setColumnWidths((prev) => ({
-                              ...prev,
-                              [dataIndex]: size.width,
-                            }));
+                            const currentTab = getCurrentTab();
+                            const newWidths = { ...(currentTab?.columnWidths || {}), [dataIndex]: size.width };
+                            updateTab(activeTabKey, { columnWidths: newWidths });
                           },
                         }),
                       };

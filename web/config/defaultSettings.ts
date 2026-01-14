@@ -17,7 +17,7 @@ const Settings: LayoutSettings & {
   splitMenus: false,
   title: 'DBMETA',
   pwa: false,
-  logo: '/logo-db.png',
+  logo: '/logo.png',
   iconfontUrl: 'https://www.dbmeta.com',
 };
 

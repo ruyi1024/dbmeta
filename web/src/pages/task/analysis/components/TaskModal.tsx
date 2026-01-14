@@ -317,10 +317,29 @@ const TaskModal: React.FC<TaskModalProps> = ({
               label="报告发送邮箱"
               rules={[
                 { required: true, message: '请输入邮箱地址' },
-                { type: 'email', message: '请输入有效的邮箱地址' },
+                {
+                  validator: (_: any, value: string) => {
+                    if (!value) {
+                      return Promise.resolve();
+                    }
+                    // 以英文分号分隔多个邮箱
+                    const emails = value.split(';').map((email: string) => email.trim()).filter((email: string) => email);
+                    if (emails.length === 0) {
+                      return Promise.reject(new Error('请输入至少一个邮箱地址'));
+                    }
+                    // 验证每个邮箱格式
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    for (const email of emails) {
+                      if (!emailRegex.test(email)) {
+                        return Promise.reject(new Error(`邮箱格式不正确: ${email}`));
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             >
-              <Input placeholder="example@company.com" />
+              <Input placeholder="example@company.com;example2@company.com（多个邮箱用英文分号分隔）" />
             </Form.Item>
 
             <Form.Item
