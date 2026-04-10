@@ -1,0 +1,19 @@
+安装步骤：
+
+nvm安装nodejs
+nvm install 22.18.0
+nvm use 22.18.0
+
+清理老的依赖
+# 删除 node_modules 目录
+Remove-Item -Recurse -Force node_modules
+# 删除 pnpm-lock.yaml 文件
+Remove-Item -Force pnpm-lock.yaml
+
+安装依赖包
+npm i -g corepack
+pnpm install
+
+运行
+pnpm dev
+

@@ -1,0 +1,458 @@
+<script lang="ts" setup>
+import { onMounted, reactive, ref } from 'vue';
+
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Space,
+  Table,
+  type TableColumnsType,
+} from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+
+import { baseRequestClient } from '#/api/request';
+
+defineOptions({ name: 'DataCapacityTableQuery' });
+
+interface TableCapacityRow {
+  id: number;
+  databaseName: string;
+  tableName: string;
+  datasourceType: string;
+  host?: string;
+  port?: string;
+  dataSize: string;
+  dataSizeBytes: number;
+  rowCount: number;
+  dataSizeIncr: string;
+  dataSizeIncrBytes: number;
+  rowCountIncr: number;
+}
+
+function unwrapAxiosData(response: unknown): unknown {
+  if (!response || typeof response !== 'object') {
+    return response;
+  }
+  const r = response as Record<string, unknown>;
+  if ('data' in r && 'status' in r && typeof r.status === 'number') {
+    return r.data;
+  }
+  return response;
+}
+
+function parsePagedPumpkin(response: unknown): { rows: TableCapacityRow[]; total: number } {
+  const raw = unwrapAxiosData(response);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { rows: [], total: 0 };
+  }
+  const b = raw as Record<string, unknown>;
+  const list = b.data;
+  const total = Number(b.total ?? 0) || 0;
+  if (!Array.isArray(list)) {
+    return { rows: [], total: 0 };
+  }
+  const rows = list.map((item: any, index: number) => {
+    const dataSizeBytes = typeof item.dataSizeBytes === 'number' ? item.dataSizeBytes : 0;
+    const dataSizeIncrBytes =
+      typeof item.dataSizeIncrBytes === 'number' ? item.dataSizeIncrBytes : 0;
+    return {
+      id: item.id ?? index,
+      databaseName: String(item.databaseName ?? ''),
+      tableName: String(item.tableName ?? ''),
+      datasourceType: String(item.datasourceType ?? ''),
+      host: item.host ?? '',
+      port: item.port ?? '',
+      dataSize: String(item.dataSize ?? ''),
+      dataSizeBytes,
+      rowCount: Number(item.rowCount) || 0,
+      dataSizeIncr: String(item.dataSizeIncr ?? '0 B'),
+      dataSizeIncrBytes,
+      rowCountIncr: Number(item.rowCountIncr) || 0,
+    } as TableCapacityRow;
+  });
+  return { rows, total };
+}
+
+const loading = ref(false);
+const dataSource = ref<TableCapacityRow[]>([]);
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  showQuickJumper: true,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  total: 0,
+});
+
+const queryForm = reactive({
+  databaseName: '',
+  tableName: '',
+  datasourceType: '',
+  host: '',
+  port: '',
+});
+
+const sortField = ref<string | undefined>();
+const sortOrder = ref<'ascend' | 'descend' | undefined>();
+
+const columns: TableColumnsType<TableCapacityRow> = [
+  {
+    title: '数据库名',
+    dataIndex: 'databaseName',
+    ellipsis: true,
+    key: 'databaseName',
+    sorter: true,
+    width: 180,
+  },
+  {
+    title: '表名',
+    dataIndex: 'tableName',
+    ellipsis: true,
+    key: 'tableName',
+    sorter: true,
+    width: 200,
+  },
+  {
+    title: '数据库类型',
+    dataIndex: 'datasourceType',
+    key: 'datasourceType',
+    sorter: true,
+    width: 120,
+  },
+  {
+    title: '主机',
+    dataIndex: 'host',
+    ellipsis: true,
+    key: 'host',
+    width: 150,
+  },
+  {
+    title: '端口',
+    dataIndex: 'port',
+    key: 'port',
+    width: 80,
+  },
+  {
+    title: '数据存储大小',
+    dataIndex: 'dataSize',
+    key: 'dataSize',
+    sorter: true,
+    width: 130,
+  },
+  {
+    title: '数据记录条数',
+    dataIndex: 'rowCount',
+    key: 'rowCount',
+    sorter: true,
+    width: 130,
+  },
+  {
+    title: '数据存储日增长',
+    dataIndex: 'dataSizeIncr',
+    key: 'dataSizeIncr',
+    sorter: true,
+    width: 140,
+  },
+  {
+    title: '数据记录日增长',
+    dataIndex: 'rowCountIncr',
+    key: 'rowCountIncr',
+    sorter: true,
+    width: 140,
+  },
+];
+
+function formatRowCount(count: number): string {
+  if (!count) return '0';
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(2)}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(2)}K`;
+  }
+  return count.toLocaleString();
+}
+
+function formatRowIncrDisplay(count: number): string {
+  if (count === 0) return '0';
+  const abs = Math.abs(count);
+  let formatted: string;
+  if (abs >= 1_000_000) {
+    formatted = `${(count / 1_000_000).toFixed(2)}M`;
+  } else if (abs >= 1000) {
+    formatted = `${(count / 1000).toFixed(2)}K`;
+  } else {
+    formatted = String(count);
+  }
+  const sign = count > 0 ? '+' : '';
+  return `${sign}${formatted}`;
+}
+
+async function fetchTableCapacity() {
+  loading.value = true;
+  try {
+    const params: Record<string, string | number> = {
+      current: pagination.current,
+      pageSize: pagination.pageSize,
+    };
+    if (queryForm.databaseName) {
+      params.databaseName = queryForm.databaseName;
+    }
+    if (queryForm.tableName) {
+      params.tableName = queryForm.tableName;
+    }
+    if (queryForm.datasourceType) {
+      params.datasourceType = queryForm.datasourceType;
+    }
+    if (queryForm.host) {
+      params.host = queryForm.host;
+    }
+    if (queryForm.port) {
+      params.port = queryForm.port;
+    }
+    if (sortField.value && sortOrder.value) {
+      params.sortField = sortField.value;
+      params.sortOrder = sortOrder.value === 'ascend' ? 'asc' : 'desc';
+    }
+
+    const response = await baseRequestClient.get('/v1/pumpkin/capacity/table/growth', {
+      params,
+    });
+    const { rows, total } = parsePagedPumpkin(response);
+    dataSource.value = rows;
+    pagination.total = total;
+  } catch (error: any) {
+    message.error(error?.message || '获取数据表容量数据失败');
+    dataSource.value = [];
+    pagination.total = 0;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleSearch() {
+  pagination.current = 1;
+  fetchTableCapacity();
+}
+
+function handleReset() {
+  queryForm.databaseName = '';
+  queryForm.tableName = '';
+  queryForm.datasourceType = '';
+  queryForm.host = '';
+  queryForm.port = '';
+  sortField.value = undefined;
+  sortOrder.value = undefined;
+  pagination.current = 1;
+  fetchTableCapacity();
+}
+
+function handleTableChange(pag: any, _filters: unknown, sorter: any) {
+  pagination.current = pag?.current ?? 1;
+  pagination.pageSize = pag?.pageSize ?? 10;
+
+  let s = sorter;
+  if (Array.isArray(sorter)) {
+    s = sorter[0];
+  }
+  const colKey = s?.field ?? s?.columnKey;
+  if (colKey && s?.order) {
+    sortField.value = String(colKey);
+    sortOrder.value = s.order;
+  } else {
+    sortField.value = undefined;
+    sortOrder.value = undefined;
+  }
+  fetchTableCapacity();
+}
+
+onMounted(() => {
+  fetchTableCapacity();
+});
+</script>
+
+<template>
+  <div class="p-5">
+    <Card title="数据表容量信息查询">
+      <Form class="mb-4">
+        <div class="query-grid">
+          <Form.Item label="数据库名" class="query-item">
+            <Input
+              v-model:value="queryForm.databaseName"
+              allow-clear
+              class="query-control"
+              placeholder="请输入数据库名"
+            />
+          </Form.Item>
+          <Form.Item label="表名" class="query-item">
+            <Input
+              v-model:value="queryForm.tableName"
+              allow-clear
+              class="query-control"
+              placeholder="请输入表名"
+            />
+          </Form.Item>
+          <Form.Item label="数据库类型" class="query-item">
+            <Input
+              v-model:value="queryForm.datasourceType"
+              allow-clear
+              class="query-control"
+              placeholder="请输入数据库类型"
+            />
+          </Form.Item>
+          <Form.Item label="主机" class="query-item">
+            <Input
+              v-model:value="queryForm.host"
+              allow-clear
+              class="query-control"
+              placeholder="请输入主机"
+            />
+          </Form.Item>
+          <Form.Item label="端口" class="query-item">
+            <Input
+              v-model:value="queryForm.port"
+              allow-clear
+              class="query-control"
+              placeholder="请输入端口"
+            />
+          </Form.Item>
+        </div>
+        <div class="query-actions">
+          <Space>
+            <Button type="primary" @click="handleSearch">查询</Button>
+            <Button @click="handleReset">重置</Button>
+          </Space>
+        </div>
+      </Form>
+
+      <Table
+        :columns="columns"
+        :data-source="dataSource"
+        :loading="loading"
+        :pagination="pagination"
+        :row-key="(record: TableCapacityRow) => record.id"
+        :scroll="{ x: 1600 }"
+        size="middle"
+        @change="handleTableChange"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'dataSize'">
+            <span class="font-medium text-[#1890ff]">{{ record.dataSize }}</span>
+          </template>
+          <template v-else-if="column.key === 'rowCount'">
+            {{ formatRowCount(record.rowCount) }}
+          </template>
+          <template v-else-if="column.key === 'dataSizeIncr'">
+            <template v-if="(record.dataSizeIncrBytes || 0) === 0">
+              <span>0 B</span>
+            </template>
+            <template v-else>
+              <span class="font-medium text-foreground">
+                <span
+                  :style="{
+                    color: record.dataSizeIncrBytes > 0 ? '#52c41a' : '#ff4d4f',
+                    fontSize: '12px',
+                    marginRight: '4px',
+                  }"
+                >
+                  {{ record.dataSizeIncrBytes > 0 ? '↑' : '↓' }}
+                </span>
+                {{ record.dataSizeIncr }}
+              </span>
+            </template>
+          </template>
+          <template v-else-if="column.key === 'rowCountIncr'">
+            <span v-if="record.rowCountIncr === 0" class="font-medium">0</span>
+            <span v-else class="font-medium text-foreground">
+              <span
+                :style="{
+                  color: record.rowCountIncr > 0 ? '#52c41a' : '#ff4d4f',
+                  fontSize: '12px',
+                  marginRight: '4px',
+                }"
+              >
+                {{ record.rowCountIncr > 0 ? '↑' : '↓' }}
+              </span>
+              {{ formatRowIncrDisplay(record.rowCountIncr) }}
+            </span>
+          </template>
+        </template>
+      </Table>
+    </Card>
+  </div>
+</template>
+
+<style scoped>
+.query-grid {
+  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  row-gap: 12px;
+}
+
+:deep(.query-item) {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+:deep(.query-item .ant-form-item-row) {
+  align-items: center;
+  display: flex;
+}
+
+:deep(.query-item .ant-form-item-label) {
+  flex: 0 0 5.5rem;
+  max-width: 7rem;
+  padding-right: 8px;
+  text-align: right;
+}
+
+:deep(.query-item .ant-form-item-control) {
+  flex: 1;
+  min-width: 0;
+}
+
+:deep(.query-control) {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 1600px) {
+  .query-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .query-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .query-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .query-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .query-actions {
+    justify-content: flex-start;
+  }
+}
+</style>

@@ -62,6 +62,16 @@ func in(target string, str_array []string) bool {
 	return false
 }
 
+// tableNameForMeta 从「库.表」或「schema.table」或裸表名中取出最后一段，供 PG 等元数据查询使用（避免 strings.Split(...)[1] 在单段表名时越界）。
+func tableNameForMeta(table string) string {
+	table = strings.TrimSpace(table)
+	if table == "" {
+		return ""
+	}
+	parts := strings.Split(table, ".")
+	return parts[len(parts)-1]
+}
+
 func DoQuery(c *gin.Context) {
 	params := make(map[string]string)
 	c.BindJSON(&params)
@@ -313,10 +323,10 @@ func DoQuery(c *gin.Context) {
 			sql = "explain " + sql
 		}
 		if queryType == "showColumn" {
-			sql = fmt.Sprintf("SELECT distinct a.attnum as num,a.attname as name,format_type(a.atttypid,a.atttypmod) as type,a.attlen as length,a.attnotnull as notnull,com.description as comment,coalesce(i.indisprimary,false) as primary_key,def.adsrc as default FROM pg_attribute a JOIN pg_class pgc ON pgc.oid = a.attrelid LEFT JOIN pg_index i ON (pgc.oid = i.indrelid AND i.indkey[0] = a.attnum) LEFT JOIN pg_description com on (pgc.oid = com.objoid AND a.attnum = com.objsubid) LEFT JOIN pg_attrdef def ON (a.attrelid = def.adrelid AND a.attnum = def.adnum) WHERE a.attnum > 0 AND pgc.oid = a.attrelid AND NOT a.attisdropped AND pgc.relname = '%s' ORDER BY a.attnum;", strings.Split(table, ".")[1])
+			sql = fmt.Sprintf("SELECT distinct a.attnum as num,a.attname as name,format_type(a.atttypid,a.atttypmod) as type,a.attlen as length,a.attnotnull as notnull,com.description as comment,coalesce(i.indisprimary,false) as primary_key,def.adsrc as default FROM pg_attribute a JOIN pg_class pgc ON pgc.oid = a.attrelid LEFT JOIN pg_index i ON (pgc.oid = i.indrelid AND i.indkey[0] = a.attnum) LEFT JOIN pg_description com on (pgc.oid = com.objoid AND a.attnum = com.objsubid) LEFT JOIN pg_attrdef def ON (a.attrelid = def.adrelid AND a.attnum = def.adnum) WHERE a.attnum > 0 AND pgc.oid = a.attrelid AND NOT a.attisdropped AND pgc.relname = '%s' ORDER BY a.attnum;", tableNameForMeta(table))
 		}
 		if queryType == "showIndex" {
-			sql = fmt.Sprintf("select * from pg_indexes where tablename='%s'", strings.Split(table, ".")[1])
+			sql = fmt.Sprintf("select * from pg_indexes where tablename='%s'", tableNameForMeta(table))
 		}
 		if queryType == "showCreate" {
 			sql = fmt.Sprintf("%s %s", "\\d", table)

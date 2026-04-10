@@ -35,10 +35,10 @@ func RuleList(c *gin.Context) {
 			db = db.Where("enable=?", c.Query("enable"))
 		}
 		if c.Query("rule_key") != "" {
-			db = db.Where("task_key like ? ", "%"+c.Query("task_key")+"%")
+			db = db.Where("rule_key like ? ", "%"+c.Query("rule_key")+"%")
 		}
 		if c.Query("rule_name") != "" {
-			db = db.Where("task_name like ? ", "%"+c.Query("task_name")+"%")
+			db = db.Where("rule_name like ? ", "%"+c.Query("rule_name")+"%")
 		}
 		sorterMap := make(map[string]string)
 		sorterData := c.Query("sorter")
@@ -79,8 +79,21 @@ func RuleList(c *gin.Context) {
 	if method == "PUT" {
 		var record model.SensitiveRule
 		c.BindJSON(&record)
-		//gin里面如果更新为0则字段不会更新，可以使用select指定更新字段解决
-		result := db.Model(&record).Select("task_name", "task_description", "crontab", "enable").Omit("id").Where("id = ?", record.Id).Updates(record)
+		if record.Id == 0 {
+			c.JSON(200, gin.H{"success": false, "msg": "id required"})
+			return
+		}
+		updates := map[string]interface{}{
+			"rule_type":    record.RuleType,
+			"rule_key":     record.RuleKey,
+			"rule_name":    record.RuleName,
+			"rule_express": record.RuleExpress,
+			"rule_pct":     record.RulePct,
+			"level":        record.Level,
+			"status":       record.Status,
+			"enable":       record.Enable,
+		}
+		result := db.Model(&model.SensitiveRule{}).Where("id = ?", record.Id).Updates(updates)
 		if result.Error != nil {
 			c.JSON(200, gin.H{"success": false, "msg": "Update Error: " + result.Error.Error()})
 			return
