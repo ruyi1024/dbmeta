@@ -270,14 +270,15 @@ onMounted(fetchIssues);
 
 <style scoped>
 .query-grid {
-  column-gap: 12px;
+  column-gap: 16px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  row-gap: 8px;
+  row-gap: 12px;
 }
 
 :deep(.query-item) {
   margin-bottom: 0;
+  min-width: 0;
 }
 
 :deep(.query-item .ant-form-item-row) {
@@ -286,8 +287,8 @@ onMounted(fetchIssues);
 }
 
 :deep(.query-item .ant-form-item-label) {
-  flex: 0 0 72px;
-  max-width: 72px;
+  flex: 0 0 5.5rem;
+  max-width: 7rem;
   padding-right: 8px;
   text-align: right;
 }
@@ -298,7 +299,9 @@ onMounted(fetchIssues);
 }
 
 :deep(.query-control) {
-  width: 300px;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .query-actions {
@@ -322,10 +325,6 @@ onMounted(fetchIssues);
 @media (max-width: 768px) {
   .query-grid {
     grid-template-columns: 1fr;
-  }
-
-  :deep(.query-control) {
-    width: 100%;
   }
 
   .query-actions {
