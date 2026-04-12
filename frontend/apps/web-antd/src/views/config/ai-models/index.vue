@@ -48,6 +48,12 @@ const providerOptions = [
 const loading = ref(false);
 const allRows = ref<AIModelRow[]>([]);
 
+/** 默认模型（数据分级等） */
+const defaultLoading = ref(false);
+const defaultSaving = ref(false);
+const gradingDefaultModelId = ref<number | undefined>(undefined);
+const enabledModelOptions = ref<{ label: string; value: number }[]>([]);
+
 const searchForm = reactive({
   model_name: '',
   name: '',
@@ -321,13 +327,88 @@ const columns: TableColumnsType<AIModelRow> = [
   { title: '操作', key: 'action', width: 180, fixed: 'right' },
 ];
 
+async function fetchDefaults() {
+  defaultLoading.value = true;
+  try {
+    const [defRes, enRes] = await Promise.all([
+      baseRequestClient.get('/v1/ai/model-defaults'),
+      baseRequestClient.get('/v1/ai/models/enabled'),
+    ]);
+    const defBody = extractApiBody(defRes) as Record<string, unknown>;
+    const payload = (defBody.data as { grading_model_id?: number } | undefined) ?? defBody;
+    const gid = (payload as { grading_model_id?: number }).grading_model_id;
+    gradingDefaultModelId.value = gid !== undefined && gid !== null ? Number(gid) : undefined;
+
+    const enBody = extractApiBody(enRes);
+    const raw = enBody.data;
+    const list = Array.isArray(raw) ? (raw as AIModelRow[]) : [];
+    enabledModelOptions.value = list
+      .filter((m) => m.id != null)
+      .map((m) => ({
+        label: `${m.name ?? m.model_name} (${m.provider ?? ''}/${m.model_name ?? ''})`,
+        value: Number(m.id),
+      }));
+  } catch (e: unknown) {
+    message.error((e as Error)?.message || '加载默认模型失败');
+  } finally {
+    defaultLoading.value = false;
+  }
+}
+
+async function saveDefaults() {
+  defaultSaving.value = true;
+  try {
+    const response = await baseRequestClient.put('/v1/ai/model-defaults', {
+      grading_model_id: gradingDefaultModelId.value ?? null,
+    });
+    const body = extractApiBody(response);
+    if (body.success !== true) {
+      message.error(String(body.message ?? '保存失败'));
+      return;
+    }
+    message.success('默认模型已保存');
+    await fetchDefaults();
+  } catch (e: unknown) {
+    message.error((e as Error)?.message || '保存失败');
+  } finally {
+    defaultSaving.value = false;
+  }
+}
+
 onMounted(() => {
   void fetchList();
+  void fetchDefaults();
 });
 </script>
 
 <template>
   <div class="p-5">
+    <Card title="默认模型" class="mb-4" :loading="defaultLoading">
+      <p class="mb-3 text-muted-foreground text-sm">
+        为业务场景指定默认 AI 模型（从下方已启用的模型中选择）。数据分级相关任务（如 AI
+        批处理）将优先使用此处配置；未配置时可回退系统其它逻辑。
+      </p>
+      <Form layout="vertical" class="max-w-xl">
+        <Form.Item label="数据分级默认模型">
+          <Select
+            v-model:value="gradingDefaultModelId"
+            allow-clear
+            show-search
+            option-filter-prop="label"
+            placeholder="不指定则使用系统内置策略"
+            :options="enabledModelOptions"
+            class="w-full"
+          />
+        </Form.Item>
+        <Form.Item>
+          <Space>
+            <Button type="primary" :loading="defaultSaving" @click="saveDefaults">保存</Button>
+            <Button @click="fetchDefaults">刷新</Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Card>
+
     <Card title="模型设置">
       <Form class="mb-4">
         <div class="query-grid">

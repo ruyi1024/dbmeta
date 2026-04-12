@@ -23,6 +23,41 @@ import (
 	"go.uber.org/zap"
 )
 
+// GetAIModelDefaults 获取各场景默认模型 ID
+func GetAIModelDefaults(c *gin.Context) {
+	m, err := service.GetAIModelDefaults()
+	if err != nil {
+		log.Error("获取默认模型配置失败", zap.Error(err))
+		c.JSON(500, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	gradingID := m[model.AIModelScenarioGrading]
+	c.JSON(200, gin.H{
+		"success": true,
+		"data": gin.H{
+			"grading_model_id": gradingID,
+		},
+	})
+}
+
+type aiModelDefaultsUpdateReq struct {
+	GradingModelId *int `json:"grading_model_id"`
+}
+
+// UpdateAIModelDefaults 更新各场景默认模型
+func UpdateAIModelDefaults(c *gin.Context) {
+	var req aiModelDefaultsUpdateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"success": false, "message": "请求参数错误", "error": err.Error()})
+		return
+	}
+	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioGrading, req.GradingModelId); err != nil {
+		c.JSON(400, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"success": true, "message": "保存成功"})
+}
+
 // GetModels 获取模型列表
 func GetModels(c *gin.Context) {
 	models, err := service.GetAllModels()

@@ -158,6 +158,8 @@ func ExecuteTask(c *gin.Context) {
 			// taskRunner.ExecuteSensitiveTask()
 		case "data_quality_ai_analysis":
 			taskRunner.ExecuteDataQualityAiAnalysis()
+		case "ai_grading_batch":
+			taskRunner.ExecuteAiGradingBatchTask()
 		default:
 			// 其他任务可以在这里添加
 		}

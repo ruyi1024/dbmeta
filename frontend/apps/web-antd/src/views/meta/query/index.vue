@@ -2,7 +2,7 @@
 import { computed, defineComponent, h, reactive, ref } from 'vue';
 import Exceljs from 'exceljs';
 import { saveAs } from 'file-saver';
-import { DownloadOutlined } from '@ant-design/icons-vue';
+import { CheckCircleOutlined, CloseCircleOutlined, DownloadOutlined } from '@ant-design/icons-vue';
 
 import {
   Alert,
@@ -478,6 +478,11 @@ function onCopyResult() {
   void writeLog('copyData');
 }
 
+/** 数据源是否可用（后端 QueryAll 可能把 status 扫成字符串 "1"） */
+function isDatasourceStatusOk(item: { status?: unknown }): boolean {
+  return Number(item.status) === 1;
+}
+
 loadDatasourceTypes();
 </script>
 
@@ -513,7 +518,19 @@ loadDatasourceTypes();
                     :key="`${item.host}:${item.port}`"
                     :value="`${item.host}:${item.port}`"
                   >
-                    {{ item.name }}[{{ item.status === 1 ? '可用' : '不可用' }}]
+                    <span class="datasource-option-label">
+                      <span class="datasource-option-name">{{ item.name }}</span>
+                      <span class="datasource-option-status">
+                        [
+                        <CheckCircleOutlined
+                          v-if="isDatasourceStatusOk(item)"
+                          class="datasource-status-icon datasource-status-icon--ok"
+                        />
+                        <CloseCircleOutlined v-else class="datasource-status-icon datasource-status-icon--bad" />
+                        {{ isDatasourceStatusOk(item) ? '可用' : '不可用' }}
+                        ]
+                      </span>
+                    </span>
                   </Select.Option>
                 </Select>
               </Form.Item>
@@ -707,6 +724,43 @@ loadDatasourceTypes();
 </template>
 
 <style scoped>
+.datasource-option-label {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.datasource-option-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.datasource-option-status {
+  align-items: center;
+  color: hsl(var(--muted-foreground));
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.datasource-status-icon {
+  font-size: 12px;
+  vertical-align: -0.15em;
+}
+
+.datasource-status-icon--ok {
+  color: #52c41a;
+}
+
+.datasource-status-icon--bad {
+  color: #ff4d4f;
+}
+
 .query-grid {
   column-gap: 16px;
   display: grid;

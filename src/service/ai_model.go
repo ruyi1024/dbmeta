@@ -18,7 +18,9 @@ import (
 	"dbmcloud/src/database"
 	"dbmcloud/src/model"
 	"dbmcloud/src/utils"
+	"errors"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -115,6 +117,7 @@ func DeleteModel(id int) error {
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("模型不存在")
 	}
+	_ = database.DB.Where("model_id = ?", id).Delete(&model.AIModelDefault{}).Error
 	return nil
 }
 
@@ -198,4 +201,63 @@ func TestModelConnection(aiModel *model.AIModel) error {
 
 	zap.L().Info("模型配置验证通过", zap.String("provider", aiModel.Provider), zap.String("model", aiModel.ModelName))
 	return nil
+}
+
+// GetAIModelDefaults 返回各场景默认模型 ID（扩展场景时在 map 中增加键）
+func GetAIModelDefaults() (map[string]*int, error) {
+	var rows []model.AIModelDefault
+	if err := database.DB.Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make(map[string]*int)
+	for i := range rows {
+		out[rows[i].Scenario] = rows[i].ModelId
+	}
+	return out, nil
+}
+
+// SetAIModelDefaultForScenario 设置某场景默认模型；modelID 为 nil 或 <=0 表示清除
+func SetAIModelDefaultForScenario(scenario string, modelID *int) error {
+	now := time.Now()
+	if modelID == nil || *modelID <= 0 {
+		return database.DB.Where("scenario = ?", scenario).Delete(&model.AIModelDefault{}).Error
+	}
+	var m model.AIModel
+	if err := database.DB.Where("id = ? AND enabled = 1", *modelID).First(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("模型不存在或未启用")
+		}
+		return err
+	}
+	var row model.AIModelDefault
+	err := database.DB.Where("scenario = ?", scenario).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return database.DB.Create(&model.AIModelDefault{
+			Scenario:   scenario,
+			ModelId:    modelID,
+			GmtUpdated: now,
+		}).Error
+	}
+	if err != nil {
+		return err
+	}
+	return database.DB.Model(&model.AIModelDefault{}).Where("scenario = ?", scenario).Updates(map[string]interface{}{
+		"model_id":     *modelID,
+		"gmt_updated": now,
+	}).Error
+}
+
+// GetDefaultAIModelByScenario 供任务侧调用：解析为完整模型配置
+func GetDefaultAIModelByScenario(scenario string) (*model.AIModel, error) {
+	var row model.AIModelDefault
+	if err := database.DB.Where("scenario = ?", scenario).First(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if row.ModelId == nil || *row.ModelId <= 0 {
+		return nil, nil
+	}
+	return GetModelById(*row.ModelId)
 }

@@ -26,6 +26,7 @@ import (
 	"dbmcloud/src/controller/datasource"
 	"dbmcloud/src/controller/event"
 	"dbmcloud/src/controller/favorite"
+	"dbmcloud/src/controller/grading"
 	"dbmcloud/src/controller/meta"
 	"dbmcloud/src/controller/monitor"
 	"dbmcloud/src/controller/privilege"
@@ -218,6 +219,15 @@ func Router() *gin.Engine {
 		v1.POST("/dataquality/tasks/execute", dataquality.ExecuteTask)
 		v1.DELETE("/dataquality/tasks/:id", dataquality.DeleteTask)
 
+		// 数据分级
+		v1.GET("/grading/grades", grading.ListGrades)
+		v1.PUT("/grading/grades", grading.UpdateGrade)
+		v1.GET("/grading/assets", grading.ListAssets)
+		v1.POST("/grading/assets", grading.CreateAsset)
+		v1.PUT("/grading/assets", grading.UpdateAsset)
+		v1.DELETE("/grading/assets/:id", grading.DeleteAsset)
+		v1.GET("/grading/logs", grading.ListLogs)
+
 		v1.GET("/dashbaord/websocket", dashboard.EventWS)
 		v1.GET("/dashbaord/info", dashboard.MetaInfo)
 
@@ -251,6 +261,10 @@ func Router() *gin.Engine {
 		v1.POST("/ai/chat/rules", ai.CreateRule)
 		v1.PUT("/ai/chat/rules/:id", ai.UpdateRule)
 		v1.DELETE("/ai/chat/rules/:id", ai.DeleteRule)
+
+		// 默认模型（不可使用 /ai/models/... 前缀，否则与下方 /ai/models/:id 在 Gin 路由树中冲突）
+		v1.GET("/ai/model-defaults", ai.GetAIModelDefaults)
+		v1.PUT("/ai/model-defaults", ai.UpdateAIModelDefaults)
 
 		// AI模型管理相关接口
 		modelsGroup := v1.Group("/ai/models")

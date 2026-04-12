@@ -12,9 +12,50 @@ import { baseRequestClient } from '#/api/request';
 
 interface InsightReport {
   created_at?: string;
+  /** 列表卡片摘要，由 report_content 生成 */
+  description_preview?: string;
   id?: number;
   report_content?: string;
   task_name?: string;
+}
+
+/** public/report_bg 下的封面图，按报告稳定映射 */
+const REPORT_BG_IMAGES = [
+  '/report_bg/bg_01.png',
+  '/report_bg/bg_02.png',
+  '/report_bg/bg_03.png',
+  '/report_bg/bg_04.png',
+  '/report_bg/bg_05.png',
+  '/report_bg/bg_06.png',
+] as const;
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h;
+}
+
+function reportBgUrl(report: InsightReport): string {
+  const n = report.id ?? hashString(String(report.task_name ?? ''));
+  const idx = Math.abs(n) % REPORT_BG_IMAGES.length;
+  return REPORT_BG_IMAGES[idx];
+}
+
+/** 从 Markdown 正文提取卡片用摘要（标题下方展示） */
+function plainTextPreview(raw: string, maxLen: number): string {
+  const t = String(raw ?? '').trim();
+  if (!t) return '暂无描述';
+  let s = t
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s) return '暂无描述';
+  if (s.length <= maxLen) return s;
+  return `${s.slice(0, maxLen).replace(/\s+\S*$/, '')}…`;
 }
 
 function formatTime(v?: string) {
@@ -36,7 +77,11 @@ const pager = reactive({
 const filteredReports = computed(() => {
   const k = keyword.value.trim();
   if (!k) return reports.value;
-  return reports.value.filter((item) => String(item.task_name ?? '').includes(k));
+  return reports.value.filter((item) => {
+    const name = String(item.task_name ?? '');
+    const desc = String(item.description_preview ?? plainTextPreview(String(item.report_content ?? ''), 500));
+    return name.includes(k) || desc.includes(k);
+  });
 });
 
 async function fetchReports() {
@@ -57,12 +102,16 @@ async function fetchReports() {
     const list = Array.isArray(payload?.data) ? (payload.data as InsightReport[]) : [];
     reports.value = list
       .filter((item) => String(item.report_content ?? '').trim().length > 0)
-      .map((item) => ({
-        created_at: item.created_at,
-        id: item.id,
-        report_content: item.report_content,
-        task_name: item.task_name || '未命名洞察报告',
-      }));
+      .map((item) => {
+        const report_content = item.report_content;
+        return {
+          created_at: item.created_at,
+          description_preview: plainTextPreview(String(report_content ?? ''), 120),
+          id: item.id,
+          report_content,
+          task_name: item.task_name || '未命名洞察报告',
+        };
+      });
   } catch (e: unknown) {
     reports.value = [];
     message.error((e as Error)?.message || '加载报告失败');
@@ -113,15 +162,21 @@ onMounted(() => {
           v-for="report in filteredReports"
           :key="report.id"
           class="book-card"
+          :style="{ backgroundImage: `url(${reportBgUrl(report)})` }"
           @click="openDetail(report)"
         >
           <div class="book-content">
-            <Tooltip :title="report.task_name">
-              <div class="book-title-wrap">
+            <div class="book-text-block">
+              <div class="book-title-row">
                 <FileTextOutlined class="book-title-icon" />
-                <div class="book-title">{{ report.task_name }}</div>
+                <Tooltip :title="report.task_name">
+                  <div class="book-title">{{ report.task_name }}</div>
+                </Tooltip>
               </div>
-            </Tooltip>
+              <Tooltip :title="report.description_preview">
+                <div class="book-desc">{{ report.description_preview }}</div>
+              </Tooltip>
+            </div>
             <div class="book-meta">
               <Tag color="blue">洞察报告</Tag>
               <span>{{ formatTime(report.created_at) }}</span>
@@ -154,7 +209,7 @@ onMounted(() => {
   border-radius: 14px;
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   padding: 16px;
   position: relative;
 }
@@ -184,7 +239,10 @@ onMounted(() => {
 }
 
 .book-card {
-  background: linear-gradient(165deg, #1e293b 0%, #2a3447 52%, #243244 100%);
+  background-color: #1e293b;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   border: 1px solid rgb(148 163 184 / 20%);
   border-radius: 12px;
   box-shadow: 0 8px 16px rgb(15 23 42 / 16%);
@@ -192,7 +250,22 @@ onMounted(() => {
   display: flex;
   min-height: 280px;
   overflow: hidden;
+  position: relative;
   transition: all 0.2s ease;
+}
+
+.book-card::before {
+  background: linear-gradient(
+    165deg,
+    rgb(15 23 42 / 58%) 0%,
+    rgb(15 23 42 / 72%) 52%,
+    rgb(15 23 42 / 78%) 100%
+  );
+  border-radius: inherit;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
 }
 
 .book-card:hover {
@@ -207,27 +280,58 @@ onMounted(() => {
   flex-direction: column;
   justify-content: space-between;
   padding: 14px 16px 12px;
+  position: relative;
+  z-index: 1;
 }
 
-.book-title {
-  color: #e5e7eb;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.4;
-  max-height: 64px;
-  overflow: hidden;
+.book-text-block {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
 }
 
-.book-title-wrap {
+.book-title-row {
   align-items: flex-start;
   display: flex;
   gap: 8px;
 }
 
+.book-title {
+  color: #f1f5f9;
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.book-desc {
+  color: rgb(203 213 225 / 92%);
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 400;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  line-height: 1.55;
+  overflow: hidden;
+  padding-left: 23px;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+}
+
 .book-title-icon {
   color: #60a5fa;
-  font-size: 15px;
-  margin-top: 2px;
+  flex-shrink: 0;
+  font-size: 18px;
+  margin-top: 3px;
 }
 
 .book-meta {

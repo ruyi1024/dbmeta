@@ -1,10 +1,10 @@
 {
   "welcomeBack": "Welcome Back",
-  "pageTitle": "Plug-and-play Admin system",
-  "pageDesc": "Efficient, versatile frontend template",
+  "pageTitle": "DBMeta · Enterprise Database Intelligence Platform",
+  "pageDesc": "Metadata assetization · AI natural-language querying · Quality, security & audit in one place",
   "loginSuccess": "Login Successful",
   "loginSuccessDesc": "Welcome Back",
-  "loginSubtitle": "Enter your account details to manage your projects",
+  "loginSubtitle": "Sign in to manage data sources, metadata, intelligent SQL, and insights",
   "selectAccount": "Quick Select Account",
   "username": "Username",
   "password": "Password",

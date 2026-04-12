@@ -387,6 +387,52 @@ func InitDb() *gorm.DB {
 		log.Error("db sync DataQualityHistory error.", zap.Error(err))
 	}
 
+	// 数据分类分级（GB 通用三类：一般 / 重要 / 核心）
+	if err = db.AutoMigrate(&model.DataSecurityGrade{}); err != nil {
+		log.Error("db sync DataSecurityGrade error.", zap.Error(err))
+	}
+	if err = db.AutoMigrate(&model.DataAssetSecurityGrade{}); err != nil {
+		log.Error("db sync DataAssetSecurityGrade error.", zap.Error(err))
+	}
+	if err = db.AutoMigrate(&model.DataAssetSecurityGradeLog{}); err != nil {
+		log.Error("db sync DataAssetSecurityGradeLog error.", zap.Error(err))
+	}
+	var dataGradeCount int64
+	db.Model(&model.DataSecurityGrade{}).Count(&dataGradeCount)
+	if dataGradeCount == 0 {
+		now := time.Now()
+		db.Create(&model.DataSecurityGrade{
+			GradeCode:   "GENERAL",
+			GradeName:   "一般数据",
+			LevelOrder:  1,
+			Description: "危害程度相对较低，按组织数据安全制度管理",
+			StandardRef: "GB 国家标准体系-通用分级(三类)",
+			Enable:      1,
+			GmtCreated:  now,
+			GmtUpdated:  now,
+		})
+		db.Create(&model.DataSecurityGrade{
+			GradeCode:   "IMPORTANT",
+			GradeName:   "重要数据",
+			LevelOrder:  2,
+			Description: "一旦遭到篡改、破坏、泄露或者非法获取、非法利用，可能对经济运行、公共利益、个人权益等造成较大危害",
+			StandardRef: "GB 国家标准体系-通用分级(三类)",
+			Enable:      1,
+			GmtCreated:  now,
+			GmtUpdated:  now,
+		})
+		db.Create(&model.DataSecurityGrade{
+			GradeCode:   "CORE",
+			GradeName:   "核心数据",
+			LevelOrder:  3,
+			Description: "危害程度高于重要数据，对国家安全、经济运行、社会秩序、公共利益等影响更为重大，需采取更严格保护措施",
+			StandardRef: "GB 国家标准体系-通用分级(三类)",
+			Enable:      1,
+			GmtCreated:  now,
+			GmtUpdated:  now,
+		})
+	}
+
 	if !db.Migrator().HasTable(&model.TaskOption{}) {
 		if err = db.AutoMigrate(&model.TaskOption{}); err != nil {
 			log.Error("db sync error.", zap.Error(err))
@@ -407,6 +453,7 @@ func InitDb() *gorm.DB {
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "*/30 * * * *"},
+		{TaskKey: "ai_grading_batch", TaskName: "AI数据分级批处理", TaskDescription: "对无分级或低置信度(仅AI)的表/列调用大模型自动标注安全分级", Crontab: "*/30 * * * *"},
 	}
 
 	for _, task := range defaultTasks {
@@ -439,6 +486,7 @@ func InitDb() *gorm.DB {
 		{HeartbeatKey: "ai_apply_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "data_quality_ai_analysis", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_pumpkin_growth", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "ai_grading_batch", HeartbeatTime: t, HeartbeatEndTime: t},
 	}
 
 	for _, heartbeat := range defaultHeartbeats {
@@ -601,6 +649,9 @@ func InitDb() *gorm.DB {
 		if err = db.AutoMigrate(&model.AIModel{}); err != nil {
 			log.Error("db sync error.", zap.Error(err))
 		}
+	}
+	if err = db.AutoMigrate(&model.AIModelDefault{}); err != nil {
+		log.Error("db sync AIModelDefault error.", zap.Error(err))
 	}
 
 	// Pumpkin growth tables
