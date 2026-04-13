@@ -80,25 +80,25 @@ func DatabaseList(c *gin.Context) {
 			return
 		}
 
-		// 打印接收到的数据用于调试
-		fmt.Printf("Received update data: %+v\n", record)
-		fmt.Printf("is_deleted type: %T, value: %v\n", record.IsDeleted, record.IsDeleted)
-
-		// 验证ID是否存在
 		if record.Id == 0 {
 			c.JSON(200, gin.H{"success": false, "msg": "Invalid ID: ID cannot be zero"})
 			return
 		}
 
-		result := database.DB.Model(&record).Select("alias_name", "app_name", "app_desc", "app_owner", "app_owner_email", "app_owner_phone", "is_deleted").Where("id = ?", record.Id).Updates(record)
+		updates := map[string]interface{}{
+			"alias_name":      record.AliasName,
+			"ops_owner":       record.OpsOwner,
+			"ops_owner_phone": record.OpsOwnerPhone,
+			"is_deleted":      record.IsDeleted,
+		}
+		result := database.DB.Model(&model.MetaDatabase{}).Where("id = ?", record.Id).Updates(updates)
 		if result.Error != nil {
 			c.JSON(200, gin.H{"success": false, "msg": "Update Error: " + result.Error.Error()})
 			return
 		}
 
-		// 检查更新是否成功
 		if result.RowsAffected == 0 {
-			c.JSON(200, gin.H{"success": false, "msg": "No record found with id: " + fmt.Sprintf("%d", record.Id)})
+			c.JSON(200, gin.H{"success": false, "msg": "No record found with id"})
 			return
 		}
 

@@ -6,11 +6,8 @@ export interface TableListItem {
   database_name: string;
   alias_name?: string;
   characters: string;
-  app_name: string;
-  app_desc: string;
-  app_owner: string;
-  app_owner_email: string;
-  app_owner_phone: string;
+  ops_owner?: string;
+  ops_owner_phone?: string;
   is_deleted: number;
   gmt_created: date;
   gmt_updated: date;
@@ -35,11 +32,8 @@ export interface TableListParams {
   database_name?: string;
   alias_name?: string;
   characters?: string;
-  app_name?: string;
-  app_desc?: string;
-  app_owner?: string;
-  app_owner_email?: string;
-  app_owner_phone?: string;
+  ops_owner?: string;
+  ops_owner_phone?: string;
   is_deleted?: number;
   pageSize?: number;
   currentPage?: number;

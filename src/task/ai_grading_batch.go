@@ -73,6 +73,64 @@ func newGradingLLMInvoker(logger *zap.Logger) (*gradingLLMInvoker, error) {
 	return &gradingLLMInvoker{apiURL: apiURL, apiKey: apiKey, timeout: timeout}, nil
 }
 
+// newTableColumnCommentLLMInvoker 表/字段 AI 备注任务：优先「表字段备注生成」默认模型，否则回退 Dify
+func newTableColumnCommentLLMInvoker(logger *zap.Logger) (*gradingLLMInvoker, error) {
+	def, err := service.GetDefaultAIModelByScenario(model.AIModelScenarioTableColumnComment)
+	if err != nil {
+		logger.Warn("读取表字段备注默认模型失败，将尝试 Dify", zap.Error(err))
+		def = nil
+	}
+	if def != nil && def.Enabled != 1 {
+		logger.Warn("表字段备注默认模型未启用，将尝试 Dify", zap.Int("model_id", def.Id))
+		def = nil
+	}
+	if def != nil {
+		cli, cerr := service.NewAIClient(def)
+		if cerr != nil {
+			logger.Warn("创建表字段备注默认模型客户端失败，将尝试 Dify", zap.String("model", def.Name), zap.Error(cerr))
+		} else {
+			logger.Info("表/字段备注生成使用配置的默认模型",
+				zap.String("provider", def.Provider), zap.String("model", def.ModelName))
+			return &gradingLLMInvoker{client: cli}, nil
+		}
+	}
+	apiURL, apiKey, timeout, derr := getDifyConfigForTableComment()
+	if derr != nil {
+		return nil, fmt.Errorf("未配置可用的表字段备注默认模型且 Dify 不可用: %w", derr)
+	}
+	logger.Info("表/字段备注生成使用 Dify（common_chat_agent）")
+	return &gradingLLMInvoker{apiURL: apiURL, apiKey: apiKey, timeout: timeout}, nil
+}
+
+// newTableColumnAccuracyLLMInvoker 表字段注释准确度评估：优先「表字段准确度评估」默认模型，否则回退 Dify
+func newTableColumnAccuracyLLMInvoker(logger *zap.Logger) (*gradingLLMInvoker, error) {
+	def, err := service.GetDefaultAIModelByScenario(model.AIModelScenarioTableColumnAccuracy)
+	if err != nil {
+		logger.Warn("读取表字段准确度评估默认模型失败，将尝试 Dify", zap.Error(err))
+		def = nil
+	}
+	if def != nil && def.Enabled != 1 {
+		logger.Warn("表字段准确度评估默认模型未启用，将尝试 Dify", zap.Int("model_id", def.Id))
+		def = nil
+	}
+	if def != nil {
+		cli, cerr := service.NewAIClient(def)
+		if cerr != nil {
+			logger.Warn("创建表字段准确度评估模型客户端失败，将尝试 Dify", zap.String("model", def.Name), zap.Error(cerr))
+		} else {
+			logger.Info("表字段准确度评估使用配置的默认模型",
+				zap.String("provider", def.Provider), zap.String("model", def.ModelName))
+			return &gradingLLMInvoker{client: cli}, nil
+		}
+	}
+	apiURL, apiKey, timeout, derr := getDifyConfigForTableComment()
+	if derr != nil {
+		return nil, fmt.Errorf("未配置可用的表字段准确度评估默认模型且 Dify 不可用: %w", derr)
+	}
+	logger.Info("表字段准确度评估使用 Dify（common_chat_agent）")
+	return &gradingLLMInvoker{apiURL: apiURL, apiKey: apiKey, timeout: timeout}, nil
+}
+
 func (g *gradingLLMInvoker) complete(prompt string) (string, error) {
 	if g.client != nil {
 		resp, err := g.client.Chat([]service.Message{{Role: "user", Content: prompt}}, nil)

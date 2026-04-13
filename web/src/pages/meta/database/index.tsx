@@ -57,11 +57,8 @@ const formInitValue = {
   database_name: '',
   alias_name: '',
   characters: '',
-  app_name: '',
-  app_desc: '',
-  app_owner: '',
-  app_owner_email: '',
-  app_owner_phone: '',
+  ops_owner: '',
+  ops_owner_phone: '',
   is_deleted: 0,
 };
 
@@ -101,28 +98,13 @@ const TableList: React.FC<{}> = () => {
       dataIndex: 'port',
     },
     {
-      title: '应用名称',
-      dataIndex: 'app_name',
+      title: '运维负责人',
+      dataIndex: 'ops_owner',
       hideInSearch: true,
     },
     {
-      title: '应用描述',
-      dataIndex: 'app_desc',
-      hideInSearch: true,
-    },
-    {
-      title: '应用负责人',
-      dataIndex: 'app_owner',
-      hideInSearch: true,
-    },
-    {
-      title: '负责人邮箱',
-      dataIndex: 'app_owner_email',
-      hideInSearch: true,
-    },
-    {
-      title: '负责人电话',
-      dataIndex: 'app_owner_phone',
+      title: '运维负责人电话',
+      dataIndex: 'ops_owner_phone',
       hideInSearch: true,
     },
     {
@@ -162,7 +144,7 @@ const TableList: React.FC<{}> = () => {
               setFormValues(record);
             }}
           >
-            修改业务信息
+            编辑
           </a>
         </>
       ),
@@ -213,29 +195,14 @@ const TableList: React.FC<{}> = () => {
               initialValue: formValues.alias_name,
             },
             {
-              title: '应用名称',
-              dataIndex: 'app_name',
-              initialValue: formValues.app_name,
+              title: '数据库运维负责人',
+              dataIndex: 'ops_owner',
+              initialValue: formValues.ops_owner,
             },
             {
-              title: '应用描述',
-              dataIndex: 'app_desc',
-              initialValue: formValues.app_desc,
-            },
-            {
-              title: '应用负责人',
-              dataIndex: 'app_owner',
-              initialValue: formValues.app_owner,
-            },
-            {
-              title: '负责人邮箱',
-              dataIndex: 'app_owner_email',
-              initialValue: formValues.app_owner_email,
-            },
-            {
-              title: '负责人电话',
-              dataIndex: 'app_owner_phone',
-              initialValue: formValues.app_owner_phone,
+              title: '运维负责人电话',
+              dataIndex: 'ops_owner_phone',
+              initialValue: formValues.ops_owner_phone,
             },
             {
               title: '是否删除',

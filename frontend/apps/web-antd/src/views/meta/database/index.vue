@@ -21,11 +21,6 @@ defineOptions({ name: 'MetaDatabasePage' });
 
 interface DatabaseItem {
   alias_name?: string;
-  app_desc?: string;
-  app_name?: string;
-  app_owner?: string;
-  app_owner_email?: string;
-  app_owner_phone?: string;
   characters?: string;
   database_name: string;
   datasource_type: string;
@@ -34,6 +29,8 @@ interface DatabaseItem {
   host: string;
   id: number;
   is_deleted: number | string;
+  ops_owner?: string;
+  ops_owner_phone?: string;
   port: number | string;
 }
 
@@ -55,13 +52,17 @@ const queryForm = reactive({
 const editVisible = ref(false);
 const editLoading = ref(false);
 const editingId = ref<number>(0);
+
+const linkModalOpen = ref(false);
+const linkLoading = ref(false);
+const linkSaving = ref(false);
+const linkDatabaseName = ref('');
+const businessOptions = ref<{ label: string; value: string }[]>([]);
+const selectedAppNames = ref<string[]>([]);
 const editForm = reactive({
   alias_name: '',
-  app_desc: '',
-  app_name: '',
-  app_owner: '',
-  app_owner_email: '',
-  app_owner_phone: '',
+  ops_owner: '',
+  ops_owner_phone: '',
   is_deleted: 0,
 });
 
@@ -72,15 +73,12 @@ const columns: TableColumnsType<DatabaseItem> = [
   { title: '数据库类型', dataIndex: 'datasource_type', key: 'datasource_type', sorter: true },
   { title: '所属主机', dataIndex: 'host', key: 'host' },
   { title: '所属端口', dataIndex: 'port', key: 'port' },
-  { title: '应用名称', dataIndex: 'app_name', key: 'app_name' },
-  { title: '应用描述', dataIndex: 'app_desc', key: 'app_desc' },
-  { title: '应用负责人', dataIndex: 'app_owner', key: 'app_owner' },
-  { title: '负责人邮箱', dataIndex: 'app_owner_email', key: 'app_owner_email' },
-  { title: '负责人电话', dataIndex: 'app_owner_phone', key: 'app_owner_phone' },
+  { title: '运维负责人', dataIndex: 'ops_owner', key: 'ops_owner' },
+  { title: '运维负责人电话', dataIndex: 'ops_owner_phone', key: 'ops_owner_phone' },
   { title: '是否删除', dataIndex: 'is_deleted', key: 'is_deleted' },
   { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
   { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
-  { title: '操作', dataIndex: 'option', key: 'option', fixed: 'right', width: 140 },
+  { title: '操作', dataIndex: 'option', key: 'option', fixed: 'right', width: 200 },
 ];
 
 async function fetchDatabases(sorter?: Record<string, string>) {
@@ -144,13 +142,63 @@ function deletedText(value: number | string) {
 function openEdit(record: Record<string, any>) {
   editingId.value = record.id;
   editForm.alias_name = record.alias_name || '';
-  editForm.app_name = record.app_name || '';
-  editForm.app_desc = record.app_desc || '';
-  editForm.app_owner = record.app_owner || '';
-  editForm.app_owner_email = record.app_owner_email || '';
-  editForm.app_owner_phone = record.app_owner_phone || '';
+  editForm.ops_owner = record.ops_owner || '';
+  editForm.ops_owner_phone = record.ops_owner_phone || '';
   editForm.is_deleted = Number(record.is_deleted) || 0;
   editVisible.value = true;
+}
+
+async function openLinkBusiness(record: DatabaseItem) {
+  linkDatabaseName.value = record.database_name;
+  linkModalOpen.value = true;
+  linkLoading.value = true;
+  selectedAppNames.value = [];
+  businessOptions.value = [];
+  try {
+    const [bizRes, relRes] = await Promise.all([
+      baseRequestClient.get('/v1/meta/business-info/list'),
+      baseRequestClient.get('/v1/meta/database-business/list', {
+        params: { exact_database_name: record.database_name },
+      }),
+    ]);
+    const bizPayload = (bizRes as any)?.data ?? bizRes;
+    const bizList = Array.isArray(bizPayload?.data) ? bizPayload.data : [];
+    businessOptions.value = bizList
+      .map((x: { app_name?: string }) => String(x.app_name || '').trim())
+      .filter(Boolean)
+      .map((name: string) => ({ label: name, value: name }));
+    const relPayload = (relRes as any)?.data ?? relRes;
+    const relList = Array.isArray(relPayload?.data) ? relPayload.data : [];
+    selectedAppNames.value = relList
+      .map((x: { app_name?: string }) => String(x.app_name || '').trim())
+      .filter(Boolean);
+  } catch (error: any) {
+    message.error(error?.message || '加载业务信息失败');
+    linkModalOpen.value = false;
+  } finally {
+    linkLoading.value = false;
+  }
+}
+
+async function handleLinkSubmit() {
+  linkSaving.value = true;
+  try {
+    const response = await baseRequestClient.post('/v1/meta/database-business/batch-sync', {
+      database_name: linkDatabaseName.value,
+      app_names: selectedAppNames.value,
+    });
+    const payload = (response as any)?.data ?? response;
+    if (payload?.success === false) {
+      message.error(payload?.msg || '保存关联失败');
+      return;
+    }
+    message.success('业务关联已保存');
+    linkModalOpen.value = false;
+  } catch (error: any) {
+    message.error(error?.message || '保存关联失败');
+  } finally {
+    linkSaving.value = false;
+  }
 }
 
 async function handleUpdateSubmit() {
@@ -245,7 +293,10 @@ onMounted(fetchDatabases);
             {{ deletedText(record.is_deleted) }}
           </template>
           <template v-else-if="column.key === 'option'">
-            <a @click="openEdit(record)">修改业务信息</a>
+            <Space size="small">
+              <a @click="openEdit(record as DatabaseItem)">编辑</a>
+              <a @click="openLinkBusiness(record as DatabaseItem)">关联业务</a>
+            </Space>
           </template>
           <template v-else-if="column.key === 'gmt_created'">
             {{ formatDate(record.gmt_created) }}
@@ -257,8 +308,48 @@ onMounted(fetchDatabases);
       </Table>
 
       <Modal
+        v-model:open="linkModalOpen"
+        title="关联业务信息"
+        :confirm-loading="linkSaving"
+        :ok-button-props="{ disabled: linkLoading }"
+        width="560px"
+        destroy-on-close
+        @ok="handleLinkSubmit"
+      >
+        <div v-if="linkLoading" class="py-8 text-center text-gray-500">加载中…</div>
+        <template v-else>
+          <p class="mb-3 text-sm text-gray-500">
+            数据库：<strong>{{ linkDatabaseName }}</strong>
+          </p>
+          <p class="mb-2 text-sm text-gray-500">
+            多选应用名称，保存后将写入「库表业务关联」表；取消勾选可解除关联。
+          </p>
+          <Select
+            v-model:value="selectedAppNames"
+            mode="multiple"
+            allow-clear
+            show-search
+            placeholder="请选择要关联的业务（应用名称）"
+            class="w-full"
+            :options="businessOptions"
+            :filter-option="
+              (input: string, option: any) =>
+                (option?.label ?? '')
+                  .toString()
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+            "
+            :max-tag-count="8"
+          />
+          <p v-if="businessOptions.length === 0" class="mt-2 text-sm text-amber-600">
+            暂无业务信息，请先在「数据字典 → 业务信息」中维护应用。
+          </p>
+        </template>
+      </Modal>
+
+      <Modal
         v-model:open="editVisible"
-        title="修改业务信息"
+        title="编辑数据库信息"
         :confirm-loading="editLoading"
         @ok="handleUpdateSubmit"
       >
@@ -266,20 +357,11 @@ onMounted(fetchDatabases);
           <Form.Item label="数据库别名">
             <Input v-model:value="editForm.alias_name" />
           </Form.Item>
-          <Form.Item label="应用名称">
-            <Input v-model:value="editForm.app_name" />
+          <Form.Item label="数据库运维负责人">
+            <Input v-model:value="editForm.ops_owner" placeholder="可选" />
           </Form.Item>
-          <Form.Item label="应用描述">
-            <Input v-model:value="editForm.app_desc" />
-          </Form.Item>
-          <Form.Item label="应用负责人">
-            <Input v-model:value="editForm.app_owner" />
-          </Form.Item>
-          <Form.Item label="负责人邮箱">
-            <Input v-model:value="editForm.app_owner_email" />
-          </Form.Item>
-          <Form.Item label="负责人电话">
-            <Input v-model:value="editForm.app_owner_phone" />
+          <Form.Item label="运维负责人电话">
+            <Input v-model:value="editForm.ops_owner_phone" placeholder="可选" />
           </Form.Item>
           <Form.Item label="是否删除">
             <Select v-model:value="editForm.is_deleted">

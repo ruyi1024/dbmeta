@@ -32,16 +32,22 @@ func GetAIModelDefaults(c *gin.Context) {
 		return
 	}
 	gradingID := m[model.AIModelScenarioGrading]
+	tableColAccuracyID := m[model.AIModelScenarioTableColumnAccuracy]
+	tableColCommentID := m[model.AIModelScenarioTableColumnComment]
 	c.JSON(200, gin.H{
 		"success": true,
 		"data": gin.H{
-			"grading_model_id": gradingID,
+			"grading_model_id":               gradingID,
+			"table_column_accuracy_model_id": tableColAccuracyID,
+			"table_column_comment_model_id":  tableColCommentID,
 		},
 	})
 }
 
 type aiModelDefaultsUpdateReq struct {
-	GradingModelId *int `json:"grading_model_id"`
+	GradingModelId            *int `json:"grading_model_id"`
+	TableColumnAccuracyModelId *int `json:"table_column_accuracy_model_id"`
+	TableColumnCommentModelId *int `json:"table_column_comment_model_id"`
 }
 
 // UpdateAIModelDefaults 更新各场景默认模型
@@ -52,6 +58,14 @@ func UpdateAIModelDefaults(c *gin.Context) {
 		return
 	}
 	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioGrading, req.GradingModelId); err != nil {
+		c.JSON(400, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioTableColumnAccuracy, req.TableColumnAccuracyModelId); err != nil {
+		c.JSON(400, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioTableColumnComment, req.TableColumnCommentModelId); err != nil {
 		c.JSON(400, gin.H{"success": false, "message": err.Error()})
 		return
 	}
@@ -146,6 +160,7 @@ func UpdateModel(c *gin.Context) {
 		c.JSON(400, gin.H{
 			"success": false,
 			"message": "无效的模型ID",
+			"error":   err.Error(),
 		})
 		return
 	}
@@ -280,6 +295,7 @@ func TestModel(c *gin.Context) {
 		c.JSON(404, gin.H{
 			"success": false,
 			"message": "模型不存在",
+			"error":   err.Error(),
 		})
 		return
 	}

@@ -52,16 +52,17 @@ func roundToTwoDecimals(value float64) float64 {
 
 func QualityInfo(c *gin.Context) {
 	// 基础统计数据
-	databaseCount, _ := database.QueryAll("select count(*) as count from meta_database limit 1")
+	databaseCount, _ := database.QueryAll("select count(*) as count from meta_database where is_deleted = 0 limit 1")
 	tableCount, _ := database.QueryAll("select count(*) as count from meta_table limit 1")
 	columnCount, _ := database.QueryAll("select count(*) as count from meta_column limit 1")
 
-	// 数据库业务关联率（基于app_name, app_desc, app_owner）
+	// 数据库业务关联率（在 meta_database_business 中存在 database_name 即视为已关联业务信息）
 	databaseBusinessCount, _ := database.QueryAll(`
-		select count(*) as count from meta_database 
-		where (app_name is not null and app_name != '') 
-		or (app_desc is not null and app_desc != '') 
-		or (app_owner is not null and app_owner != '')
+		select count(*) as count from meta_database d
+		where d.is_deleted = 0
+		and exists (
+			select 1 from meta_database_business b where b.database_name = d.database_name limit 1
+		)
 		limit 1
 	`)
 
@@ -160,18 +161,25 @@ func QualityInfo(c *gin.Context) {
 		columnAccuracyRate = roundToTwoDecimals(columnAccuracyRate)
 	}
 
-	// 数据库业务关联情况饼图数据
+	// 数据库业务关联情况饼图数据（同关联率逻辑）
 	databaseBusinessData, _ := database.QueryAll(`
 		select 
 			case 
-				when (app_name is not null and app_name != '') 
-					or (app_desc is not null and app_desc != '') 
-					or (app_owner is not null and app_owner != '') then '已关联业务'
+				when exists (
+					select 1 from meta_database_business b where b.database_name = meta_database.database_name limit 1
+				) then '已关联业务'
 				else '未关联业务'
 			end as type,
 			count(*) as value
-		from meta_database 
-		group by type
+		from meta_database
+		where is_deleted = 0
+		group by 
+			case 
+				when exists (
+					select 1 from meta_database_business b where b.database_name = meta_database.database_name limit 1
+				) then '已关联业务'
+				else '未关联业务'
+			end
 	`)
 	databaseQualityDataList := make([]map[string]interface{}, 0)
 	for _, item := range databaseBusinessData {

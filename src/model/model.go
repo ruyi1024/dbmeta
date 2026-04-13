@@ -153,11 +153,8 @@ type MetaDatabase struct {
 	AliasName      string    `gorm:"size:50" json:"alias_name"` // 数据库别名
 	SchemaName     string    `gorm:"size:50" json:"schema_name"`
 	Characters     string    `gorm:"size:50" json:"characters"`
-	AppName        string    `gorm:"size:50" json:"app_name"`
-	AppDesc        string    `gorm:"size:50" json:"app_desc"`
-	AppOwner       string    `gorm:"size:50" json:"app_owner"`
-	AppOwnerEmail  string    `gorm:"size:50" json:"app_owner_email"`
-	AppOwnerPhone  string    `gorm:"size:50" json:"app_owner_phone"`
+	OpsOwner       string    `gorm:"column:ops_owner;size:100" json:"ops_owner"`
+	OpsOwnerPhone  string    `gorm:"column:ops_owner_phone;size:50" json:"ops_owner_phone"`
 	IsDeleted      int       `gorm:"default:0" json:"is_deleted"`
 	CreatedAt      time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
 	UpdatedAt      time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
@@ -165,6 +162,37 @@ type MetaDatabase struct {
 
 func (MetaDatabase) TableName() string {
 	return "meta_database"
+}
+
+// MetaBusinessInfo 数据库业务信息（仅存业务侧描述，与实例/库表等技术元数据解耦）
+type MetaBusinessInfo struct {
+	Id             int64     `gorm:"primarykey" json:"id"`
+	AppName        string    `gorm:"column:app_name;size:128;uniqueIndex;not null" json:"app_name"`
+	AppDescription string    `gorm:"column:app_description;size:2000" json:"app_description"`
+	AppOwner       string    `gorm:"column:app_owner;size:100" json:"app_owner"`
+	AppOwnerEmail  string    `gorm:"column:app_owner_email;size:100" json:"app_owner_email"`
+	AppOwnerPhone  string    `gorm:"column:app_owner_phone;size:50" json:"app_owner_phone"`
+	Remark         string    `gorm:"size:500" json:"remark"`
+	CreatedAt      time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
+	UpdatedAt      time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (MetaBusinessInfo) TableName() string {
+	return "meta_business_info"
+}
+
+// MetaDatabaseBusiness 数据库名与应用（业务信息）的关联；业务键为 database_name + app_name 唯一
+type MetaDatabaseBusiness struct {
+	Id           int64     `gorm:"primarykey" json:"id"`
+	DatabaseName string    `gorm:"column:database_name;size:128;not null;uniqueIndex:uk_meta_db_app" json:"database_name"`
+	AppName      string    `gorm:"column:app_name;size:128;not null;uniqueIndex:uk_meta_db_app" json:"app_name"`
+	Remark       string    `gorm:"size:500" json:"remark"`
+	CreatedAt    time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
+	UpdatedAt    time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (MetaDatabaseBusiness) TableName() string {
+	return "meta_database_business"
 }
 
 type MetaTable struct {
@@ -175,8 +203,9 @@ type MetaTable struct {
 	DatabaseName   string    `gorm:"size:50;index" json:"database_name"`
 	TableType      string    `gorm:"size:50" json:"table_type"`
 	TableNameX     string    `gorm:"column:table_name;size:50;index" json:"table_name"`
-	TableComment   string    `gorm:"size:50" json:"table_comment"`
-	AiComment      string    `gorm:"size:50" json:"ai_comment"`
+	TableComment   string    `gorm:"size:100" json:"table_comment"`
+	TableCommentAccuracy *float64 `gorm:"column:table_comment_accuracy;type:decimal(2,1)" json:"table_comment_accuracy"`
+	AiComment      string    `gorm:"size:100" json:"ai_comment"`
 	AiFixed        int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
 	Characters     string    `gorm:"size:50" json:"characters"`
 	IsDeleted      int8      `gorm:"default:0" json:"is_deleted"`
@@ -196,8 +225,9 @@ type MetaColumn struct {
 	DatabaseName     string    `gorm:"size:50;index" json:"database_name"`
 	TableNameX       string    `gorm:"column:table_name;size:50;index" json:"table_name"`
 	ColumnName       string    `gorm:"size:50;index" json:"column_name"`
-	ColumnComment    string    `gorm:"size:50" json:"column_comment"`
-	AiComment        string    `gorm:"size:50" json:"ai_comment"`
+	ColumnComment    string    `gorm:"size:100" json:"column_comment"`
+	ColumnCommentAccuracy *float64 `gorm:"column:column_comment_accuracy;type:decimal(2,1)" json:"column_comment_accuracy"`
+	AiComment        string    `gorm:"size:100" json:"ai_comment"`
 	AiFixed          int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
 	DataType         string    `gorm:"size:50" json:"data_type"`
 	IsNullable       string    `gorm:"size:50" json:"is_nullable"`

@@ -644,25 +644,35 @@ onUnmounted(() => {
     </Card>
 
     <Card title="数据列表">
-      <Form class="mb-4" layout="inline" :wrapper-col="{ flex: '1 1 200px' }">
+      <Form class="task-query-form" layout="inline">
         <Form.Item label="任务标识">
-          <Input v-model:value="queryForm.task_key" allow-clear placeholder="任务标识" />
+          <Input
+            v-model:value="queryForm.task_key"
+            allow-clear
+            class="task-query-input"
+            placeholder="任务标识"
+          />
         </Form.Item>
         <Form.Item label="任务名">
-          <Input v-model:value="queryForm.task_name" allow-clear placeholder="任务名" />
+          <Input
+            v-model:value="queryForm.task_name"
+            allow-clear
+            class="task-query-input"
+            placeholder="任务名"
+          />
         </Form.Item>
-        <Form.Item label="启用">
+        <Form.Item class="task-query-enable-item" label="启用">
           <Select
             v-model:value="queryForm.enable"
             allow-clear
+            class="task-query-enable-select"
             placeholder="全部"
-            style="width: 120px"
           >
             <Select.Option :value="1">启用</Select.Option>
             <Select.Option :value="0">禁用</Select.Option>
           </Select>
         </Form.Item>
-        <Form.Item>
+        <Form.Item class="task-query-actions">
           <Space>
             <Button type="primary" @click="handleSearch">查询</Button>
             <Button @click="handleReset">重置</Button>
@@ -813,5 +823,42 @@ onUnmounted(() => {
 <style scoped>
 .stat-card :deep(.ant-card-body) {
   padding: 12px 16px;
+}
+
+/* 数据列表搜索栏与表格间距 */
+.task-query-form {
+  margin-bottom: 28px;
+}
+
+/* 数据列表搜索栏：避免 wrapper-col flex 把「启用」与按钮挤错位 */
+.task-query-form.ant-form-inline {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  row-gap: 10px;
+}
+
+.task-query-form :deep(.ant-form-item) {
+  margin-bottom: 0;
+  margin-inline-end: 0;
+}
+
+.task-query-input {
+  max-width: 100%;
+  width: 200px;
+}
+
+.task-query-enable-item {
+  flex-shrink: 0;
+}
+
+.task-query-enable-select {
+  min-width: 120px;
+  width: 120px;
+}
+
+.task-query-actions {
+  flex-shrink: 0;
 }
 </style>

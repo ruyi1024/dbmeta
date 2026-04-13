@@ -133,11 +133,10 @@ func InitDb() *gorm.DB {
 
 	}
 
-	if !db.Migrator().HasTable(&model.MetaDatabase{}) {
-		if err = db.AutoMigrate(&model.MetaDatabase{}); err != nil {
-			log.Error("db sync error.", zap.Error(err))
-		}
+	if err = db.AutoMigrate(&model.MetaDatabase{}); err != nil {
+		log.Error("db sync MetaDatabase error.", zap.Error(err))
 	}
+	metaDatabaseDropLegacyBusinessColumns(db)
 
 	if !db.Migrator().HasTable(&model.MetaTable{}) {
 		if err = db.AutoMigrate(&model.MetaTable{}); err != nil {
@@ -149,6 +148,13 @@ func InitDb() *gorm.DB {
 		if err = db.AutoMigrate(&model.MetaColumn{}); err != nil {
 			log.Error("db sync error.", zap.Error(err))
 		}
+	}
+
+	if err = db.AutoMigrate(&model.MetaBusinessInfo{}); err != nil {
+		log.Error("db sync MetaBusinessInfo error.", zap.Error(err))
+	}
+	if err = db.AutoMigrate(&model.MetaDatabaseBusiness{}); err != nil {
+		log.Error("db sync MetaDatabaseBusiness error.", zap.Error(err))
 	}
 
 	// 数据质量相关表 - 直接执行 AutoMigrate（GORM 会自动处理表是否存在）
@@ -450,6 +456,8 @@ func InitDb() *gorm.DB {
 		{TaskKey: "ai_general_column_comment", TaskName: "AI生成字段注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据字段生成AI注释", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_apply_table_comment", TaskName: "AI应用表注释", TaskDescription: "将待应用的AI注释应用到实际数据表", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_apply_column_comment", TaskName: "AI应用字段注释", TaskDescription: "将待应用的AI注释应用到实际数据字段", Crontab: "*/30 * * * *"},
+		{TaskKey: "ai_table_comment_accuracy", TaskName: "AI表注释准确度评估", TaskDescription: "基于表名和表注释评估注释准确度并写回 0-1 分值(1位小数)", Crontab: "*/30 * * * *"},
+		{TaskKey: "ai_column_comment_accuracy", TaskName: "AI字段注释准确度评估", TaskDescription: "基于字段名、字段注释等元数据评估字段注释准确度并写回 0-1 分值(1位小数)", Crontab: "*/30 * * * *"},
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "*/30 * * * *"},
@@ -484,6 +492,8 @@ func InitDb() *gorm.DB {
 		{HeartbeatKey: "ai_general_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_apply_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_apply_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "ai_table_comment_accuracy", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "ai_column_comment_accuracy", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "data_quality_ai_analysis", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_pumpkin_growth", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_grading_batch", HeartbeatTime: t, HeartbeatEndTime: t},
@@ -920,6 +930,19 @@ func QueryRemoteNew(db *sql.DB, sql string) ([]string, []map[string]interface{},
 		list = append(list, entry)
 	}
 	return columns, list, nil
+}
+
+// metaDatabaseDropLegacyBusinessColumns 移除 meta_database 表中已废弃的业务字段列（应用侧信息改由业务信息表与关联表维护）
+func metaDatabaseDropLegacyBusinessColumns(db *gorm.DB) {
+	m := db.Migrator()
+	legacy := []string{"app_name", "app_desc", "app_owner", "app_owner_email", "app_owner_phone"}
+	for _, col := range legacy {
+		if m.HasColumn(&model.MetaDatabase{}, col) {
+			if err := m.DropColumn(&model.MetaDatabase{}, col); err != nil {
+				log.Error("drop meta_database legacy column failed", zap.String("column", col), zap.Error(err))
+			}
+		}
+	}
 }
 
 func InitRedis() *redis.Client {

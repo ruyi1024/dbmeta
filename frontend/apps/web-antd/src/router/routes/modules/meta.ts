@@ -35,7 +35,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/instance/index.vue'),
         meta: {
           icon: 'lucide:server',
-          title: '实例信息查询',
+          title: '实例信息',
         },
       },
       {
@@ -44,7 +44,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/database/index.vue'),
         meta: {
           icon: 'lucide:database-zap',
-          title: '数据库查询',
+          title: '数据库信息',
+        },
+      },
+      {
+        name: 'MetaBusinessInfo',
+        path: '/meta/business-info',
+        component: () => import('#/views/meta/business-info/index.vue'),
+        meta: {
+          icon: 'lucide:building-2',
+          title: '业务信息',
+        },
+      },
+      {
+        name: 'MetaDatabaseBusiness',
+        path: '/meta/database-business',
+        component: () => import('#/views/meta/database-business/index.vue'),
+        meta: {
+          icon: 'lucide:link-2',
+          title: '数据库业务信息',
         },
       },
       {
@@ -53,7 +71,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/table/index.vue'),
         meta: {
           icon: 'lucide:table',
-          title: '数据表查询',
+          title: '数据表信息',
         },
       },
       {
@@ -62,7 +80,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/column/index.vue'),
         meta: {
           icon: 'lucide:columns-3',
-          title: '数据字段查询',
+          title: '数据字段信息',
         },
       },
     ],

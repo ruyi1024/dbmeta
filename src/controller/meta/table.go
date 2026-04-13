@@ -46,6 +46,24 @@ func TableList(c *gin.Context) {
 		if c.Query("table_name") != "" {
 			db = db.Where("table_name like ? ", c.Query("table_name")+"%")
 		}
+		switch c.Query("has_table_comment") {
+		case "1":
+			db = db.Where("(table_comment IS NOT NULL AND table_comment != '')")
+		case "0":
+			db = db.Where("(table_comment IS NULL OR table_comment = '')")
+		}
+		switch c.Query("has_ai_comment") {
+		case "1":
+			db = db.Where("(ai_comment IS NOT NULL AND ai_comment != '')")
+		case "0":
+			db = db.Where("(ai_comment IS NULL OR ai_comment = '')")
+		}
+		if v := c.Query("ai_fixed"); v != "" {
+			switch v {
+			case "0", "1", "2", "3":
+				db = db.Where("ai_fixed = ?", v)
+			}
+		}
 		sorterMap := make(map[string]string)
 		sorterData := c.Query("sorter")
 		json.Unmarshal([]byte(sorterData), &sorterMap)
@@ -123,4 +141,38 @@ func BatchUpdateAiFixed(c *gin.Context) {
 		})
 		return
 	}
+}
+
+// UpdateTableAiComment 更新单条数据表的 AI 注释文案（列表中双击编辑）
+func UpdateTableAiComment(c *gin.Context) {
+	if c.Request.Method != "PUT" {
+		return
+	}
+	var req struct {
+		ID        int    `json:"id"`
+		AiComment string `json:"ai_comment"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "参数解析失败: " + err.Error()})
+		return
+	}
+	if req.ID <= 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "无效的表 ID"})
+		return
+	}
+	comment := strings.TrimSpace(req.AiComment)
+	if len([]rune(comment)) > 100 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "AI注释长度不能超过100个字符"})
+		return
+	}
+	var row model.MetaTable
+	if err := database.DB.First(&row, req.ID).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "记录不存在"})
+		return
+	}
+	if err := database.DB.Model(&row).Update("ai_comment", comment).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "更新失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "msg": "已保存"})
 }

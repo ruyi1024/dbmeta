@@ -4,7 +4,23 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
-import { Badge, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tooltip, message } from 'ant-design-vue';
+import {
+  Badge,
+  Button,
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tabs,
+  Tooltip,
+  message,
+} from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
 
@@ -35,6 +51,22 @@ function extractApiBody(response: unknown): Record<string, unknown> {
   return r;
 }
 
+function extractErrorMessage(err: unknown, fallback: string): string {
+  const e = err as
+    | {
+        message?: string;
+        response?: { data?: { error?: string; message?: string; msg?: string } };
+      }
+    | undefined;
+  return (
+    e?.response?.data?.error ||
+    e?.response?.data?.message ||
+    e?.response?.data?.msg ||
+    e?.message ||
+    fallback
+  );
+}
+
 const providerOptions = [
   { label: 'Ollama', value: 'ollama' },
   { label: 'LM Studio', value: 'lm_studio' },
@@ -45,6 +77,8 @@ const providerOptions = [
   { label: 'Qwen', value: 'qwen' },
 ];
 
+const activeTab = ref<'settings' | 'defaults'>('settings');
+
 const loading = ref(false);
 const allRows = ref<AIModelRow[]>([]);
 
@@ -52,6 +86,10 @@ const allRows = ref<AIModelRow[]>([]);
 const defaultLoading = ref(false);
 const defaultSaving = ref(false);
 const gradingDefaultModelId = ref<number | undefined>(undefined);
+/** AI 生成表/字段备注（元数据注释任务） */
+const tableColumnCommentDefaultModelId = ref<number | undefined>(undefined);
+/** 表字段准确度评估 */
+const tableColumnAccuracyDefaultModelId = ref<number | undefined>(undefined);
 const enabledModelOptions = ref<{ label: string; value: number }[]>([]);
 
 const searchForm = reactive({
@@ -212,12 +250,12 @@ async function handleTestConnectionById(id?: number) {
     const response = await baseRequestClient.post(`/v1/ai/models/${id}/test`);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.message ?? body.error ?? '连接测试失败'));
+      message.error(String(body.error ?? body.message ?? '连接测试失败'));
       return;
     }
     message.success('连接测试成功');
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '连接测试失败');
+    message.error(extractErrorMessage(e, '连接测试失败'));
   }
 }
 
@@ -232,12 +270,12 @@ async function handleTestConnectionBeforeSave() {
     const response = await baseRequestClient.post('/v1/ai/model/test-config', buildPayload());
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.message ?? body.error ?? '连接测试失败'));
+      message.error(String(body.error ?? body.message ?? '连接测试失败'));
       return;
     }
     message.success('连接测试成功');
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '连接测试失败');
+    message.error(extractErrorMessage(e, '连接测试失败'));
   } finally {
     testing.value = false;
   }
@@ -335,9 +373,26 @@ async function fetchDefaults() {
       baseRequestClient.get('/v1/ai/models/enabled'),
     ]);
     const defBody = extractApiBody(defRes) as Record<string, unknown>;
-    const payload = (defBody.data as { grading_model_id?: number } | undefined) ?? defBody;
-    const gid = (payload as { grading_model_id?: number }).grading_model_id;
+    const payload =
+      (defBody.data as {
+        grading_model_id?: number;
+        table_column_accuracy_model_id?: number;
+        table_column_comment_model_id?: number;
+      } | undefined) ??
+      defBody;
+    const p = payload as {
+      grading_model_id?: number;
+      table_column_accuracy_model_id?: number;
+      table_column_comment_model_id?: number;
+    };
+    const gid = p.grading_model_id;
     gradingDefaultModelId.value = gid !== undefined && gid !== null ? Number(gid) : undefined;
+    const taid = p.table_column_accuracy_model_id;
+    tableColumnAccuracyDefaultModelId.value =
+      taid !== undefined && taid !== null ? Number(taid) : undefined;
+    const tcid = p.table_column_comment_model_id;
+    tableColumnCommentDefaultModelId.value =
+      tcid !== undefined && tcid !== null ? Number(tcid) : undefined;
 
     const enBody = extractApiBody(enRes);
     const raw = enBody.data;
@@ -360,6 +415,8 @@ async function saveDefaults() {
   try {
     const response = await baseRequestClient.put('/v1/ai/model-defaults', {
       grading_model_id: gradingDefaultModelId.value ?? null,
+      table_column_accuracy_model_id: tableColumnAccuracyDefaultModelId.value ?? null,
+      table_column_comment_model_id: tableColumnCommentDefaultModelId.value ?? null,
     });
     const body = extractApiBody(response);
     if (body.success !== true) {
@@ -383,92 +440,120 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="默认模型" class="mb-4" :loading="defaultLoading">
-      <p class="mb-3 text-muted-foreground text-sm">
-        为业务场景指定默认 AI 模型（从下方已启用的模型中选择）。数据分级相关任务（如 AI
-        批处理）将优先使用此处配置；未配置时可回退系统其它逻辑。
-      </p>
-      <Form layout="vertical" class="max-w-xl">
-        <Form.Item label="数据分级默认模型">
-          <Select
-            v-model:value="gradingDefaultModelId"
-            allow-clear
-            show-search
-            option-filter-prop="label"
-            placeholder="不指定则使用系统内置策略"
-            :options="enabledModelOptions"
-            class="w-full"
-          />
-        </Form.Item>
-        <Form.Item>
-          <Space>
-            <Button type="primary" :loading="defaultSaving" @click="saveDefaults">保存</Button>
-            <Button @click="fetchDefaults">刷新</Button>
-          </Space>
-        </Form.Item>
-      </Form>
-    </Card>
+    <Tabs v-model:activeKey="activeTab" class="ai-models-tabs" type="card">
+      <Tabs.TabPane key="settings" tab="模型设置">
+        <Card :bordered="false">
+          <Form class="mb-4">
+            <div class="query-grid">
+              <Form.Item label="模型名称" class="query-item">
+                <Input v-model:value="searchForm.name" allow-clear class="query-control" placeholder="请输入模型名称" @press-enter="handleSearch" />
+              </Form.Item>
+              <Form.Item label="提供商" class="query-item">
+                <Select v-model:value="searchForm.provider" allow-clear class="query-control" placeholder="请选择提供商" :options="providerOptions" />
+              </Form.Item>
+              <Form.Item label="模型标识" class="query-item">
+                <Input v-model:value="searchForm.model_name" allow-clear class="query-control" placeholder="请输入模型标识" @press-enter="handleSearch" />
+              </Form.Item>
+            </div>
+            <div class="query-actions">
+              <Space>
+                <Button type="primary" @click="handleSearch">查询</Button>
+                <Button @click="handleReset">重置</Button>
+                <Button type="primary" ghost @click="openCreate">新建</Button>
+              </Space>
+            </div>
+          </Form>
 
-    <Card title="模型设置">
-      <Form class="mb-4">
-        <div class="query-grid">
-          <Form.Item label="模型名称" class="query-item">
-            <Input v-model:value="searchForm.name" allow-clear class="query-control" placeholder="请输入模型名称" @press-enter="handleSearch" />
-          </Form.Item>
-          <Form.Item label="提供商" class="query-item">
-            <Select v-model:value="searchForm.provider" allow-clear class="query-control" placeholder="请选择提供商" :options="providerOptions" />
-          </Form.Item>
-          <Form.Item label="模型标识" class="query-item">
-            <Input v-model:value="searchForm.model_name" allow-clear class="query-control" placeholder="请输入模型标识" @press-enter="handleSearch" />
-          </Form.Item>
-        </div>
-        <div class="query-actions">
-          <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" ghost @click="openCreate">新建</Button>
-          </Space>
-        </div>
-      </Form>
+          <Table
+            :columns="columns"
+            :data-source="pagedRows"
+            :loading="loading"
+            :pagination="pagination"
+            :row-key="(record: AIModelRow, index?: number) => record.id ?? `ai-model-${pagination.current}-${index ?? 0}`"
+            :scroll="{ x: 1700 }"
+            @change="handleTableChange"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'api_url'">
+                <Tooltip :title="record.api_url || '-'">
+                  <span class="inline-block max-w-[200px] truncate">{{ record.api_url || '-' }}</span>
+                </Tooltip>
+              </template>
+              <template v-else-if="column.key === 'enabled'">
+                <Switch :checked="Number(record.enabled) === 1" @change="(checked) => handleToggle(record, Boolean(checked))" />
+              </template>
+              <template v-else-if="column.key === 'status'">
+                <Badge :status="Number(record.enabled) === 1 ? 'success' : 'default'" />
+              </template>
+              <template v-else-if="column.key === 'description'">
+                <Tooltip :title="record.description || '-'">
+                  <span class="inline-block max-w-[160px] truncate">{{ record.description || '-' }}</span>
+                </Tooltip>
+              </template>
+              <template v-else-if="column.key === 'action'">
+                <Space>
+                  <Button type="link" size="small" @click="handleTestConnectionById(record.id)">测试</Button>
+                  <Button type="link" size="small" @click="openEdit(record)">修改</Button>
+                  <Popconfirm title="确定删除此模型吗？" placement="left" @confirm="handleDelete(record)">
+                    <Button type="link" size="small" danger>删除</Button>
+                  </Popconfirm>
+                </Space>
+              </template>
+            </template>
+          </Table>
+        </Card>
+      </Tabs.TabPane>
 
-      <Table
-        :columns="columns"
-        :data-source="pagedRows"
-        :loading="loading"
-        :pagination="pagination"
-        :row-key="(record: AIModelRow, index: number) => record.id ?? `ai-model-${pagination.current}-${index}`"
-        :scroll="{ x: 1700 }"
-        @change="handleTableChange"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'api_url'">
-            <Tooltip :title="record.api_url || '-'">
-              <span class="inline-block max-w-[200px] truncate">{{ record.api_url || '-' }}</span>
-            </Tooltip>
-          </template>
-          <template v-else-if="column.key === 'enabled'">
-            <Switch :checked="Number(record.enabled) === 1" @change="(checked: boolean) => handleToggle(record, checked)" />
-          </template>
-          <template v-else-if="column.key === 'status'">
-            <Badge :status="Number(record.enabled) === 1 ? 'success' : 'default'" />
-          </template>
-          <template v-else-if="column.key === 'description'">
-            <Tooltip :title="record.description || '-'">
-              <span class="inline-block max-w-[160px] truncate">{{ record.description || '-' }}</span>
-            </Tooltip>
-          </template>
-          <template v-else-if="column.key === 'action'">
-            <Space>
-              <Button type="link" size="small" @click="handleTestConnectionById(record.id)">测试</Button>
-              <Button type="link" size="small" @click="openEdit(record)">修改</Button>
-              <Popconfirm title="确定删除此模型吗？" placement="left" @confirm="handleDelete(record)">
-                <Button type="link" size="small" danger>删除</Button>
-              </Popconfirm>
-            </Space>
-          </template>
-        </template>
-      </Table>
-    </Card>
+      <Tabs.TabPane key="defaults" tab="默认模型">
+        <Card :bordered="false" :loading="defaultLoading">
+          <p class="mb-3 text-muted-foreground text-sm">
+            为业务场景指定默认 AI 模型（从已启用的模型中选择）。未指定时将按各任务原有回退逻辑（例如 Dify
+            智能体）。
+          </p>
+          <Form layout="vertical" class="max-w-xl">
+            <Form.Item label="数据分级默认模型">
+              <Select
+                v-model:value="gradingDefaultModelId"
+                allow-clear
+                show-search
+                option-filter-prop="label"
+                placeholder="不指定则使用系统内置策略"
+                :options="enabledModelOptions"
+                class="w-full"
+              />
+            </Form.Item>
+            <Form.Item label="表字段备注生成默认模型">
+              <Select
+                v-model:value="tableColumnCommentDefaultModelId"
+                allow-clear
+                show-search
+                option-filter-prop="label"
+                placeholder="用于 AI 生成表注释、字段注释任务；不指定则回退 Dify"
+                :options="enabledModelOptions"
+                class="w-full"
+              />
+            </Form.Item>
+            <Form.Item label="表字段准确度评估默认模型">
+              <Select
+                v-model:value="tableColumnAccuracyDefaultModelId"
+                allow-clear
+                show-search
+                option-filter-prop="label"
+                placeholder="用于表字段与注释准确度评估任务；不指定则回退系统默认逻辑"
+                :options="enabledModelOptions"
+                class="w-full"
+              />
+            </Form.Item>
+            <Form.Item>
+              <Space>
+                <Button type="primary" :loading="defaultSaving" @click="saveDefaults">保存</Button>
+                <Button @click="fetchDefaults">刷新</Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Card>
+      </Tabs.TabPane>
+    </Tabs>
 
     <Modal
       v-model:open="modalOpen"
@@ -530,6 +615,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.ai-models-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.ai-models-tabs :deep(.ant-tabs-content) {
+  padding-top: 16px;
+}
+
 .query-grid {
   column-gap: 12px;
   display: grid;

@@ -33,6 +33,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const aiGeneralColumnCommentBatchSize = 20
+
+type aiColumnCommentBatchItem struct {
+	ID        int    `json:"id"`
+	AiComment string `json:"ai_comment"`
+}
+
 func init() {
 	go aiGeneralColumnCommentCrontabTask()
 }
@@ -65,10 +72,9 @@ func doAiGeneralColumnCommentTask() {
 		return
 	}
 
-	// 获取Dify配置
-	apiURL, apiKey, timeout, err := getDifyConfigForColumnComment()
+	invoker, err := newTableColumnCommentLLMInvoker(logger)
 	if err != nil {
-		errorMsg := fmt.Sprintf("获取Dify配置失败: %v", err)
+		errorMsg := fmt.Sprintf("初始化模型调用失败: %v", err)
 		logger.Error(errorMsg)
 		taskLogger.Failed(errorMsg)
 		return
@@ -98,22 +104,47 @@ func doAiGeneralColumnCommentTask() {
 	failedCount := 0
 	errorDetails := []string{}
 
-	for i, column := range columns {
-		logger.Info("处理字段", zap.Int("index", i+1), zap.Int("total", len(columns)), zap.String("table_name", column.TableNameX), zap.String("column_name", column.ColumnName))
+	for start := 0; start < len(columns); start += aiGeneralColumnCommentBatchSize {
+		end := start + aiGeneralColumnCommentBatchSize
+		if end > len(columns) {
+			end = len(columns)
+		}
+		chunk := columns[start:end]
 
-		err := processColumnComment(column, apiURL, apiKey, timeout)
-		if err != nil {
-			errorMsg := fmt.Sprintf("处理字段 %s.%s 失败: %v", column.TableNameX, column.ColumnName, err)
-			logger.Error(errorMsg)
-			errorDetails = append(errorDetails, errorMsg)
-			failedCount++
-		} else {
-			successCount++
+		commentMap, batchErr := generateColumnCommentBatch(chunk, invoker)
+		if batchErr != nil {
+			msg := fmt.Sprintf("批次 %d-%d 调用模型失败: %v", start+1, end, batchErr)
+			logger.Error(msg)
+			errorDetails = append(errorDetails, msg)
+			failedCount += len(chunk)
+			taskLogger.UpdateResult(fmt.Sprintf("已处理 %d/%d 个字段 (成功: %d, 失败: %d)", successCount+failedCount, len(columns), successCount, failedCount))
+			continue
 		}
 
-		// 更新进度
-		progressMsg := fmt.Sprintf("已处理 %d/%d 个字段 (成功: %d, 失败: %d)", i+1, len(columns), successCount, failedCount)
-		taskLogger.UpdateResult(progressMsg)
+		for _, column := range chunk {
+			comment := cleanColumnComment(commentMap[column.Id])
+			if comment == "" {
+				errorMsg := fmt.Sprintf("处理字段 %s.%s 失败: 模型未返回有效注释", column.TableNameX, column.ColumnName)
+				logger.Error(errorMsg)
+				errorDetails = append(errorDetails, errorMsg)
+				failedCount++
+				continue
+			}
+			updateResult := database.DB.Model(&model.MetaColumn{}).Where("id = ?", column.Id).Update("ai_comment", comment)
+			if updateResult.Error != nil {
+				errorMsg := fmt.Sprintf("处理字段 %s.%s 失败: 更新数据库失败: %v", column.TableNameX, column.ColumnName, updateResult.Error)
+				logger.Error(errorMsg)
+				errorDetails = append(errorDetails, errorMsg)
+				failedCount++
+				continue
+			}
+			logger.Info("成功为字段生成AI注释",
+				zap.String("table_name", column.TableNameX),
+				zap.String("column_name", column.ColumnName),
+				zap.String("comment", comment))
+			successCount++
+		}
+		taskLogger.UpdateResult(fmt.Sprintf("已处理 %d/%d 个字段 (成功: %d, 失败: %d)", successCount+failedCount, len(columns), successCount, failedCount))
 	}
 
 	// 记录最终结果
@@ -134,49 +165,61 @@ func doAiGeneralColumnCommentTask() {
 	logger.Info(finalResult)
 }
 
-func processColumnComment(column model.MetaColumn, apiURL, apiKey string, timeout time.Duration) error {
-	logger := log.Logger
+func generateColumnCommentBatch(columns []model.MetaColumn, invoker *gradingLLMInvoker) (map[int]string, error) {
+	lines := make([]string, 0, len(columns))
+	for _, column := range columns {
+		lines = append(lines, fmt.Sprintf(`{"id":%d,"table_name":"%s","column_name":"%s","data_type":"%s","is_nullable":"%s","default_value":"%s"}`,
+			column.Id,
+			escapeJSONString(column.TableNameX),
+			escapeJSONString(column.ColumnName),
+			escapeJSONString(column.DataType),
+			escapeJSONString(column.IsNullable),
+			escapeJSONString(column.DefaultValue),
+		))
+	}
 
-	// 构造提示词
-	prompt := fmt.Sprintf(`请为数据库字段 '%s' 生成一个简洁的中文注释，只返回生成的注释即可，不要返回任何其他内容，要求：
-1. 注释要简洁明了，不超过20个字符
-2. 使用中文描述字段的用途和含义
-3. 根据字段名、数据类型、是否可空等信息推测字段含义
-4. 如果是用户相关字段，说明是用户什么信息
-5. 如果是业务相关字段，说明是什么业务数据
-6. 如果是时间相关字段，说明是什么时间
-7. 如果是状态相关字段，说明是什么状态
+	prompt := fmt.Sprintf(`你是数据库字段注释助手。请为每个字段生成简洁中文注释。
+要求：
+1. 每条注释不超过20个中文字符；
+2. 基于字段名、表名、数据类型、是否可空、默认值综合推断；
+3. 只输出 JSON 数组，不要 Markdown，不要额外说明；
+4. 返回格式严格为：
+[{"id":1,"ai_comment":"用户手机号"}]
+5. 必须保留输入 id，且每个输入 id 都要返回。
 
-表名: %s
-字段名: %s
-数据类型: %s
-是否可空: %s
-默认值: %s`, column.ColumnName, column.TableNameX, column.ColumnName, column.DataType, column.IsNullable, column.DefaultValue)
+待生成数据：
+[%s]`, strings.Join(lines, ","))
 
-	// 调用Dify API
-	response, err := callDifyAPIForColumnComment(prompt, apiURL, apiKey, timeout)
+	answer, err := invoker.complete(prompt)
 	if err != nil {
-		return fmt.Errorf("调用Dify API失败: %v", err)
+		return nil, err
 	}
-
-	// 清理和验证响应
-	cleanedComment := cleanColumnComment(response)
-	if cleanedComment == "" {
-		return fmt.Errorf("生成的注释为空")
+	items, err := parseColumnCommentBatch(answer)
+	if err != nil {
+		return nil, err
 	}
-
-	// 更新数据库
-	updateResult := database.DB.Model(&model.MetaColumn{}).Where("id = ?", column.Id).Update("ai_comment", cleanedComment)
-	if updateResult.Error != nil {
-		return fmt.Errorf("更新数据库失败: %v", updateResult.Error)
+	out := make(map[int]string, len(items))
+	for _, item := range items {
+		if item.ID <= 0 {
+			continue
+		}
+		out[item.ID] = item.AiComment
 	}
+	return out, nil
+}
 
-	logger.Info("成功为字段生成AI注释", zap.String("table_name", column.TableNameX), zap.String("column_name", column.ColumnName), zap.String("comment", cleanedComment))
-
-	// 添加延迟，避免API调用过于频繁
-	time.Sleep(2 * time.Second)
-
-	return nil
+func parseColumnCommentBatch(answer string) ([]aiColumnCommentBatchItem, error) {
+	s := strings.TrimSpace(answer)
+	if i := strings.Index(s, "["); i >= 0 {
+		if j := strings.LastIndex(s, "]"); j > i {
+			s = s[i : j+1]
+		}
+	}
+	var payload []aiColumnCommentBatchItem
+	if err := json.Unmarshal([]byte(s), &payload); err != nil {
+		return nil, fmt.Errorf("解析批量字段注释响应失败: %v", err)
+	}
+	return payload, nil
 }
 
 func getDifyConfigForColumnComment() (apiURL, apiKey string, timeout time.Duration, err error) {
@@ -290,4 +333,9 @@ func cleanColumnComment(comment string) string {
 	comment = strings.ReplaceAll(comment, "\r", "")
 
 	return comment
+}
+
+// ExecuteAiGeneralColumnCommentTask 手动触发，与定时任务逻辑一致（计划任务平台「手工运行」）
+func ExecuteAiGeneralColumnCommentTask() {
+	doAiGeneralColumnCommentTask()
 }

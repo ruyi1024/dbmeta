@@ -1,12 +1,16 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 
 import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Form,
+  Popover,
   Input,
+  Progress,
+  Select,
   Space,
   Table,
   type TableColumnsType,
@@ -30,6 +34,7 @@ interface TableItem {
   id: number;
   port: number | string;
   table_comment?: string;
+  table_comment_accuracy?: number | string;
   table_name: string;
   table_type?: string;
 }
@@ -37,6 +42,10 @@ interface TableItem {
 const loading = ref(false);
 const dataSource = ref<TableItem[]>([]);
 const selectedRowKeys = ref<number[]>([]);
+/** 双击编辑「AI注释生成」 */
+const editingAiCommentId = ref<number | null>(null);
+const editingAiCommentDraft = ref('');
+const aiCommentInputRef = ref<{ focus?: () => void } | null>(null);
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -49,13 +58,39 @@ const queryForm = reactive({
   host: '',
   port: '',
   table_name: '',
+  /** 是否有表注释：'' 全部 | '1' 有 | '0' 无 */
+  has_table_comment: '' as '' | '0' | '1',
+  /** 是否有 AI 注释 */
+  has_ai_comment: '' as '' | '0' | '1',
+  /** AI 注释应用状态，对应 ai_fixed */
+  ai_fixed: '' as '' | '0' | '1' | '2' | '3',
 });
 
-const columns: TableColumnsType<TableItem> = [
+const yesNoFilterOptions = [
+  { label: '全部', value: '' },
+  { label: '有', value: '1' },
+  { label: '无', value: '0' },
+];
+
+const aiFixedFilterOptions = [
+  { label: '全部', value: '' },
+  { label: '待审核', value: '0' },
+  { label: '不应用', value: '1' },
+  { label: '待应用', value: '2' },
+  { label: '已应用', value: '3' },
+];
+
+const VISIBILITY_STORAGE_KEY = 'meta_table_visible_columns';
+
+/** 时间列默认不展示，可在「列设置」中勾选 */
+const TIME_COLUMN_KEYS = new Set(['gmt_created', 'gmt_updated']);
+
+const allColumns: TableColumnsType<TableItem> = [
   { title: '数据表名', dataIndex: 'table_name', key: 'table_name', sorter: true },
   { title: '表类型', dataIndex: 'table_type', key: 'table_type' },
   { title: '表字符集', dataIndex: 'characters', key: 'characters' },
-  { title: '表备注', dataIndex: 'table_comment', key: 'table_comment' },
+  { title: '表注释', dataIndex: 'table_comment', key: 'table_comment' },
+  { title: '注释准确度', dataIndex: 'table_comment_accuracy', key: 'table_comment_accuracy' },
   { title: 'AI注释生成', dataIndex: 'ai_comment', key: 'ai_comment' },
   { title: 'AI注释应用', dataIndex: 'ai_fixed', key: 'ai_fixed' },
   { title: '所属数据库', dataIndex: 'database_name', key: 'database_name', sorter: true },
@@ -65,6 +100,61 @@ const columns: TableColumnsType<TableItem> = [
   { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
   { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
 ];
+
+const columnPickerOptions = computed(() =>
+  allColumns.map((c) => ({
+    label: String(c.title ?? c.key),
+    value: String(c.key),
+  })),
+);
+
+function defaultVisibleColumnKeys(): string[] {
+  return allColumns.map((c) => String(c.key)).filter((k) => !TIME_COLUMN_KEYS.has(k));
+}
+
+function loadVisibleColumnKeys(): string[] {
+  try {
+    const raw = localStorage.getItem(VISIBILITY_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as string[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const valid = parsed.filter((k) => allColumns.some((c) => String(c.key) === k));
+        if (valid.length > 0) {
+          if (!valid.includes('table_comment_accuracy')) {
+            valid.push('table_comment_accuracy');
+          }
+          return valid;
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return defaultVisibleColumnKeys();
+}
+
+const visibleColumnKeys = ref<string[]>(loadVisibleColumnKeys());
+
+const displayColumns = computed(() =>
+  allColumns.filter((c) => visibleColumnKeys.value.includes(String(c.key))),
+);
+
+watch(
+  visibleColumnKeys,
+  (v) => {
+    if (v.length === 0) {
+      visibleColumnKeys.value = defaultVisibleColumnKeys();
+      message.warning('至少保留一列');
+      return;
+    }
+    try {
+      localStorage.setItem(VISIBILITY_STORAGE_KEY, JSON.stringify(v));
+    } catch {
+      /* ignore */
+    }
+  },
+  { deep: true },
+);
 
 async function fetchTables(sorter?: Record<string, string>) {
   loading.value = true;
@@ -124,6 +214,9 @@ function handleReset() {
   queryForm.port = '';
   queryForm.database_name = '';
   queryForm.table_name = '';
+  queryForm.has_table_comment = '';
+  queryForm.has_ai_comment = '';
+  queryForm.ai_fixed = '';
   pagination.current = 1;
   fetchTables();
 }
@@ -152,6 +245,71 @@ function aiFixedStatus(value?: number) {
   if (value === 2) return { status: 'warning' as const, text: '待应用' };
   if (value === 3) return { status: 'success' as const, text: '已应用' };
   return { status: 'default' as const, text: '待审核' };
+}
+
+function normalizeAccuracyValue(value?: number | string) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n < 0) return 0;
+  if (n > 1) return 1;
+  return n;
+}
+
+function getAccuracyMeta(value?: number | string) {
+  const score = normalizeAccuracyValue(value);
+  if (score === null) {
+    return { color: '#d9d9d9', label: '-', percent: 0, scoreText: '-' };
+  }
+  if (score > 0.95) {
+    return { color: '#52c41a', label: '优', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+  }
+  if (score >= 0.8) {
+    return { color: '#1677ff', label: '良', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+  }
+  if (score >= 0.6) {
+    return { color: '#faad14', label: '中', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+  }
+  return { color: '#ff4d4f', label: '差', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+}
+
+function startEditAiComment(record: TableItem) {
+  editingAiCommentId.value = record.id;
+  editingAiCommentDraft.value = record.ai_comment ?? '';
+  nextTick(() => {
+    aiCommentInputRef.value?.focus?.();
+  });
+}
+
+function cancelEditAiComment() {
+  editingAiCommentId.value = null;
+  editingAiCommentDraft.value = '';
+}
+
+async function commitAiCommentEdit(record: TableItem) {
+  if (editingAiCommentId.value !== record.id) return;
+  const next = editingAiCommentDraft.value.trim();
+  const prev = (record.ai_comment ?? '').trim();
+  if (next === prev) {
+    cancelEditAiComment();
+    return;
+  }
+  try {
+    const response = await baseRequestClient.put('/v1/meta/table/update-ai-comment', {
+      id: record.id,
+      ai_comment: next,
+    });
+    const payload = (response as any)?.data ?? response;
+    if (payload?.success === false) {
+      message.error(payload?.msg || '保存失败');
+      return;
+    }
+    record.ai_comment = next;
+    message.success(payload?.msg || '已保存');
+    cancelEditAiComment();
+  } catch (error: any) {
+    message.error(error?.message || '保存失败');
+  }
 }
 
 onMounted(fetchTables);
@@ -202,6 +360,33 @@ onMounted(fetchTables);
               class="query-control"
             />
           </Form.Item>
+          <Form.Item label="有表注释" class="query-item">
+            <Select
+              v-model:value="queryForm.has_table_comment"
+              :options="yesNoFilterOptions"
+              allow-clear
+              placeholder="全部"
+              class="query-control"
+            />
+          </Form.Item>
+          <Form.Item label="有AI注释" class="query-item">
+            <Select
+              v-model:value="queryForm.has_ai_comment"
+              :options="yesNoFilterOptions"
+              allow-clear
+              placeholder="全部"
+              class="query-control"
+            />
+          </Form.Item>
+          <Form.Item label="AI注释状态" class="query-item">
+            <Select
+              v-model:value="queryForm.ai_fixed"
+              :options="aiFixedFilterOptions"
+              allow-clear
+              placeholder="全部"
+              class="query-control"
+            />
+          </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
@@ -211,19 +396,34 @@ onMounted(fetchTables);
         </div>
       </Form>
 
-      <div class="mb-3 flex justify-end">
+      <div class="query-toolbar-divider"></div>
+
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <Space>
-          <Button danger :disabled="selectedRowKeys.length === 0" @click="handleBatchUpdate(1)">
-            不应用AI注释 ({{ selectedRowKeys.length }})
-          </Button>
           <Button type="primary" :disabled="selectedRowKeys.length === 0" @click="handleBatchUpdate(2)">
             应用AI注释 ({{ selectedRowKeys.length }})
           </Button>
+          <Button danger :disabled="selectedRowKeys.length === 0" @click="handleBatchUpdate(1)">
+            不应用AI注释 ({{ selectedRowKeys.length }})
+          </Button>
         </Space>
+        <Popover trigger="click" placement="bottomRight">
+          <template #content>
+            <div class="column-picker">
+              <div class="mb-2 text-xs text-gray-500">勾选要显示的列（创建/修改时间默认隐藏）</div>
+              <Checkbox.Group v-model:value="visibleColumnKeys" class="column-picker-group">
+                <div v-for="opt in columnPickerOptions" :key="opt.value" class="column-picker-item">
+                  <Checkbox :value="opt.value">{{ opt.label }}</Checkbox>
+                </div>
+              </Checkbox.Group>
+            </div>
+          </template>
+          <Button>列设置</Button>
+        </Popover>
       </div>
 
       <Table
-        :columns="columns"
+        :columns="displayColumns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="pagination"
@@ -239,8 +439,45 @@ onMounted(fetchTables);
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'ai_comment'">
-            <span v-if="record.ai_comment">{{ record.ai_comment }}</span>
-            <span v-else style="color: #999">暂无AI注释</span>
+            <Input
+              v-if="editingAiCommentId === record.id"
+              ref="aiCommentInputRef"
+              v-model:value="editingAiCommentDraft"
+              size="small"
+              :maxlength="100"
+              show-count
+              placeholder="请输入 AI 注释"
+              class="w-full min-w-[200px]"
+              @blur="commitAiCommentEdit(record as TableItem)"
+              @keydown.esc.prevent="cancelEditAiComment"
+            />
+            <span
+              v-else
+              class="ai-comment-cell"
+              title="双击修改"
+              @dblclick="startEditAiComment(record as TableItem)"
+            >
+              <span v-if="record.ai_comment">{{ record.ai_comment }}</span>
+              <span v-else style="color: #999">暂无AI注释</span>
+            </span>
+          </template>
+          <template v-else-if="column.key === 'table_comment_accuracy'">
+            <div class="accuracy-cell">
+              <Progress
+                :percent="getAccuracyMeta(record.table_comment_accuracy).percent"
+                :stroke-color="getAccuracyMeta(record.table_comment_accuracy).color"
+                :show-info="false"
+                size="small"
+                class="accuracy-progress"
+              />
+              <span
+                class="accuracy-text"
+                :style="{ color: getAccuracyMeta(record.table_comment_accuracy).color }"
+              >
+                {{ getAccuracyMeta(record.table_comment_accuracy).label }}
+                <span class="accuracy-score">{{ getAccuracyMeta(record.table_comment_accuracy).scoreText }}</span>
+              </span>
+            </div>
           </template>
           <template v-else-if="column.key === 'ai_fixed'">
             <Badge :status="aiFixedStatus(record.ai_fixed).status" :text="aiFixedStatus(record.ai_fixed).text" />
@@ -299,6 +536,11 @@ onMounted(fetchTables);
   margin-top: 12px;
 }
 
+.query-toolbar-divider {
+  border-top: 1px solid #f0f0f0;
+  margin-bottom: 12px;
+}
+
 @media (max-width: 1400px) {
   .query-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -319,5 +561,57 @@ onMounted(fetchTables);
   .query-actions {
     justify-content: flex-start;
   }
+}
+
+.column-picker {
+  background: hsl(var(--background, 0 0% 100%));
+  border-radius: 8px;
+  max-height: 360px;
+  max-width: 280px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.column-picker-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.column-picker-item {
+  line-height: 1.5;
+}
+
+.ai-comment-cell {
+  cursor: text;
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.accuracy-cell {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.accuracy-progress {
+  flex: 0 0 72px;
+  margin-bottom: 0;
+}
+
+.accuracy-text {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 3rem;
+  text-align: right;
+}
+
+.accuracy-score {
+  color: #666;
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 4px;
 }
 </style>

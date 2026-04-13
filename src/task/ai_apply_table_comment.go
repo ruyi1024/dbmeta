@@ -264,3 +264,8 @@ func applyTableComment(dbCon *sql.DB, table model.MetaTable) error {
 
 	return nil
 }
+
+// ExecuteAiApplyTableCommentTask 手动触发，与定时任务逻辑一致（计划任务平台「手工运行」）
+func ExecuteAiApplyTableCommentTask() {
+	doAiApplyTableCommentTask()
+}

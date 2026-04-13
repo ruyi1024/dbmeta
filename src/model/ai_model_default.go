@@ -9,7 +9,9 @@ import "time"
 
 // 场景常量：与 ai_model_default.scenario 对应
 const (
-	AIModelScenarioGrading = "grading" // 数据分级（AI 批处理等）
+	AIModelScenarioGrading             = "grading"               // 数据分级（AI 批处理等）
+	AIModelScenarioTableColumnComment  = "table_column_comment"  // AI 生成表/字段备注（元数据注释任务）
+	AIModelScenarioTableColumnAccuracy = "table_column_accuracy" // 表字段与注释准确度评估
 )
 
 // AIModelDefault 各场景默认使用的 AI 模型（model_id 指向 ai_models.id）

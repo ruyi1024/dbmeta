@@ -38,28 +38,43 @@ func init() {
 func aiApplyColumnCommentCrontabTask() {
 	time.Sleep(time.Second * time.Duration(30))
 	var db = database.DB
+	logger := log.Logger
 	var record model.TaskOption
-	db.Select("crontab").Where("task_key=?", "ai_apply_column_comment").Take(&record)
+	if err := db.Select("crontab").Where("task_key=?", "ai_apply_column_comment").Take(&record).Error; err != nil {
+		logger.Warn("failed to load ai_apply_column_comment schedule, fallback to default cron",
+			zap.Error(err), zap.String("default_cron", "*/30 * * * *"))
+		record.Crontab = "*/30 * * * *"
+	}
+	if strings.TrimSpace(record.Crontab) == "" {
+		record.Crontab = "*/30 * * * *"
+		logger.Warn("ai_apply_column_comment crontab is empty, fallback to default cron",
+			zap.String("default_cron", record.Crontab))
+	}
 	c := cron.New()
-	c.AddFunc(record.Crontab, func() {
+	if _, err := c.AddFunc(record.Crontab, func() {
 		db.Select("enable").Where("task_key=?", "ai_apply_column_comment").Take(&record)
 		if record.Enable == 1 {
 			db.Model(model.TaskHeartbeat{}).Where("heartbeat_key='ai_apply_column_comment'").Updates(map[string]interface{}{"heartbeat_time": time.Now().Format("2006-01-02 15:04:05.999")})
 			doAiApplyColumnCommentTask()
 			db.Model(model.TaskHeartbeat{}).Where("heartbeat_key='ai_apply_column_comment'").Updates(map[string]interface{}{"heartbeat_end_time": time.Now().Format("2006-01-02 15:04:05.999")})
 		}
-	})
+	}); err != nil {
+		logger.Error("failed to register ai_apply_column_comment cron task",
+			zap.String("crontab", record.Crontab), zap.Error(err))
+		return
+	}
+	logger.Info("registered ai_apply_column_comment cron task", zap.String("crontab", record.Crontab))
 	c.Start()
 }
 
 func doAiApplyColumnCommentTask() {
 	logger := log.Logger
-	logger.Info("开始执行AI应用字段注释任务")
+	logger.Info("start ai_apply_column_comment task")
 
 	// 创建任务日志记录器
 	taskLogger := NewTaskLogger("ai_apply_column_comment")
 	if err := taskLogger.Start(); err != nil {
-		logger.Error("创建任务日志失败", zap.Error(err))
+		logger.Error("failed to create task log", zap.Error(err))
 		return
 	}
 
@@ -67,21 +82,21 @@ func doAiApplyColumnCommentTask() {
 	var columns []model.MetaColumn
 	result := database.DB.Where("ai_comment IS NOT NULL AND ai_comment != '' AND ai_fixed = 2 ").Find(&columns)
 	if result.Error != nil {
-		errorMsg := fmt.Sprintf("查询待应用AI注释的字段失败: %v", result.Error)
+		errorMsg := fmt.Sprintf("failed to query columns pending ai comment apply: %v", result.Error)
 		logger.Error(errorMsg)
 		taskLogger.Failed(errorMsg)
 		return
 	}
 
 	if len(columns) == 0 {
-		successMsg := "没有需要应用AI注释的字段"
+		successMsg := "no columns pending ai comment apply"
 		logger.Info(successMsg)
 		taskLogger.Success(successMsg)
 		return
 	}
 
-	logger.Info("找到需要应用AI注释的字段", zap.Int("count", len(columns)))
-	taskLogger.UpdateResult(fmt.Sprintf("找到 %d 个需要应用AI注释的字段", len(columns)))
+	logger.Info("found columns pending ai comment apply", zap.Int("count", len(columns)))
+	taskLogger.UpdateResult(fmt.Sprintf("found %d columns pending ai comment apply", len(columns)))
 
 	// 按数据源分组
 	datasourceGroups := groupColumnsByDatasource(columns)
@@ -91,12 +106,12 @@ func doAiApplyColumnCommentTask() {
 	errorDetails := []string{}
 
 	for datasourceKey, columnGroup := range datasourceGroups {
-		logger.Info("处理数据源", zap.String("datasource", datasourceKey), zap.Int("column_count", len(columnGroup)))
+		logger.Info("processing datasource", zap.String("datasource", datasourceKey), zap.Int("column_count", len(columnGroup)))
 
 		// 获取数据源连接信息
 		datasource, err := getDatasourceInfoForColumn(columnGroup[0])
 		if err != nil {
-			errorMsg := fmt.Sprintf("获取数据源 %s 信息失败: %v", datasourceKey, err)
+			errorMsg := fmt.Sprintf("failed to get datasource info %s: %v", datasourceKey, err)
 			logger.Error(errorMsg)
 			errorDetails = append(errorDetails, errorMsg)
 			failedCount += len(columnGroup)
@@ -106,7 +121,7 @@ func doAiApplyColumnCommentTask() {
 		// 连接到目标数据库
 		dbCon, err := connectToTargetDatabaseForColumn(datasource)
 		if err != nil {
-			errorMsg := fmt.Sprintf("连接数据源 %s 失败: %v", datasourceKey, err)
+			errorMsg := fmt.Sprintf("failed to connect datasource %s: %v", datasourceKey, err)
 			logger.Error(errorMsg)
 			errorDetails = append(errorDetails, errorMsg)
 			failedCount += len(columnGroup)
@@ -116,7 +131,7 @@ func doAiApplyColumnCommentTask() {
 
 		// 处理该数据源下的所有字段
 		for i, column := range columnGroup {
-			logger.Info("应用字段注释", zap.Int("index", i+1), zap.Int("total", len(columnGroup)),
+			logger.Info("applying column comment", zap.Int("index", i+1), zap.Int("total", len(columnGroup)),
 				zap.String("datasource_type", column.DatasourceType),
 				zap.String("database_name", column.DatabaseName),
 				zap.String("table_name", column.TableNameX),
@@ -124,7 +139,7 @@ func doAiApplyColumnCommentTask() {
 
 			err := applyColumnComment(dbCon, column)
 			if err != nil {
-				errorMsg := fmt.Sprintf("应用字段 %s.%s.%s 注释失败: %v", column.DatabaseName, column.TableNameX, column.ColumnName, err)
+				errorMsg := fmt.Sprintf("failed to apply comment for column %s.%s.%s: %v", column.DatabaseName, column.TableNameX, column.ColumnName, err)
 				logger.Error(errorMsg)
 				errorDetails = append(errorDetails, errorMsg)
 				failedCount++
@@ -132,30 +147,30 @@ func doAiApplyColumnCommentTask() {
 				// 更新状态为已应用
 				updateResult := database.DB.Model(&model.MetaColumn{}).Where("id = ?", column.Id).Update("ai_fixed", 3)
 				if updateResult.Error != nil {
-					errorMsg := fmt.Sprintf("更新字段 %s.%s.%s 状态失败: %v", column.DatabaseName, column.TableNameX, column.ColumnName, updateResult.Error)
+					errorMsg := fmt.Sprintf("failed to update ai_fixed for column %s.%s.%s: %v", column.DatabaseName, column.TableNameX, column.ColumnName, updateResult.Error)
 					logger.Error(errorMsg)
 					errorDetails = append(errorDetails, errorMsg)
 					failedCount++
 				} else {
 					successCount++
-					logger.Info("成功应用字段注释", zap.String("database_name", column.DatabaseName),
+					logger.Info("column comment applied", zap.String("database_name", column.DatabaseName),
 						zap.String("table_name", column.TableNameX), zap.String("column_name", column.ColumnName),
 						zap.String("comment", column.AiComment))
 				}
 			}
 
 			// 更新进度
-			progressMsg := fmt.Sprintf("已处理 %d/%d 个字段 (成功: %d, 失败: %d)", successCount+failedCount, len(columns), successCount, failedCount)
+			progressMsg := fmt.Sprintf("processed %d/%d columns (success: %d, failed: %d)", successCount+failedCount, len(columns), successCount, failedCount)
 			taskLogger.UpdateResult(progressMsg)
 		}
 	}
 
 	// 记录最终结果
-	finalResult := fmt.Sprintf("任务完成 - 总计: %d, 成功: %d, 失败: %d", len(columns), successCount, failedCount)
+	finalResult := fmt.Sprintf("task finished - total: %d, success: %d, failed: %d", len(columns), successCount, failedCount)
 	if len(errorDetails) > 0 {
-		finalResult += fmt.Sprintf("。失败详情: %s", errorDetails[0]) // 只记录第一个错误详情
+		finalResult += fmt.Sprintf(". first error: %s", errorDetails[0])
 		if len(errorDetails) > 1 {
-			finalResult += fmt.Sprintf(" 等 %d 个错误", len(errorDetails))
+			finalResult += fmt.Sprintf(" and %d more errors", len(errorDetails))
 		}
 	}
 
@@ -187,7 +202,7 @@ func getDatasourceInfoForColumn(column model.MetaColumn) (*model.Datasource, err
 		column.DatasourceType, column.Host, column.Port).First(&datasource)
 
 	if result.Error != nil {
-		return nil, fmt.Errorf("数据源不存在或已禁用: %v", result.Error)
+		return nil, fmt.Errorf("datasource not found or disabled: %v", result.Error)
 	}
 
 	return &datasource, nil
@@ -201,7 +216,7 @@ func connectToTargetDatabaseForColumn(datasource *model.Datasource) (*sql.DB, er
 		var err error
 		origPass, err = utils.AesPassDecode(datasource.Pass, setting.Setting.DbPassKey)
 		if err != nil {
-			return nil, fmt.Errorf("密码解密失败: %v", err)
+			return nil, fmt.Errorf("failed to decrypt datasource password: %v", err)
 		}
 	}
 
@@ -229,11 +244,11 @@ func connectToTargetDatabaseForColumn(datasource *model.Datasource) (*sql.DB, er
 			database.WithPassword(origPass),
 			database.WithDatabase("system"))
 	} else {
-		return nil, fmt.Errorf("不支持的数据库类型: %s", datasource.Type)
+		return nil, fmt.Errorf("unsupported datasource type: %s", datasource.Type)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("连接数据库失败: %v", err)
+		return nil, fmt.Errorf("failed to connect target database: %v", err)
 	}
 
 	return dbCon, nil
@@ -254,13 +269,13 @@ func extractColumnDefinition(createTableSQL, columnName string) (string, error) 
 	}
 
 	if targetLine == "" {
-		return "", fmt.Errorf("未找到字段 %s 的定义", columnName)
+		return "", fmt.Errorf("column definition not found for %s", columnName)
 	}
 
 	// 2. 找到字段名在行中的位置
 	columnStart := strings.Index(targetLine, "`"+columnName+"`")
 	if columnStart == -1 {
-		return "", fmt.Errorf("未找到字段 %s 的定义", columnName)
+		return "", fmt.Errorf("column definition not found for %s", columnName)
 	}
 
 	// 3. 从字段名开始，跳过字段名和空白字符
@@ -298,12 +313,12 @@ func extractColumnDefinition(createTableSQL, columnName string) (string, error) 
 
 	// 5. 提取字段定义
 	if start >= end {
-		return "", fmt.Errorf("无法解析字段 %s 的定义", columnName)
+		return "", fmt.Errorf("failed to parse column definition for %s", columnName)
 	}
 
 	columnDef := strings.TrimSpace(targetLine[start:end])
 	if columnDef == "" {
-		return "", fmt.Errorf("无法解析字段 %s 的定义", columnName)
+		return "", fmt.Errorf("failed to parse column definition for %s", columnName)
 	}
 
 	return columnDef, nil
@@ -324,13 +339,13 @@ func applyColumnComment(dbCon *sql.DB, column model.MetaColumn) error {
 		var tableName, createTableSQL string
 		err := dbCon.QueryRow(showCreateSQL).Scan(&tableName, &createTableSQL)
 		if err != nil {
-			return fmt.Errorf("获取表结构失败: %v", err)
+			return fmt.Errorf("failed to fetch table ddl: %v", err)
 		}
 
 		// 2. 找到该字段的整行数据并提取字段定义
 		columnDefinition, err := extractColumnDefinition(createTableSQL, column.ColumnName)
 		if err != nil {
-			return fmt.Errorf("解析字段定义失败: %v", err)
+			return fmt.Errorf("failed to parse column definition: %v", err)
 		}
 
 		// 3. 生成完整的ALTER语句
@@ -343,7 +358,7 @@ func applyColumnComment(dbCon *sql.DB, column model.MetaColumn) error {
 		// 4. 执行ALTER语句
 		_, err = dbCon.Exec(alterSQL)
 		if err != nil {
-			return fmt.Errorf("执行ALTER语句失败: %s, 错误: %v", alterSQL, err)
+			return fmt.Errorf("failed to execute ALTER SQL: %s, error: %v", alterSQL, err)
 		}
 
 	} else if column.DatasourceType == "ClickHouse" {
@@ -353,11 +368,16 @@ func applyColumnComment(dbCon *sql.DB, column model.MetaColumn) error {
 
 		_, err := dbCon.Exec(alterSQL)
 		if err != nil {
-			return fmt.Errorf("执行ALTER语句失败: %s, 错误: %v", alterSQL, err)
+			return fmt.Errorf("failed to execute ALTER SQL: %s, error: %v", alterSQL, err)
 		}
 	} else {
-		return fmt.Errorf("不支持的数据库类型: %s", column.DatasourceType)
+		return fmt.Errorf("unsupported datasource type: %s", column.DatasourceType)
 	}
 
 	return nil
+}
+
+// ExecuteAiApplyColumnCommentTask 手动触发，与定时任务逻辑一致（计划任务平台「手工运行」）
+func ExecuteAiApplyColumnCommentTask() {
+	doAiApplyColumnCommentTask()
 }

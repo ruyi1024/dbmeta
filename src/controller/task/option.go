@@ -160,6 +160,18 @@ func ExecuteTask(c *gin.Context) {
 			taskRunner.ExecuteDataQualityAiAnalysis()
 		case "ai_grading_batch":
 			taskRunner.ExecuteAiGradingBatchTask()
+		case "ai_general_table_comment":
+			taskRunner.ExecuteAiGeneralTableCommentTask()
+		case "ai_general_column_comment":
+			taskRunner.ExecuteAiGeneralColumnCommentTask()
+		case "ai_apply_table_comment":
+			taskRunner.ExecuteAiApplyTableCommentTask()
+		case "ai_apply_column_comment":
+			taskRunner.ExecuteAiApplyColumnCommentTask()
+		case "ai_table_comment_accuracy":
+			taskRunner.ExecuteAiTableCommentAccuracyTask()
+		case "ai_column_comment_accuracy":
+			taskRunner.ExecuteAiColumnCommentAccuracyTask()
 		default:
 			// 其他任务可以在这里添加
 		}

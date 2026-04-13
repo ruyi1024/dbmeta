@@ -33,6 +33,13 @@ import (
 	"go.uber.org/zap"
 )
 
+const aiGeneralTableCommentBatchSize = 20
+
+type aiTableCommentBatchItem struct {
+	ID        int    `json:"id"`
+	AiComment string `json:"ai_comment"`
+}
+
 // DifyRequest Dify API请求结构
 type DifyRequest struct {
 	Inputs       map[string]interface{} `json:"inputs"`
@@ -82,10 +89,9 @@ func doAiGeneralTableCommentTask() {
 		return
 	}
 
-	// 获取Dify配置
-	apiURL, apiKey, timeout, err := getDifyConfigForTableComment()
+	invoker, err := newTableColumnCommentLLMInvoker(logger)
 	if err != nil {
-		errorMsg := fmt.Sprintf("获取Dify配置失败: %v", err)
+		errorMsg := fmt.Sprintf("初始化模型调用失败: %v", err)
 		logger.Error(errorMsg)
 		taskLogger.Failed(errorMsg)
 		return
@@ -115,22 +121,47 @@ func doAiGeneralTableCommentTask() {
 	failedCount := 0
 	errorDetails := []string{}
 
-	for i, table := range tables {
-		logger.Info("处理表", zap.Int("index", i+1), zap.Int("total", len(tables)), zap.String("table_name", table.TableNameX))
+	for start := 0; start < len(tables); start += aiGeneralTableCommentBatchSize {
+		end := start + aiGeneralTableCommentBatchSize
+		if end > len(tables) {
+			end = len(tables)
+		}
+		chunk := tables[start:end]
 
-		err := processTableComment(table, apiURL, apiKey, timeout)
-		if err != nil {
-			errorMsg := fmt.Sprintf("处理表 %s 失败: %v", table.TableNameX, err)
-			logger.Error(errorMsg)
-			errorDetails = append(errorDetails, errorMsg)
-			failedCount++
-		} else {
+		commentMap, batchErr := generateTableCommentBatch(chunk, invoker)
+		if batchErr != nil {
+			msg := fmt.Sprintf("批次 %d-%d 调用模型失败: %v", start+1, end, batchErr)
+			logger.Error(msg)
+			errorDetails = append(errorDetails, msg)
+			failedCount += len(chunk)
+			taskLogger.UpdateResult(fmt.Sprintf("已处理 %d/%d 个表 (成功: %d, 失败: %d)", successCount+failedCount, len(tables), successCount, failedCount))
+			continue
+		}
+
+		for _, table := range chunk {
+			comment := cleanTableComment(commentMap[table.Id])
+			if comment == "" {
+				errorMsg := fmt.Sprintf("处理表 %s 失败: 模型未返回有效注释", table.TableNameX)
+				logger.Error(errorMsg)
+				errorDetails = append(errorDetails, errorMsg)
+				failedCount++
+				continue
+			}
+			updateResult := database.DB.Model(&model.MetaTable{}).Where("id = ?", table.Id).Update("ai_comment", comment)
+			if updateResult.Error != nil {
+				errorMsg := fmt.Sprintf("处理表 %s 失败: 更新数据库失败: %v", table.TableNameX, updateResult.Error)
+				logger.Error(errorMsg)
+				errorDetails = append(errorDetails, errorMsg)
+				failedCount++
+				continue
+			}
+			logger.Info("成功为表生成AI注释",
+				zap.String("table_name", table.TableNameX),
+				zap.String("comment", comment))
 			successCount++
 		}
 
-		// 更新进度
-		progressMsg := fmt.Sprintf("已处理 %d/%d 个表 (成功: %d, 失败: %d)", i+1, len(tables), successCount, failedCount)
-		taskLogger.UpdateResult(progressMsg)
+		taskLogger.UpdateResult(fmt.Sprintf("已处理 %d/%d 个表 (成功: %d, 失败: %d)", successCount+failedCount, len(tables), successCount, failedCount))
 	}
 
 	// 记录最终结果
@@ -151,42 +182,55 @@ func doAiGeneralTableCommentTask() {
 	logger.Info(finalResult)
 }
 
-func processTableComment(table model.MetaTable, apiURL, apiKey string, timeout time.Duration) error {
-	logger := log.Logger
+func generateTableCommentBatch(tables []model.MetaTable, invoker *gradingLLMInvoker) (map[int]string, error) {
+	lines := make([]string, 0, len(tables))
+	for _, table := range tables {
+		lines = append(lines, fmt.Sprintf(`{"id":%d,"table_name":"%s"}`,
+			table.Id, escapeJSONString(table.TableNameX)))
+	}
 
-	// 构造提示词
-	prompt := fmt.Sprintf(`请为数据库表 '%s' 生成一个简洁的中文注释，只返回生成的注释即可，不要返回任何其他内容，要求：
-1. 注释要简洁明了，不超过20个字符
-2. 使用中文描述表的用途
-3. 如果是用户相关表，说明是用户什么信息
-4. 如果是业务相关表，说明是什么业务
+	prompt := fmt.Sprintf(`你是数据库表注释助手。请为每个表生成简洁中文注释。
+要求：
+1. 每条注释不超过20个中文字符；
+2. 基于表名推断表用途；
+3. 只输出 JSON 数组，不要 Markdown，不要额外说明；
+4. 返回格式严格为：
+[{"id":1,"ai_comment":"用户信息表"}]
+5. 必须保留输入 id，且每个输入 id 都要返回。
 
-表名: %s`, table.TableNameX, table.TableNameX)
+待生成数据：
+[%s]`, strings.Join(lines, ","))
 
-	// 调用Dify API
-	response, err := callDifyAPIForTableComment(prompt, apiURL, apiKey, timeout)
+	answer, err := invoker.complete(prompt)
 	if err != nil {
-		return fmt.Errorf("调用Dify API失败: %v", err)
+		return nil, err
 	}
-
-	// 清理和验证响应
-	cleanedComment := cleanTableComment(response)
-	if cleanedComment == "" {
-		return fmt.Errorf("生成的注释为空")
+	items, err := parseTableCommentBatch(answer)
+	if err != nil {
+		return nil, err
 	}
-
-	// 更新数据库
-	updateResult := database.DB.Model(&model.MetaTable{}).Where("id = ?", table.Id).Update("ai_comment", cleanedComment)
-	if updateResult.Error != nil {
-		return fmt.Errorf("更新数据库失败: %v", updateResult.Error)
+	out := make(map[int]string, len(items))
+	for _, item := range items {
+		if item.ID <= 0 {
+			continue
+		}
+		out[item.ID] = item.AiComment
 	}
+	return out, nil
+}
 
-	logger.Info("成功为表生成AI注释", zap.String("table_name", table.TableNameX), zap.String("comment", cleanedComment))
-
-	// 添加延迟，避免API调用过于频繁
-	time.Sleep(2 * time.Second)
-
-	return nil
+func parseTableCommentBatch(answer string) ([]aiTableCommentBatchItem, error) {
+	s := strings.TrimSpace(answer)
+	if i := strings.Index(s, "["); i >= 0 {
+		if j := strings.LastIndex(s, "]"); j > i {
+			s = s[i : j+1]
+		}
+	}
+	var payload []aiTableCommentBatchItem
+	if err := json.Unmarshal([]byte(s), &payload); err != nil {
+		return nil, fmt.Errorf("解析批量表注释响应失败: %v", err)
+	}
+	return payload, nil
 }
 
 func getDifyConfigForTableComment() (apiURL, apiKey string, timeout time.Duration, err error) {
@@ -300,4 +344,9 @@ func cleanTableComment(comment string) string {
 	comment = strings.ReplaceAll(comment, "\r", "")
 
 	return comment
+}
+
+// ExecuteAiGeneralTableCommentTask 手动触发，与定时任务逻辑一致（计划任务平台「手工运行」）
+func ExecuteAiGeneralTableCommentTask() {
+	doAiGeneralTableCommentTask()
 }
