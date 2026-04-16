@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,10 +14,10 @@ limitations under the License.
 package ai
 
 import (
-	"dbmcloud/log"
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
-	"dbmcloud/src/service"
+	"dbmeta-core/log"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/service"
 	"fmt"
 	"strings"
 	"time"

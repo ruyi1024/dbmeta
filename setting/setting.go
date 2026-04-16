@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,9 +9,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package setting
@@ -19,6 +16,7 @@ package setting
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -28,11 +26,26 @@ import (
 
 type setting struct {
 	Log        `yam:"log"`
+	Server     ServerConfig `yaml:"server"`
 	DataSource `yaml:"dataSource"`
-	Notice     `yaml:"notice"`
-	Decrypt    `yaml:"decrypt"`
-	Token      `yaml:"token"`
-	AI         `yaml:"ai"`
+	// Notice 仅来自数据库 settings 表（category=notice），不从 YAML 读取
+	Notice  `yaml:"-"`
+	Decrypt `yaml:"decrypt"`
+	Token   `yaml:"token"`
+	AI      `yaml:"ai"`
+	License LicenseConfig `yaml:"license"`
+}
+
+// ServerConfig HTTP 服务监听。
+type ServerConfig struct {
+	// Addr 监听地址，如 ":8086" 或 "127.0.0.1:9090"。为空则默认 ":8086"。
+	Addr string `yaml:"addr"`
+}
+
+// LicenseConfig 与 src/license 包配合：生产环境应执行完整校验。
+type LicenseConfig struct {
+	// DevSkip 为 true 时跳过 LICENSE.ENC 与机器码等校验，仅用于本地开发；生产环境务必为 false。
+	DevSkip bool `yaml:"devSkip"`
 }
 
 type Log struct {
@@ -55,7 +68,6 @@ type DataSource struct {
 	ClickhouseUser     string `yaml:"clickhouseUser"`
 	ClickhousePassword string `yaml:"clickhousePassword"`
 	ClickhouseDatabase string `yaml:"clickhouseDatabase"`
-	NsqServer          string `yaml:"nsqServer"`
 }
 
 type Notice struct {
@@ -137,7 +149,21 @@ type GuideOption struct {
 
 var Setting = new(setting)
 
+// ConfigBaseDir 为当前加载的配置文件所在目录的绝对路径，供 LICENSE.ENC 等相对配置文件解析；解析失败时为空。
+var ConfigBaseDir string
+
+// ConfigPath 为当前加载配置文件的绝对路径，供运行中更新配置后持久化回文件。
+var ConfigPath string
+
 func InitSetting(path string) (err error) {
+	ConfigBaseDir = ""
+	ConfigPath = ""
+	if path != "" {
+		if abs, err := filepath.Abs(path); err == nil {
+			ConfigBaseDir = filepath.Dir(abs)
+			ConfigPath = abs
+		}
+	}
 	if f, err := os.Open(path); err == nil {
 		defer func() {
 			_ = f.Close()
@@ -170,4 +196,24 @@ func InitSetting(path string) (err error) {
 
 func DataSourceInfo() DataSource {
 	return Setting.DataSource
+}
+
+// NoticeInfo 返回当前通信配置（mail/aliyun/wechat），由数据库 settings 表加载后缓存在内存。
+func NoticeInfo() Notice {
+	return Setting.Notice
+}
+
+// SetNotice 由数据库加载层写入内存，供邮件/短信/微信等包读取。
+func SetNotice(n Notice) {
+	Setting.Notice = n
+}
+
+// ListenAddr 返回 Gin HTTP 监听地址（配置文件 server.addr）。
+// 未配置时默认 :8086；企业版入口会在 Bootstrap 中将空值设为 :8088（见 app/bootstrap.go）。
+func ListenAddr() string {
+	s := strings.TrimSpace(Setting.Server.Addr)
+	if s == "" {
+		return ":8086"
+	}
+	return s
 }

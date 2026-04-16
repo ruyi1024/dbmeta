@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,17 +9,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package task
 
 import (
-	"dbmcloud/log"
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
+	"dbmeta-core/log"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
 	"fmt"
 	"time"
 
@@ -80,7 +77,7 @@ func doRecycleTokenTask() {
 	// 查询过期的Token数量
 	var expiredCount int64
 	expireTime := time.Now().Format("2006-01-02 15:04:05")
-	
+
 	countResult := database.DB.Model(&model.Token{}).Where("expired <= ?", expireTime).Count(&expiredCount)
 	if countResult.Error != nil {
 		errorMsg := fmt.Sprintf("查询过期Token数量失败: %v", countResult.Error)
@@ -110,7 +107,7 @@ func doRecycleTokenTask() {
 
 	// 记录最终结果
 	finalResult := fmt.Sprintf("Token清理完成 - 预期删除: %d, 实际删除: %d", expiredCount, deleteResult.RowsAffected)
-	
+
 	if deleteResult.RowsAffected != expiredCount {
 		finalResult += fmt.Sprintf(" (数量不匹配，可能有并发操作)")
 	}

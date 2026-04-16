@@ -15,6 +15,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'MetaInstancePage' });
 
@@ -47,14 +48,14 @@ const queryForm = reactive({
   type: '',
 });
 const columns: TableColumnsType<InstanceItem> = [
-  { title: '实例类型', dataIndex: 'type', key: 'type', sorter: true },
-  { title: '实例名', dataIndex: 'name', key: 'name', sorter: true },
-  { title: '实例主机', dataIndex: 'host', key: 'host', sorter: true },
-  { title: '实例端口', dataIndex: 'port', key: 'port' },
-  { title: '角色', dataIndex: 'role', key: 'role' },
-  { title: '是否启用', dataIndex: 'enable', key: 'enable' },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
+  { title: $t('page.metaInstance.columns.type'), dataIndex: 'type', key: 'type', sorter: true },
+  { title: $t('page.metaInstance.columns.name'), dataIndex: 'name', key: 'name', sorter: true },
+  { title: $t('page.metaInstance.columns.host'), dataIndex: 'host', key: 'host', sorter: true },
+  { title: $t('page.metaInstance.columns.port'), dataIndex: 'port', key: 'port' },
+  { title: $t('page.metaInstance.columns.role'), dataIndex: 'role', key: 'role' },
+  { title: $t('page.metaInstance.columns.enable'), dataIndex: 'enable', key: 'enable' },
+  { title: $t('page.metaInstance.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
+  { title: $t('page.metaInstance.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
 ];
 
 async function fetchInstances(sorter?: Record<string, string>) {
@@ -80,7 +81,7 @@ async function fetchInstances(sorter?: Record<string, string>) {
     dataSource.value = list;
     pagination.total = Number(payload?.total ?? list.length) || list.length;
   } catch (error: any) {
-    message.error(error?.message || '实例查询失败');
+    message.error(error?.message || $t('page.metaInstance.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -121,11 +122,19 @@ function formatDate(value?: string) {
 }
 
 function roleText(role: number | string) {
-  return String(role) === '1' ? '主' : String(role) === '2' ? '备' : '-';
+  return String(role) === '1'
+    ? $t('page.metaInstance.option.primary')
+    : String(role) === '2'
+      ? $t('page.metaInstance.option.secondary')
+      : '-';
 }
 
 function enableText(enable: number | string) {
-  return String(enable) === '1' ? '是' : String(enable) === '0' ? '否' : '-';
+  return String(enable) === '1'
+    ? $t('page.metaInstance.option.yes')
+    : String(enable) === '0'
+      ? $t('page.metaInstance.option.no')
+      : '-';
 }
 
 onMounted(() => {
@@ -135,58 +144,58 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="数据库实例列表">
+    <Card :title="$t('page.metaInstance.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="实例类型" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.type')" class="query-item">
             <Input
               v-model:value="queryForm.type"
-              placeholder="请输入实例类型"
+              :placeholder="$t('page.metaInstance.placeholder.type')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="实例名" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.name')" class="query-item">
             <Input
               v-model:value="queryForm.name"
-              placeholder="请输入实例名"
+              :placeholder="$t('page.metaInstance.placeholder.name')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="实例主机" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.host')" class="query-item">
             <Input
               v-model:value="queryForm.host"
-              placeholder="请输入实例主机"
+              :placeholder="$t('page.metaInstance.placeholder.host')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="实例端口" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.port')" class="query-item">
             <Input
               v-model:value="queryForm.port"
-              placeholder="请输入实例端口"
+              :placeholder="$t('page.metaInstance.placeholder.port')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="角色" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.role')" class="query-item">
             <Select v-model:value="queryForm.role" allow-clear class="query-control">
-              <Select.Option value="1">主</Select.Option>
-              <Select.Option value="2">备</Select.Option>
+              <Select.Option value="1">{{ $t('page.metaInstance.option.primary') }}</Select.Option>
+              <Select.Option value="2">{{ $t('page.metaInstance.option.secondary') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="是否启用" class="query-item">
+          <Form.Item :label="$t('page.metaInstance.columns.enable')" class="query-item">
             <Select v-model:value="queryForm.enable" allow-clear class="query-control">
-              <Select.Option value="1">是</Select.Option>
-              <Select.Option value="0">否</Select.Option>
+              <Select.Option value="1">{{ $t('page.metaInstance.option.yes') }}</Select.Option>
+              <Select.Option value="0">{{ $t('page.metaInstance.option.no') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>

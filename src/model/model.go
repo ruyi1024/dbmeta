@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,9 +9,6 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package model
@@ -196,21 +193,21 @@ func (MetaDatabaseBusiness) TableName() string {
 }
 
 type MetaTable struct {
-	Id             int       `gorm:"primarykey" json:"id"`
-	DatasourceType string    `gorm:"size:50;index" json:"datasource_type"`
-	Host           string    `gorm:"size:100;index:idx_host_port" json:"host"`
-	Port           string    `gorm:"size:10;index:idx_host_port" json:"port"`
-	DatabaseName   string    `gorm:"size:50;index" json:"database_name"`
-	TableType      string    `gorm:"size:50" json:"table_type"`
-	TableNameX     string    `gorm:"column:table_name;size:50;index" json:"table_name"`
-	TableComment   string    `gorm:"size:100" json:"table_comment"`
-	TableCommentAccuracy *float64 `gorm:"column:table_comment_accuracy;type:decimal(2,1)" json:"table_comment_accuracy"`
-	AiComment      string    `gorm:"size:100" json:"ai_comment"`
-	AiFixed        int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
-	Characters     string    `gorm:"size:50" json:"characters"`
-	IsDeleted      int8      `gorm:"default:0" json:"is_deleted"`
-	CreatedAt      time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
-	UpdatedAt      time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+	Id                   int       `gorm:"primarykey" json:"id"`
+	DatasourceType       string    `gorm:"size:50;index" json:"datasource_type"`
+	Host                 string    `gorm:"size:100;index:idx_host_port" json:"host"`
+	Port                 string    `gorm:"size:10;index:idx_host_port" json:"port"`
+	DatabaseName         string    `gorm:"size:50;index" json:"database_name"`
+	TableType            string    `gorm:"size:50" json:"table_type"`
+	TableNameX           string    `gorm:"column:table_name;size:50;index" json:"table_name"`
+	TableComment         string    `gorm:"size:100" json:"table_comment"`
+	TableCommentAccuracy *float64  `gorm:"column:table_comment_accuracy;type:decimal(2,1)" json:"table_comment_accuracy"`
+	AiComment            string    `gorm:"size:100" json:"ai_comment"`
+	AiFixed              int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
+	Characters           string    `gorm:"size:50" json:"characters"`
+	IsDeleted            int8      `gorm:"default:0" json:"is_deleted"`
+	CreatedAt            time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
+	UpdatedAt            time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
 }
 
 func (MetaTable) TableName() string {
@@ -218,25 +215,25 @@ func (MetaTable) TableName() string {
 }
 
 type MetaColumn struct {
-	Id               int       `gorm:"primarykey" json:"id"`
-	DatasourceType   string    `gorm:"size:50;index" json:"datasource_type"`
-	Host             string    `gorm:"size:100;index:idx_host_port" json:"host"`
-	Port             string    `gorm:"size:10;index:idx_host_port" json:"port"`
-	DatabaseName     string    `gorm:"size:50;index" json:"database_name"`
-	TableNameX       string    `gorm:"column:table_name;size:50;index" json:"table_name"`
-	ColumnName       string    `gorm:"size:50;index" json:"column_name"`
-	ColumnComment    string    `gorm:"size:100" json:"column_comment"`
-	ColumnCommentAccuracy *float64 `gorm:"column:column_comment_accuracy;type:decimal(2,1)" json:"column_comment_accuracy"`
-	AiComment        string    `gorm:"size:100" json:"ai_comment"`
-	AiFixed          int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
-	DataType         string    `gorm:"size:50" json:"data_type"`
-	IsNullable       string    `gorm:"size:50" json:"is_nullable"`
-	DefaultValue     string    `gorm:"size:50" json:"default_value"`
-	Ordinal_Position int       `gorm:"default:0" json:"ordinal_position"`
-	Characters       string    `gorm:"size:100" json:"characters"`
-	IsDeleted        int8      `gorm:"default:0" json:"is_deleted"`
-	CreatedAt        time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
-	UpdatedAt        time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+	Id                    int       `gorm:"primarykey" json:"id"`
+	DatasourceType        string    `gorm:"size:50;index" json:"datasource_type"`
+	Host                  string    `gorm:"size:100;index:idx_host_port" json:"host"`
+	Port                  string    `gorm:"size:10;index:idx_host_port" json:"port"`
+	DatabaseName          string    `gorm:"size:50;index" json:"database_name"`
+	TableNameX            string    `gorm:"column:table_name;size:50;index" json:"table_name"`
+	ColumnName            string    `gorm:"size:50;index" json:"column_name"`
+	ColumnComment         string    `gorm:"size:100" json:"column_comment"`
+	ColumnCommentAccuracy *float64  `gorm:"column:column_comment_accuracy;type:decimal(2,1)" json:"column_comment_accuracy"`
+	AiComment             string    `gorm:"size:100" json:"ai_comment"`
+	AiFixed               int8      `gorm:"default:0;comment:'0:待审核,1:不应用,2:待应用,3:已应用'" json:"ai_fixed"`
+	DataType              string    `gorm:"size:50" json:"data_type"`
+	IsNullable            string    `gorm:"size:50" json:"is_nullable"`
+	DefaultValue          string    `gorm:"size:50" json:"default_value"`
+	Ordinal_Position      int       `gorm:"default:0" json:"ordinal_position"`
+	Characters            string    `gorm:"size:100" json:"characters"`
+	IsDeleted             int8      `gorm:"default:0" json:"is_deleted"`
+	CreatedAt             time.Time `gorm:"column:gmt_created;index" json:"gmt_created"`
+	UpdatedAt             time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
 }
 
 func (MetaColumn) TableName() string {
@@ -313,6 +310,7 @@ type TaskOption struct {
 	TaskDescription string     `gorm:"size:500," json:"task_description"`
 	Crontab         string     `gorm:"size:100," json:"crontab"`
 	Enable          int8       `gorm:"default:1" json:"enable"`
+	CommercialOnly  int8       `gorm:"column:commercial_only;default:0" json:"commercial_only"` // 0: 开源可用, 1: 仅企业版
 	LastRunTime     *time.Time `gorm:"column:last_run_time" json:"last_run_time"`
 	NextRunTime     *time.Time `gorm:"column:next_run_time" json:"next_run_time"`
 	CreatedAt       time.Time  `gorm:"column:gmt_created" json:"gmt_created"`

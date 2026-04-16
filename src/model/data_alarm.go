@@ -70,6 +70,7 @@ type DataAlarmLog struct {
 	RuleMatched  bool       `gorm:"default:0" json:"rule_matched"`           // 规则是否匹配
 	EmailSent    bool       `gorm:"default:0" json:"email_sent"`             // 邮件是否已发送
 	ErrorMessage string     `gorm:"type:text" json:"error_message"`
+	ReportHTML   string     `gorm:"column:report_html;type:longtext" json:"-"`
 	CreatedAt    time.Time  `gorm:"column:gmt_created;index" json:"-"`
 }
 

@@ -17,6 +17,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface PieItem {
   type: string;
@@ -70,49 +71,49 @@ interface DashboardData {
 
 const mockData: DashboardData = {
   accuracyData: [
-    { type: '准确', value: 14_470 },
-    { type: '格式错误', value: 850 },
-    { type: '范围错误', value: 360 },
+    { type: $t('page.qualityDashboard.pie.accurate'), value: 14_470 },
+    { type: $t('page.qualityDashboard.pie.formatError'), value: 850 },
+    { type: $t('page.qualityDashboard.pie.rangeError'), value: 360 },
   ],
   aiAnalysis: {
     analysisTime: '2024-01-15 10:30:00',
     insights: [
-      '整体数据质量评分为88.2分，处于良好水平',
-      '数据唯一性表现最佳，达到94.1%',
-      '字段准确性需要重点关注，存在格式和范围错误',
-      '建议优先处理高优先级问题，预计可提升整体质量5-8分',
+      $t('page.qualityDashboard.ai.insight1'),
+      $t('page.qualityDashboard.ai.insight2'),
+      $t('page.qualityDashboard.ai.insight3'),
+      $t('page.qualityDashboard.ai.insight4'),
     ],
-    overallLevel: '良好',
+    overallLevel: $t('page.qualityDashboard.ai.overallLevel'),
     overallScore: 88.2,
     recommendations: [
       {
-        desc: '检测到1980个字段存在数据缺失，建议优先处理user_info表的email字段，空值率超过20%',
-        priority: '高',
-        title: '字段完整性待提升',
+        desc: $t('page.qualityDashboard.ai.recommendation1Desc'),
+        priority: $t('page.qualityDashboard.level.high'),
+        title: $t('page.qualityDashboard.ai.recommendation1Title'),
         type: 'high',
       },
       {
-        desc: '发现850个字段存在格式错误，主要集中在phone、email等联系信息字段，建议统一格式规范',
-        priority: '中',
-        title: '数据格式规范性问题',
+        desc: $t('page.qualityDashboard.ai.recommendation2Desc'),
+        priority: $t('page.qualityDashboard.level.medium'),
+        title: $t('page.qualityDashboard.ai.recommendation2Title'),
         type: 'medium',
       },
       {
-        desc: '部分关联表数据存在不一致情况，建议检查外键约束和数据同步机制',
-        priority: '低',
-        title: '数据一致性优化',
+        desc: $t('page.qualityDashboard.ai.recommendation3Desc'),
+        priority: $t('page.qualityDashboard.level.low'),
+        title: $t('page.qualityDashboard.ai.recommendation3Title'),
         type: 'low',
       },
     ],
-    trendAnalysis: '近30天数据质量呈上升趋势，较上月提升2.3%',
+    trendAnalysis: $t('page.qualityDashboard.ai.trendAnalysis'),
   },
   completenessData: [
-    { type: '完整', value: 13_700 },
-    { type: '缺失', value: 1980 },
+    { type: $t('page.qualityDashboard.pie.complete'), value: 13_700 },
+    { type: $t('page.qualityDashboard.pie.missing'), value: 1980 },
   ],
   consistencyData: [
-    { type: '一致', value: 13_420 },
-    { type: '不一致', value: 2260 },
+    { type: $t('page.qualityDashboard.pie.consistent'), value: 13_420 },
+    { type: $t('page.qualityDashboard.pie.inconsistent'), value: 2260 },
   ],
   dataConsistency: 85.6,
   dataTimeliness: 88.7,
@@ -125,8 +126,8 @@ const mockData: DashboardData = {
   totalIssues: 342,
   totalTables: 1250,
   uniquenessData: [
-    { type: '唯一', value: 14_750 },
-    { type: '重复', value: 930 },
+    { type: $t('page.qualityDashboard.pie.unique'), value: 14_750 },
+    { type: $t('page.qualityDashboard.pie.duplicate'), value: 930 },
   ],
 };
 
@@ -158,14 +159,14 @@ function getIssueLevelColor(level: string) {
 }
 
 function getIssueLevelText(level: string) {
-  if (level === 'high') return '高';
-  if (level === 'medium') return '中';
-  if (level === 'low') return '低';
-  return '未知';
+  if (level === 'high') return $t('page.qualityDashboard.level.high');
+  if (level === 'medium') return $t('page.qualityDashboard.level.medium');
+  if (level === 'low') return $t('page.qualityDashboard.level.low');
+  return $t('page.qualityDashboard.level.unknown');
 }
 
 function normalizePieData(data?: PieItem[]) {
-  if (!data || data.length === 0) return [{ type: '暂无数据', value: 1 }];
+  if (!data || data.length === 0) return [{ type: $t('page.qualityDashboard.noData'), value: 1 }];
   return data;
 }
 
@@ -195,25 +196,25 @@ function renderPie(
 function renderAllCharts() {
   renderPie(
     renderCompleteness,
-    '字段完整性分布',
+    $t('page.qualityDashboard.chart.fieldCompleteness'),
     dashboardData.value.completenessData,
     ['#52c41a', '#ff4d4f'],
   );
   renderPie(
     renderAccuracy,
-    '字段准确性分布',
+    $t('page.qualityDashboard.chart.fieldAccuracy'),
     dashboardData.value.accuracyData,
     ['#1890ff', '#faad14', '#ff4d4f'],
   );
   renderPie(
     renderConsistency,
-    '数据一致性分布',
+    $t('page.qualityDashboard.chart.dataConsistency'),
     dashboardData.value.consistencyData,
     ['#52c41a', '#ff7875'],
   );
   renderPie(
     renderUniqueness,
-    '数据唯一性分布',
+    $t('page.qualityDashboard.chart.dataUniqueness'),
     dashboardData.value.uniquenessData,
     ['#52c41a', '#ff7875'],
   );
@@ -241,14 +242,14 @@ const overallScore = computed(() => {
 });
 
 const issueColumns: TableColumnsType<IssueItem> = [
-  { dataIndex: 'tableName', key: 'tableName', title: '表名', width: 150 },
-  { dataIndex: 'columnName', key: 'columnName', title: '字段名', width: 150 },
-  { dataIndex: 'issueType', key: 'issueType', title: '问题类型', width: 120 },
-  { dataIndex: 'issueLevel', key: 'issueLevel', title: '严重程度', width: 100 },
-  { dataIndex: 'issueDesc', key: 'issueDesc', title: '问题描述' },
-  { dataIndex: 'issueCount', key: 'issueCount', title: '问题数量', width: 100 },
-  { dataIndex: 'lastCheckTime', key: 'lastCheckTime', title: '最后检查时间', width: 180 },
-  { key: 'aiAnalysis', title: 'AI分析', width: 120 },
+  { dataIndex: 'tableName', key: 'tableName', title: $t('page.qualityDashboard.columns.tableName'), width: 150 },
+  { dataIndex: 'columnName', key: 'columnName', title: $t('page.qualityDashboard.columns.columnName'), width: 150 },
+  { dataIndex: 'issueType', key: 'issueType', title: $t('page.qualityDashboard.columns.issueType'), width: 120 },
+  { dataIndex: 'issueLevel', key: 'issueLevel', title: $t('page.qualityDashboard.columns.issueLevel'), width: 100 },
+  { dataIndex: 'issueDesc', key: 'issueDesc', title: $t('page.qualityDashboard.columns.issueDesc') },
+  { dataIndex: 'issueCount', key: 'issueCount', title: $t('page.qualityDashboard.columns.issueCount'), width: 100 },
+  { dataIndex: 'lastCheckTime', key: 'lastCheckTime', title: $t('page.qualityDashboard.columns.lastCheckTime'), width: 180 },
+  { key: 'aiAnalysis', title: $t('page.qualityDashboard.columns.aiAnalysis'), width: 120 },
 ];
 
 async function fetchDashboardData() {
@@ -270,73 +271,25 @@ onMounted(fetchDashboardData);
 
 <template>
   <div class="p-5">
-    <Card class="mb-4" :bordered="false">
-      <Row :gutter="24">
-        <Col :md="8" :xs="24">
-          <div class="ai-score-card">
-            <div class="text-sm text-gray-500">AI综合评分</div>
-            <div class="mt-2 text-3xl font-semibold">
-              {{ dashboardData.aiAnalysis?.overallScore || 0 }}<span class="text-base">分</span>
-            </div>
-            <div class="mt-2">
-              <Tag :color="getQualityColor(dashboardData.aiAnalysis?.overallScore || 0)">
-                {{ dashboardData.aiAnalysis?.overallLevel || '良好' }}
-              </Tag>
-            </div>
-            <div class="mt-2 text-xs text-gray-500">分析时间：{{ dashboardData.aiAnalysis?.analysisTime || '--' }}</div>
-          </div>
-        </Col>
-        <Col :md="16" :xs="24">
-          <div class="text-sm font-medium">AI智能洞察</div>
-          <div class="mt-2 space-y-2 text-sm">
-            <div v-for="(insight, index) in dashboardData.aiAnalysis?.insights || []" :key="index">
-              {{ insight }}
-            </div>
-          </div>
-          <div class="mt-3 text-sm text-green-600">{{ dashboardData.aiAnalysis?.trendAnalysis || '' }}</div>
-        </Col>
-      </Row>
-    </Card>
-
-    <Card title="AI优化建议" class="mb-4" :bordered="false">
-      <Row :gutter="[16, 16]">
-        <Col
-          v-for="(rec, index) in dashboardData.aiAnalysis?.recommendations || []"
-          :key="index"
-          :lg="8"
-          :md="12"
-          :xs="24"
-        >
-          <Card :bordered="true" size="small">
-            <Tag :color="rec.type === 'high' ? 'red' : rec.type === 'medium' ? 'orange' : 'blue'">
-              {{ rec.priority }}优先级
-            </Tag>
-            <div class="mt-2 font-medium">{{ rec.title }}</div>
-            <div class="mt-2 text-sm text-gray-500">{{ rec.desc }}</div>
-          </Card>
-        </Col>
-      </Row>
-    </Card>
-
     <Row :gutter="[16, 16]" class="mb-4">
-      <Col :lg="6" :md="12" :xs="24"><Card><Statistic title="数据表总数" :value="dashboardData.totalTables || 0" /></Card></Col>
-      <Col :lg="6" :md="12" :xs="24"><Card><Statistic title="数据字段总数" :value="dashboardData.totalColumns || 0" /></Card></Col>
-      <Col :lg="6" :md="12" :xs="24"><Card><Statistic title="质量问题总数" :value="dashboardData.totalIssues || 0" /></Card></Col>
+      <Col :lg="6" :md="12" :xs="24"><Card><Statistic :title="$t('page.qualityDashboard.kpi.totalTables')" :value="dashboardData.totalTables || 0" /></Card></Col>
+      <Col :lg="6" :md="12" :xs="24"><Card><Statistic :title="$t('page.qualityDashboard.kpi.totalColumns')" :value="dashboardData.totalColumns || 0" /></Card></Col>
+      <Col :lg="6" :md="12" :xs="24"><Card><Statistic :title="$t('page.qualityDashboard.kpi.totalIssues')" :value="dashboardData.totalIssues || 0" /></Card></Col>
       <Col :lg="6" :md="12" :xs="24">
         <Card>
-          <Statistic title="整体质量评分" :value="overallScore" suffix="/ 100" :value-style="{ color: getQualityColor(overallScore) }" />
+          <Statistic :title="$t('page.qualityDashboard.kpi.overallScore')" :value="overallScore" suffix="/ 100" :value-style="{ color: getQualityColor(overallScore) }" />
         </Card>
       </Col>
     </Row>
 
     <Row :gutter="[16, 16]" class="mb-4">
       <Col v-for="item in [
-        { key: 'fieldCompleteness', label: '字段完整性', desc: '字段数据完整率，反映数据缺失情况' },
-        { key: 'fieldAccuracy', label: '字段准确性', desc: '字段数据准确率，反映格式和范围正确性' },
-        { key: 'tableCompleteness', label: '表完整性', desc: '表结构完整性，反映表结构规范性' },
-        { key: 'dataConsistency', label: '数据一致性', desc: '跨表数据一致性，反映关联数据正确性' },
-        { key: 'dataUniqueness', label: '数据唯一性', desc: '主键和业务唯一性，反映重复数据情况' },
-        { key: 'dataTimeliness', label: '数据及时性', desc: '数据更新及时性，反映数据新鲜度' },
+        { key: 'fieldCompleteness', label: $t('page.qualityDashboard.metric.fieldCompleteness'), desc: $t('page.qualityDashboard.metricDesc.fieldCompleteness') },
+        { key: 'fieldAccuracy', label: $t('page.qualityDashboard.metric.fieldAccuracy'), desc: $t('page.qualityDashboard.metricDesc.fieldAccuracy') },
+        { key: 'tableCompleteness', label: $t('page.qualityDashboard.metric.tableCompleteness'), desc: $t('page.qualityDashboard.metricDesc.tableCompleteness') },
+        { key: 'dataConsistency', label: $t('page.qualityDashboard.metric.dataConsistency'), desc: $t('page.qualityDashboard.metricDesc.dataConsistency') },
+        { key: 'dataUniqueness', label: $t('page.qualityDashboard.metric.dataUniqueness'), desc: $t('page.qualityDashboard.metricDesc.dataUniqueness') },
+        { key: 'dataTimeliness', label: $t('page.qualityDashboard.metric.dataTimeliness'), desc: $t('page.qualityDashboard.metricDesc.dataTimeliness') },
       ]" :key="item.key" :lg="8" :md="12" :xs="24">
         <Card :title="item.label">
           <div class="text-2xl font-semibold">{{ (dashboardData as any)[item.key] || 0 }}%</div>
@@ -347,20 +300,20 @@ onMounted(fetchDashboardData);
     </Row>
 
     <Row :gutter="[16, 16]" class="mb-4">
-      <Col :md="12" :xs="24"><Card title="字段完整性分布"><EchartsUI ref="completenessChartRef" class="h-[300px]" /></Card></Col>
-      <Col :md="12" :xs="24"><Card title="字段准确性分布"><EchartsUI ref="accuracyChartRef" class="h-[300px]" /></Card></Col>
+      <Col :md="12" :xs="24"><Card :title="$t('page.qualityDashboard.chart.fieldCompleteness')"><EchartsUI ref="completenessChartRef" class="h-[300px]" /></Card></Col>
+      <Col :md="12" :xs="24"><Card :title="$t('page.qualityDashboard.chart.fieldAccuracy')"><EchartsUI ref="accuracyChartRef" class="h-[300px]" /></Card></Col>
     </Row>
     <Row :gutter="[16, 16]" class="mb-4">
-      <Col :md="12" :xs="24"><Card title="数据一致性分布"><EchartsUI ref="consistencyChartRef" class="h-[300px]" /></Card></Col>
-      <Col :md="12" :xs="24"><Card title="数据唯一性分布"><EchartsUI ref="uniquenessChartRef" class="h-[300px]" /></Card></Col>
+      <Col :md="12" :xs="24"><Card :title="$t('page.qualityDashboard.chart.dataConsistency')"><EchartsUI ref="consistencyChartRef" class="h-[300px]" /></Card></Col>
+      <Col :md="12" :xs="24"><Card :title="$t('page.qualityDashboard.chart.dataUniqueness')"><EchartsUI ref="uniquenessChartRef" class="h-[300px]" /></Card></Col>
     </Row>
 
-    <Card title="质量问题列表" :bordered="false">
+    <Card :title="$t('page.qualityDashboard.issueListTitle')" :bordered="false">
       <Table
         :columns="issueColumns"
         :data-source="dashboardData.issueList || []"
         :loading="loading"
-        :pagination="{ pageSize: 10, showSizeChanger: true, showTotal: (total:number) => `共 ${total} 条问题` }"
+        :pagination="{ pageSize: 10, showSizeChanger: true, showTotal: (total:number) => `${$t('page.common.total')} ${total} ${$t('page.qualityDashboard.issuesUnit')}` }"
         :row-key="(record: IssueItem, index?: number) => record.key || `${record.tableName || 't'}-${record.columnName || 'c'}-${index ?? 0}`"
       >
         <template #bodyCell="{ column, record }">
@@ -374,9 +327,9 @@ onMounted(fetchDashboardData);
           </template>
           <template v-else-if="column.key === 'aiAnalysis'">
             <Tooltip
-              :title="`AI评估：该问题属于${getIssueLevelText(record.issueLevel || '')}优先级`"
+              :title="$t('page.qualityDashboard.aiTooltip', { level: getIssueLevelText(record.issueLevel || '') })"
             >
-              <Tag color="blue">AI分析</Tag>
+              <Tag color="blue">{{ $t('page.qualityDashboard.columns.aiAnalysis') }}</Tag>
             </Tooltip>
           </template>
           <template v-else-if="column.key === 'issueCount'">
@@ -388,18 +341,4 @@ onMounted(fetchDashboardData);
   </div>
 </template>
 
-<style scoped>
-.ai-score-card {
-  border-right: 1px solid #f0f0f0;
-  height: 100%;
-  padding-right: 12px;
-}
-
-@media (max-width: 768px) {
-  .ai-score-card {
-    border-right: none;
-    margin-bottom: 12px;
-    padding-right: 0;
-  }
-}
-</style>
+<style scoped></style>

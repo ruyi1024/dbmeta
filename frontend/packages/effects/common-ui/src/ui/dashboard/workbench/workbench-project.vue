@@ -41,13 +41,13 @@ defineEmits(['click']);
             'rounded-br-xl': index === items.length - 1,
           }"
           class="group w-full cursor-pointer border-t border-r border-border p-4 transition-all hover:shadow-xl md:w-1/2 lg:w-1/3"
+          @click="$emit('click', item)"
         >
           <div class="flex items-center">
             <VbenIcon
               :color="item.color"
               :icon="item.icon"
               class="size-8 transition-all duration-300 group-hover:scale-110"
-              @click="$emit('click', item)"
             />
             <span class="ml-4 text-lg font-medium">{{ item.title }}</span>
           </div>

@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,34 +9,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package router
 
 import (
-	"dbmcloud/src/controller/ai"
-	"dbmcloud/src/controller/alarm"
-	"dbmcloud/src/controller/audit"
-	"dbmcloud/src/controller/dashboard"
-	"dbmcloud/src/controller/data"
-	"dbmcloud/src/controller/dataquality"
-	"dbmcloud/src/controller/datasource"
-	"dbmcloud/src/controller/event"
-	"dbmcloud/src/controller/favorite"
-	"dbmcloud/src/controller/grading"
-	"dbmcloud/src/controller/meta"
-	"dbmcloud/src/controller/monitor"
-	"dbmcloud/src/controller/privilege"
-	"dbmcloud/src/controller/pumpkin"
-	"dbmcloud/src/controller/query"
-	"dbmcloud/src/controller/safe"
-	"dbmcloud/src/controller/sensitive"
-	"dbmcloud/src/controller/task"
-	"dbmcloud/src/controller/users"
-	"dbmcloud/src/middleware"
+	"dbmeta-core/src/controller/ai"
+	"dbmeta-core/src/controller/config"
+	"dbmeta-core/src/controller/dashboard"
+	"dbmeta-core/src/controller/data"
+	"dbmeta-core/src/controller/dataquality"
+	"dbmeta-core/src/controller/datasource"
+	"dbmeta-core/src/controller/edition"
+	"dbmeta-core/src/controller/favorite"
+	"dbmeta-core/src/controller/grading"
+	"dbmeta-core/src/controller/meta"
+	"dbmeta-core/src/controller/pumpkin"
+	"dbmeta-core/src/controller/query"
+	"dbmeta-core/src/controller/task"
+	"dbmeta-core/src/controller/users"
+	"dbmeta-core/src/middleware"
+	"dbmeta-core/src/module"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -47,12 +40,13 @@ func Router() *gin.Engine {
 	r := gin.New()
 	// session
 	store := cookie.NewStore([]byte("secret"))
-	r.Use(sessions.Sessions("lepus-v2", store))
+	r.Use(sessions.Sessions("dbmeta-session", store))
 	r.Use(middleware.Auth())
 
 	v1 := r.Group("api/v1")
 	{
 		v1.GET("/currentUser", users.CurrentUser)
+		v1.GET("/edition", edition.GetEdition)
 		v1.POST("/login/account", users.Login)
 		v1.GET("/login/outLogin", users.Logout)
 		v1.GET("/users/manager/lists", users.GetUsers)
@@ -80,6 +74,10 @@ func Router() *gin.Engine {
 		v1.POST("/datasource_env/list", datasource.EnvList)
 		v1.PUT("/datasource_env/list", datasource.EnvList)
 		v1.DELETE("/datasource_env/list", datasource.EnvList)
+		v1.GET("/setting/notice", config.NoticeGet)
+		v1.PUT("/setting/notice/mail", config.NoticeMailPut)
+		v1.PUT("/setting/notice/aliyun", config.NoticeAliyunPut)
+		v1.PUT("/setting/notice/wechat", config.NoticeWechatPut)
 
 		v1.GET("/task/option", task.OptionList)
 		v1.POST("/task/option", task.OptionList)
@@ -89,18 +87,7 @@ func Router() *gin.Engine {
 		v1.GET("/task/log/stats", task.TaskLogStats)
 		v1.GET("/task/today/stats", task.TaskTodayStats)
 
-		// 大模型分析任务相关路由
-		v1.GET("/task/analysis/list", task.AnalysisTaskList)
-		v1.POST("/task/analysis/create", task.AnalysisTaskList)
-		v1.PUT("/task/analysis/update", task.AnalysisTaskList)
-		v1.DELETE("/task/analysis/delete/:id", task.AnalysisTaskList)
-		v1.PUT("/task/analysis/toggle-status", task.ToggleAnalysisTaskStatus)
-		v1.POST("/task/analysis/execute", task.ExecuteAnalysisTask)
-		v1.GET("/task/analysis/logs", task.AnalysisTaskLogs)
-		v1.POST("/task/analysis/test-sql", task.TestSqlQuery)
-		v1.POST("/task/analysis/test-dify", task.TestDifyConnection)
-		v1.GET("/task/analysis/datasource-type", task.GetDatasourceTypeList)
-		v1.GET("/task/analysis/datasource", task.GetDatasourceList)
+		// 数据洞察（大模型分析任务）API 由企业版 insight 模块注册，见 dbmeta-enterprise/insight。
 
 		// 数据告警相关接口
 		v1.GET("/data/alarm/list", data.DataAlarmList)
@@ -110,21 +97,21 @@ func Router() *gin.Engine {
 		v1.PUT("/data/alarm/toggle-status", data.ToggleDataAlarmStatus)
 		v1.POST("/data/alarm/execute", data.ExecuteDataAlarm)
 		v1.GET("/data/alarm/logs", data.DataAlarmLogs)
+		v1.GET("/data/alarm/report/:id", data.GetDataAlarmReport)
 		v1.GET("/data/alarm/detail/:id", data.GetDataAlarmDetail)
 		v1.POST("/data/alarm/test-sql", data.TestSqlQuery)
 		v1.GET("/data/alarm/datasource-type", data.GetDatasourceTypeList)
 		v1.GET("/data/alarm/datasource", data.GetDatasourceList)
 		v1.GET("/data/alarm/database", data.GetDatabaseList)
 
-		v1.GET("/privilege/list", privilege.List)
-		v1.POST("/privilege/grant", privilege.DoGrant)
+		// 数据安全相关 API（privilege / sensitive / safe）由企业版 security 插件注册，见 dbmeta-enterprise/security。
 
 		v1.GET("/query/datasource_type", query.DataSourceTypeList)
 		v1.GET("/query/datasource", query.DataSourceList)
 		v1.GET("/query/database", query.DatabaseList)
 		v1.GET("/query/table", query.TableList)
 		v1.POST("/query/doQuery", query.DoQuery)
-		v1.POST("/query/writeLog", query.DoWriteLog)
+		// POST /query/writeLog 由企业版 audit 插件注册（导出等场景写审计）。
 
 		v1.GET("/favorite/list", favorite.List)
 		v1.POST("/favorite/list", favorite.List)
@@ -152,59 +139,6 @@ func Router() *gin.Engine {
 		v1.GET("/meta/dashboard/info", meta.DashboardInfo)
 		v1.GET("/meta/quality/info", meta.QualityInfo)
 
-		v1.GET("/sensitive/rule", sensitive.RuleList)
-		v1.POST("/sensitive/rule", sensitive.RuleList)
-		v1.PUT("/sensitive/rule", sensitive.RuleList)
-		v1.DELETE("/sensitive/rule", sensitive.RuleList)
-		v1.GET("/sensitive/meta", sensitive.MetaList)
-
-		v1.GET("/event", event.List)
-		v1.GET("/event/filterItems", event.FilterItems)
-		v1.GET("/event/charts", event.Charts)
-		v1.GET("/event/chartsFull", event.ChartsFull)
-		v1.GET("/event/detail", event.EventDetail)
-		v1.GET("/event/type/list", event.TypeList)
-		v1.GET("/event/group/list", event.GroupList)
-		v1.GET("/event/entity/list", event.EntityList)
-		v1.GET("/event/key/list", event.KeyList)
-		v1.GET("/event/all/list", event.GetAllEventInfoList)
-
-		v1.GET("/monitor/dashbaord/websocket", monitor.EventWS)
-		v1.GET("/monitor/dashbaord/info", monitor.MetaInfo)
-		v1.GET("/monitor/mysql/status", monitor.MySQLStatus)
-		v1.POST("/monitor/mysql/chart", monitor.MySQLChart)
-
-		v1.GET("/alarm/channel", alarm.ChannelList)
-		v1.POST("/alarm/channel", alarm.ChannelList)
-		v1.PUT("/alarm/channel", alarm.ChannelList)
-		v1.DELETE("/alarm/channel", alarm.ChannelList)
-
-		v1.GET("/alarm/rule", alarm.RuleList)
-		v1.POST("/alarm/rule", alarm.RuleList)
-		v1.PUT("/alarm/rule", alarm.RuleList)
-		v1.DELETE("/alarm/rule", alarm.RuleList)
-
-		v1.GET("/alarm/level", alarm.LevelList)
-		v1.POST("/alarm/level", alarm.LevelList)
-		v1.PUT("/alarm/level", alarm.LevelList)
-		v1.DELETE("/alarm/level", alarm.LevelList)
-
-		v1.GET("/alarm/suggest", alarm.SuggestList)
-		v1.POST("/alarm/suggest", alarm.SuggestList)
-		v1.PUT("/alarm/suggest", alarm.SuggestList)
-		v1.DELETE("/alarm/suggest", alarm.SuggestList)
-		v1.PUT("/alarm/batchUpdateStatus", alarm.PutBatchUpdateStatus)
-
-		v1.GET("/alarm/event", alarm.EventList)
-		v1.GET("/alarm/event/detail", alarm.EventDetail)
-		v1.GET("/alarm/event/analysis", alarm.EventAnalysis)
-
-		v1.POST("/alarm/test/send_email", alarm.DoSendEmailTest)
-		v1.POST("/alarm/test/send_sms", alarm.DoSendSmsTest)
-		v1.POST("/alarm/test/send_phone", alarm.DoSendPhoneTest)
-		v1.POST("/alarm/test/send_wechat", alarm.DoSendWechatTest)
-		v1.POST("/alarm/test/send_weburl", alarm.DoSendWebhookTest)
-
 		v1.GET("/meta/env/list", meta.MetaEnvList)
 		v1.POST("/meta/env/list", meta.MetaEnvList)
 		v1.PUT("/meta/env/list", meta.MetaEnvList)
@@ -213,8 +147,7 @@ func Router() *gin.Engine {
 		v1.GET("/task/list", task.TaskList)
 		v1.POST("/task/option/execute", task.ExecuteTask)
 
-		v1.GET("/audit/query_log", audit.GetQueryLog)
-		v1.GET("/safe/dashboard/info", safe.DashboardInfo)
+		// 数据查询审计 /audit/query_log 由企业版 audit 插件注册。
 
 		// 数据质量相关接口
 		v1.GET("/dataquality/dashboard/info", dataquality.DashboardInfo)
@@ -290,6 +223,9 @@ func Router() *gin.Engine {
 		}
 		// 测试配置接口使用不同的路径前缀，避免与 :id 路由冲突
 		v1.POST("/ai/model/test-config", ai.TestModelConfig)
+
+		// 外部模块路由扩展入口（如企业版插件）。
+		module.RegisterRoutes(v1)
 	}
 
 	return r

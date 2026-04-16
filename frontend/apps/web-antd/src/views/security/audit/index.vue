@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import { saveAs } from 'file-saver';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'DataSecurityQueryAudit' });
 
@@ -47,7 +48,7 @@ const pagination = reactive({
   pageSize: 10,
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   total: 0,
 });
 
@@ -84,7 +85,7 @@ async function fetchList() {
     dataSource.value = list;
     pagination.total = total;
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '加载审计日志失败');
+    message.error((e as Error)?.message || $t('page.securityAudit.message.loadFailed'));
     dataSource.value = [];
     pagination.total = 0;
   } finally {
@@ -131,27 +132,27 @@ function formatTime(v?: string) {
 
 function statusTag(status?: string) {
   const s = String(status || '');
-  if (s === 'success') return { color: 'success' as const, text: '执行成功' };
-  if (s === 'intercept') return { color: 'error' as const, text: '风险拦截' };
-  if (s === 'failed') return { color: 'warning' as const, text: '执行失败' };
+  if (s === 'success') return { color: 'success' as const, text: $t('page.securityAudit.status.success') };
+  if (s === 'intercept') return { color: 'error' as const, text: $t('page.securityAudit.status.intercept') };
+  if (s === 'failed') return { color: 'warning' as const, text: $t('page.securityAudit.status.failed') };
   return { color: 'default' as const, text: s || '-' };
 }
 
 function exportCsv() {
   if (!dataSource.value.length) {
-    message.warning('当前无数据可导出');
+    message.warning($t('page.securityAudit.message.noDataToExport'));
     return;
   }
   const headers = [
-    '记录时间',
-    '用户',
-    '数据源',
-    '数据库',
-    '操作',
-    'SQL类型',
-    '执行内容',
-    '执行状态',
-    '执行结果',
+    $t('page.securityAudit.columns.recordTime'),
+    $t('page.securityAudit.columns.username'),
+    $t('page.securityAudit.columns.datasourceType'),
+    $t('page.securityAudit.columns.database'),
+    $t('page.securityAudit.columns.queryType'),
+    $t('page.securityAudit.columns.sqlType'),
+    $t('page.securityAudit.columns.content'),
+    $t('page.securityAudit.columns.status'),
+    $t('page.securityAudit.columns.result'),
   ];
   const rows = dataSource.value.map((r) =>
     [
@@ -168,46 +169,46 @@ function exportCsv() {
   );
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
   const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-  saveAs(blob, `数据查询审计-${dayjs().format('YYYYMMDD-HHmmss')}.csv`);
-  message.success('已导出当前页数据');
+  saveAs(blob, `${$t('page.securityAudit.exportFilePrefix')}-${dayjs().format('YYYYMMDD-HHmmss')}.csv`);
+  message.success($t('page.securityAudit.message.exported'));
 }
 
 const columns: TableColumnsType<QueryLogRow> = [
   {
-    title: '记录时间',
+    title: $t('page.securityAudit.columns.recordTime'),
     dataIndex: 'gmt_created',
     key: 'gmt_created',
     sorter: true,
     width: 170,
     customRender: ({ record }) => formatTime(record.gmt_created),
   },
-  { title: '用户', dataIndex: 'username', key: 'username', width: 100 },
-  { title: '数据源', dataIndex: 'datasource_type', key: 'datasource_type', width: 100 },
+  { title: $t('page.securityAudit.columns.username'), dataIndex: 'username', key: 'username', width: 100 },
+  { title: $t('page.securityAudit.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', width: 100 },
   {
-    title: '数据库',
+    title: $t('page.securityAudit.columns.database'),
     dataIndex: 'database',
     key: 'database',
     ellipsis: true,
     width: 120,
   },
-  { title: '操作', dataIndex: 'query_type', key: 'query_type', sorter: true, width: 140 },
-  { title: 'SQL类型', dataIndex: 'sql_type', key: 'sql_type', sorter: true, width: 100 },
+  { title: $t('page.securityAudit.columns.queryType'), dataIndex: 'query_type', key: 'query_type', sorter: true, width: 140 },
+  { title: $t('page.securityAudit.columns.sqlType'), dataIndex: 'sql_type', key: 'sql_type', sorter: true, width: 100 },
   {
-    title: '执行内容',
+    title: $t('page.securityAudit.columns.content'),
     dataIndex: 'content',
     key: 'content',
     ellipsis: true,
     width: 220,
   },
   {
-    title: '执行状态',
+    title: $t('page.securityAudit.columns.status'),
     dataIndex: 'status',
     key: 'status',
     sorter: true,
     width: 110,
   },
   {
-    title: '执行结果',
+    title: $t('page.securityAudit.columns.result'),
     dataIndex: 'result',
     key: 'result',
     ellipsis: true,
@@ -220,26 +221,26 @@ onMounted(fetchList);
 
 <template>
   <div class="p-5">
-    <Card title="数据查询审计" size="small">
+    <Card :title="$t('page.securityAudit.title')" size="small">
       <Row :gutter="[12, 12]" align="middle">
         <Col :flex="'auto'">
           <Space wrap>
             <Input.Search
               v-model:value="keyword"
               allow-clear
-              placeholder="支持按用户名搜索"
+              :placeholder="$t('page.securityAudit.searchPlaceholder')"
               style="width: 280px"
               @search="onSearch"
             />
-            <Tooltip title="刷新列表">
+            <Tooltip :title="$t('page.securityAudit.refreshTip')">
               <Button @click="fetchList">
-                刷新
+                {{ $t('page.common.refresh') }}
               </Button>
             </Tooltip>
           </Space>
         </Col>
         <Col>
-          <Button type="primary" ghost @click="exportCsv">导出当前页</Button>
+          <Button type="primary" ghost @click="exportCsv">{{ $t('page.securityAudit.exportCurrentPage') }}</Button>
         </Col>
       </Row>
 

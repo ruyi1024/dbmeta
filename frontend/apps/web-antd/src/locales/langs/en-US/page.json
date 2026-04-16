@@ -11,5 +11,1854 @@
     "title": "Dashboard",
     "analytics": "Analytics",
     "workspace": "Workspace"
+  },
+  "workspace": {
+    "userFallback": "User",
+    "description": {
+      "focus": "Focus on today's priorities and configuration checks"
+    },
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "section": {
+      "commonFunctions": "Common Functions",
+      "recentUpdates": "Important Charts",
+      "quickNav": "Quick Navigation",
+      "todo": "To-do Reminders"
+    },
+    "quickNav": {
+      "databaseQuery": "Database Capacity Query",
+      "capacity": "Capacity Dashboard",
+      "quality": "Quality Dashboard",
+      "query": "Query Analysis",
+      "users": "User Management",
+      "env": "Environment Settings"
+    },
+    "cards": {
+      "group": {
+        "core": "Core Modules",
+        "quality": "Data Quality",
+        "ops": "Task Operations",
+        "config": "System Configuration",
+        "ai": "AI Capabilities"
+      },
+      "metaDashboard": {
+        "title": "Metadata Overview",
+        "desc": "Track metadata collection scale and key metric changes"
+      },
+      "qualityRules": {
+        "title": "Quality Rule Management",
+        "desc": "Configure rules and continuously evaluate execution results"
+      },
+      "taskPlan": {
+        "title": "Scheduled Task Orchestration",
+        "desc": "Manage collection, assessment, and analysis jobs in one place"
+      },
+      "notice": {
+        "title": "Notification Configuration",
+        "desc": "Maintain Email, SMS, and WeChat notification channels"
+      },
+      "datasource": {
+        "title": "Data Source Management",
+        "desc": "Manage instance connections and run connectivity checks"
+      },
+      "aiModels": {
+        "title": "AI Model Settings",
+        "desc": "Manage model endpoints and default model strategies"
+      }
+    },
+    "todo": {
+      "datasourceCheck": {
+        "title": "Run data source health checks",
+        "content": "Inspect connectivity and status of key data sources to avoid task failures."
+      },
+      "qualityTask": {
+        "title": "Review quality assessment results",
+        "content": "Check latest task outcomes and handle high-priority issues promptly."
+      },
+      "aiModel": {
+        "title": "Verify default AI models",
+        "content": "Confirm default models for classification, comment generation, and accuracy checks."
+      },
+      "notice": {
+        "title": "Validate notification channels",
+        "content": "Test Email/SMS/WeChat channels to ensure alerts can be delivered in time."
+      }
+    },
+    "trend": {
+      "meta": "Metadata collection job finished and asset metrics were refreshed.",
+      "quality": "Quality assessment completed. Please review rule hits and issue distribution.",
+      "capacity": "Capacity inspection completed and top growth objects were updated."
+    },
+    "trendDate": {
+      "justNow": "Just now",
+      "oneHourAgo": "1 hour ago",
+      "oneDayAgo": "1 day ago"
+    },
+    "trendOwner": {
+      "system": "System Job",
+      "scheduler": "Scheduler",
+      "collector": "Collector Service"
+    },
+    "chart": {
+      "qualityTitle": "Data Quality Overview",
+      "taskTitle": "Task Execution Overview",
+      "metric": {
+        "completeness": "Field Completeness",
+        "accuracy": "Field Accuracy",
+        "tableCompleteness": "Table Completeness",
+        "consistency": "Data Consistency",
+        "uniqueness": "Data Uniqueness",
+        "timeliness": "Data Timeliness"
+      },
+      "task": {
+        "today": "Today",
+        "todayTotal": "Executed Today",
+        "todaySuccess": "Succeeded Today",
+        "todayFailed": "Failed Today",
+        "successRate": "Success Rate",
+        "hour24Total": "Executed in 24h"
+      }
+    }
+  },
+  "common": {
+    "refresh": "Refresh",
+    "underConstruction": "Under Construction",
+    "search": "Search",
+    "reset": "Reset",
+    "loading": "Loading...",
+    "total": "Total",
+    "records": "records",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create"
+  },
+  "commercial": {
+    "title": "Enterprise Feature",
+    "subtitle": "Data Insight, Audit Center, and Data Security require enterprise services. If enterprise modules are deployed, ensure the enterprise process is running. These modules are not included in the open-source runtime.",
+    "backHome": "Back to Home"
+  },
+  "categorization": {
+    "description": "Manage categories and labels for data assets by business domain and compliance requirements."
+  },
+  "configCenter": {
+    "description": "Centralized management for system parameters and feature switches.",
+    "placeholder": "Configuration center is under construction. Task, alert, and AI module settings will be integrated here."
+  },
+  "meta": {
+    "title": "Metadata",
+    "description": "Entry of the metadata module. Related pages from web/meta will be migrated here."
+  },
+  "notice": {
+    "title": "Messaging Configuration",
+    "tab": {
+      "mail": "Email",
+      "aliyun": "Aliyun",
+      "wechat": "WeChat"
+    },
+    "placeholder": {
+      "smtpHost": "e.g. smtp.163.com",
+      "smtpPort": "e.g. 465"
+    },
+    "form": {
+      "mailUser": "Email Account",
+      "mailPass": "Email Password",
+      "mailFrom": "Sender",
+      "smtpHost": "SMTP Host",
+      "smtpPort": "SMTP Port",
+      "accessKeyId": "AccessKey ID",
+      "accessKeySecret": "AccessKey Secret",
+      "wechatAppId": "App ID",
+      "wechatAppSecret": "App Secret",
+      "smsSignName": "SMS Signature",
+      "smsTemplateCode": "SMS Template Code",
+      "phoneTemplateCode": "Voice Template Code",
+      "phonePlayTimes": "Voice Playback Count",
+      "wechatSendTemplateId": "Send Template ID"
+    },
+    "action": {
+      "saveMail": "Save Email Configuration",
+      "saveAliyun": "Save Aliyun Configuration",
+      "saveWechat": "Save WeChat Configuration"
+    },
+    "message": {
+      "loadFailed": "Failed to load messaging configuration",
+      "saveFailed": "Save failed",
+      "mailSaved": "Email configuration saved successfully",
+      "aliyunSaved": "Aliyun configuration saved successfully",
+      "wechatSaved": "WeChat configuration saved successfully"
+    }
+  },
+  "insight": {
+    "description": "Browse generated insight reports in a bookshelf-style view.",
+    "searchPlaceholder": "Search by report name",
+    "empty": "No insight reports generated yet",
+    "reportTag": "Insight Report",
+    "unnamedReport": "Untitled Insight Report",
+    "previewEmpty": "No description",
+    "noContent": "No content",
+    "generatedAt": "Generated at: ",
+    "message": {
+      "loadFailed": "Failed to load reports"
+    }
+  },
+  "analytics": {
+    "overview": {
+      "users": "Users",
+      "totalUsers": "Total Users",
+      "visits": "Visits",
+      "totalVisits": "Total Visits",
+      "downloads": "Downloads",
+      "totalDownloads": "Total Downloads",
+      "usage": "Usage",
+      "totalUsage": "Total Usage"
+    },
+    "tab": {
+      "trend": "Traffic Trend",
+      "monthlyVisits": "Monthly Visits"
+    },
+    "card": {
+      "visitCount": "Visit Count",
+      "visitSource": "Traffic Source"
+    }
+  },
+  "capacity": {
+    "databaseQuery": {
+      "title": "Database Capacity Query",
+      "form": {
+        "databaseName": "Database",
+        "datasourceType": "Database Type",
+        "host": "Host",
+        "port": "Port"
+      },
+      "placeholder": {
+        "databaseName": "Enter database name",
+        "datasourceType": "Enter database type",
+        "host": "Enter host",
+        "port": "Enter port"
+      },
+      "columns": {
+        "databaseName": "Database",
+        "datasourceType": "Database Type",
+        "host": "Host",
+        "port": "Port",
+        "tableCount": "Table Count",
+        "dataSize": "Storage Size",
+        "rowCount": "Row Count",
+        "dataSizeIncr": "Daily Storage Growth",
+        "rowCountIncr": "Daily Row Growth"
+      },
+      "message": {
+        "fetchFailed": "Failed to fetch database capacity data"
+      }
+    },
+    "tableQuery": {
+      "title": "Table Capacity Query",
+      "form": {
+        "databaseName": "Database",
+        "tableName": "Table",
+        "datasourceType": "Database Type",
+        "host": "Host",
+        "port": "Port"
+      },
+      "placeholder": {
+        "databaseName": "Enter database name",
+        "tableName": "Enter table name",
+        "datasourceType": "Enter database type",
+        "host": "Enter host",
+        "port": "Enter port"
+      },
+      "columns": {
+        "databaseName": "Database",
+        "tableName": "Table",
+        "datasourceType": "Database Type",
+        "host": "Host",
+        "port": "Port",
+        "dataSize": "Storage Size",
+        "rowCount": "Row Count",
+        "dataSizeIncr": "Daily Storage Growth",
+        "rowCountIncr": "Daily Row Growth"
+      },
+      "message": {
+        "fetchFailed": "Failed to fetch table capacity data"
+      }
+    },
+    "dashboard": {
+      "sectionTitle": "Key Metrics",
+      "stat": {
+        "databaseCount": "Databases",
+        "tableCount": "Tables",
+        "totalDataSize": "Total Storage",
+        "totalRows": "Total Rows",
+        "dailyGrowthSize": "Daily Storage Growth",
+        "dailyGrowthRows": "Daily Row Growth"
+      },
+      "chart": {
+        "databaseTop": "Top Databases by Size",
+        "tableTop": "Top Tables by Size",
+        "fragmentationTop": "Top Tables by Fragmentation",
+        "rowsTop": "Top Tables by Row Count"
+      },
+      "noData": "No data",
+      "unit": {
+        "gb": "GB"
+      },
+      "axis": {
+        "capacityGb": "Size (GB)",
+        "fragmentSize": "Fragmentation",
+        "rowCount": "Rows"
+      },
+      "tooltip": {
+        "type": "Type",
+        "host": "Host",
+        "port": "Port",
+        "capacity": "Capacity",
+        "dataSize": "Data size",
+        "database": "Database",
+        "fragmentSize": "Fragmentation",
+        "rowCount": "Rows"
+      }
+    }
+  },
+  "qualityIssues": {
+    "title": "Quality Issues",
+    "aiDiagnosis": "AI Diagnosis",
+    "form": {
+      "tableName": "Table",
+      "columnName": "Column",
+      "issueType": "Issue Type",
+      "issueLevel": "Severity",
+      "status": "Status"
+    },
+    "placeholder": {
+      "tableName": "Enter table name",
+      "columnName": "Enter column name",
+      "handler": "Enter assignee",
+      "handleRemark": "Enter handling remark"
+    },
+    "issueType": {
+      "completeness": "Completeness",
+      "accuracy": "Accuracy",
+      "uniqueness": "Uniqueness",
+      "consistency": "Consistency",
+      "timeliness": "Timeliness"
+    },
+    "level": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "done": "Resolved",
+      "ignored": "Ignored"
+    },
+    "columns": {
+      "databaseName": "Database",
+      "tableName": "Table",
+      "columnName": "Column",
+      "issueType": "Issue Type",
+      "issueLevel": "Severity",
+      "issueDesc": "Issue Description",
+      "issueCount": "Issue Count",
+      "status": "Status",
+      "handler": "Assignee",
+      "lastCheckTime": "Last Check Time",
+      "option": "Action"
+    },
+    "action": {
+      "handle": "Handle"
+    },
+    "modal": {
+      "title": "Handle Quality Issue",
+      "handleStatus": "Handle Status",
+      "handler": "Assignee",
+      "handleRemark": "Handling Remark"
+    },
+    "message": {
+      "fetchFailed": "Failed to fetch quality issues",
+      "updateFailed": "Update failed",
+      "updateSuccess": "Updated successfully"
+    }
+  },
+  "qualityDashboard": {
+    "noData": "No data",
+    "issuesUnit": "issues",
+    "aiTooltip": "AI evaluation: this issue has {level} priority",
+    "level": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "pie": {
+      "accurate": "Accurate",
+      "formatError": "Format Error",
+      "rangeError": "Range Error",
+      "complete": "Complete",
+      "missing": "Missing",
+      "consistent": "Consistent",
+      "inconsistent": "Inconsistent",
+      "unique": "Unique",
+      "duplicate": "Duplicate"
+    },
+    "kpi": {
+      "totalTables": "Total Tables",
+      "totalColumns": "Total Columns",
+      "totalIssues": "Total Quality Issues",
+      "overallScore": "Overall Quality Score"
+    },
+    "metric": {
+      "fieldCompleteness": "Field Completeness",
+      "fieldAccuracy": "Field Accuracy",
+      "tableCompleteness": "Table Completeness",
+      "dataConsistency": "Data Consistency",
+      "dataUniqueness": "Data Uniqueness",
+      "dataTimeliness": "Data Timeliness"
+    },
+    "metricDesc": {
+      "fieldCompleteness": "Field completion rate indicating missing data level",
+      "fieldAccuracy": "Field accuracy rate indicating format and range correctness",
+      "tableCompleteness": "Schema completeness indicating table structure quality",
+      "dataConsistency": "Cross-table consistency indicating relational correctness",
+      "dataUniqueness": "Primary key and business uniqueness indicating duplicates",
+      "dataTimeliness": "Data update timeliness indicating data freshness"
+    },
+    "chart": {
+      "fieldCompleteness": "Field Completeness Distribution",
+      "fieldAccuracy": "Field Accuracy Distribution",
+      "dataConsistency": "Data Consistency Distribution",
+      "dataUniqueness": "Data Uniqueness Distribution"
+    },
+    "issueListTitle": "Quality Issue List",
+    "columns": {
+      "tableName": "Table",
+      "columnName": "Column",
+      "issueType": "Issue Type",
+      "issueLevel": "Severity",
+      "issueDesc": "Issue Description",
+      "issueCount": "Issue Count",
+      "lastCheckTime": "Last Check Time",
+      "aiAnalysis": "AI Analysis"
+    },
+    "ai": {
+      "overallLevel": "Good",
+      "insight1": "Overall data quality score is 88.2, at a good level",
+      "insight2": "Data uniqueness performs best, reaching 94.1%",
+      "insight3": "Field accuracy needs attention due to format and range errors",
+      "insight4": "Prioritizing high-priority issues may improve overall quality by 5-8 points",
+      "recommendation1Title": "Field completeness needs improvement",
+      "recommendation1Desc": "1,980 fields have missing values. Prioritize the email field in user_info table, with null rate above 20%.",
+      "recommendation2Title": "Data format standardization issue",
+      "recommendation2Desc": "850 fields have format errors, mainly in contact fields like phone and email. Standardized format rules are recommended.",
+      "recommendation3Title": "Data consistency optimization",
+      "recommendation3Desc": "Inconsistencies exist in related tables. Check foreign key constraints and data synchronization mechanisms.",
+      "trendAnalysis": "Data quality has shown an upward trend in the past 30 days, improving by 2.3% month-over-month."
+    }
+  },
+  "qualityRules": {
+    "title": "Quality Rules",
+    "columns": {
+      "ruleName": "Rule Name",
+      "ruleType": "Rule Type",
+      "ruleDesc": "Description",
+      "threshold": "Threshold",
+      "severity": "Severity",
+      "enabled": "Enabled",
+      "createdBy": "Created By",
+      "createdAt": "Created At",
+      "operation": "Actions"
+    },
+    "form": {
+      "ruleType": "Rule Type",
+      "enabled": "Enabled",
+      "ruleName": "Rule Name",
+      "ruleDesc": "Description",
+      "ruleConfig": "Rule Config",
+      "threshold": "Threshold (%)",
+      "severity": "Severity"
+    },
+    "placeholder": {
+      "ruleName": "Enter rule name",
+      "ruleConfig": "JSON, e.g. {\"field\":\"email\",\"pattern\":\"email\"}"
+    },
+    "action": {
+      "newRule": "New Rule"
+    },
+    "modal": {
+      "createTitle": "New Rule",
+      "editTitle": "Edit Rule"
+    },
+    "confirmDelete": "Delete this rule?",
+    "enabled": {
+      "on": "On",
+      "off": "Off"
+    },
+    "message": {
+      "fetchFailed": "Failed to load rules",
+      "ruleNameRequired": "Please enter rule name",
+      "saveFailed": "Save failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully",
+      "toggleFailed": "Operation failed",
+      "enabledOn": "Enabled",
+      "enabledOff": "Disabled"
+    }
+  },
+  "qualityTasks": {
+    "title": "Assessment Tasks",
+    "columns": {
+      "taskName": "Task Name",
+      "taskType": "Task Type",
+      "datasource": "Data Source",
+      "databaseName": "Database",
+      "status": "Status",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "createdBy": "Created By",
+      "createdAt": "Created At",
+      "operation": "Actions"
+    },
+    "form": {
+      "taskType": "Task Type",
+      "status": "Status"
+    },
+    "taskTypeOption": {
+      "full": "Full scan",
+      "incremental": "Incremental",
+      "scheduled": "Scheduled"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "success": "Succeeded",
+      "failed": "Failed"
+    },
+    "action": {
+      "newTask": "New Task",
+      "start": "Start"
+    },
+    "modal": {
+      "createTitle": "New Assessment Task"
+    },
+    "formModal": {
+      "taskName": "Task Name",
+      "taskType": "Task Type",
+      "database": "Database",
+      "tableFilter": "Table filter (JSON)",
+      "scheduleConfig": "Schedule (JSON)"
+    },
+    "placeholder": {
+      "taskName": "Enter task name",
+      "tableFilter": "e.g. {\"include\": [\"table1\", \"table2\"]}",
+      "scheduleConfig": "e.g. {\"cron\": \"0 0 2 * * ?\"}"
+    },
+    "confirmDelete": "Delete this task?",
+    "durationSeconds": "{n} s",
+    "message": {
+      "fetchFailed": "Failed to load tasks",
+      "nameDbRequired": "Please enter task name and database",
+      "createFailed": "Create failed",
+      "createSuccess": "Created successfully",
+      "startFailed": "Start failed",
+      "started": "Task started",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "taskPlan": {
+    "pageTitle": "Scheduled Task Console",
+    "statsCardTitle": "Execution Overview",
+    "stat": {
+      "todayExecute": "Today's executions",
+      "todayExecuteTip": "Total executions today and hourly trend",
+      "todayFailed": "Today's failures",
+      "todayFailedTip": "Failed runs today and hourly trend",
+      "hour24": "Last 24h executions",
+      "hour24Tip": "Total executions in the last 24 hours and hourly trend",
+      "successRate": "Success rate",
+      "successRateTip": "Today's success rate trend",
+      "lastExecute": "Last run: "
+    },
+    "dataList": "Task list",
+    "paginationTotal": "Total {total} records",
+    "form": {
+      "taskKey": "Task key",
+      "taskName": "Task name",
+      "enable": "Enabled",
+      "taskDescription": "Description",
+      "scheduleCrontab": "Schedule (crontab)",
+      "schedule": "Schedule"
+    },
+    "placeholder": {
+      "taskKey": "Task key",
+      "taskName": "Task name",
+      "all": "All",
+      "cron": "Cron expression",
+      "taskKeyUnique": "Unique key"
+    },
+    "enabled": {
+      "on": "Enabled",
+      "off": "Disabled",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "action": {
+      "new": "New",
+      "edit": "Edit",
+      "delete": "Delete",
+      "runManual": "Run now",
+      "viewLogs": "View logs",
+      "submit": "Submit",
+      "save": "Save"
+    },
+    "columns": {
+      "taskKey": "Task key",
+      "taskName": "Task name",
+      "taskDescription": "Description",
+      "crontab": "Schedule",
+      "enable": "Enabled",
+      "lastRunTime": "Last run",
+      "nextRunTime": "Next run",
+      "actions": "Actions"
+    },
+    "modal": {
+      "createTitle": "New task",
+      "editTitle": "Edit task"
+    },
+    "confirmDelete": "Delete this task? This cannot be undone.",
+    "execute": {
+      "titleEnabled": "Run task",
+      "titleDisabled": "Task disabled",
+      "contentEnabled": "Run task \"{name}\" now?",
+      "contentDisabled": "Task \"{name}\" is disabled. Run anyway?"
+    },
+    "message": {
+      "listLoadFailed": "Failed to load tasks",
+      "permissionDenied": "Permission denied. Contact an administrator.",
+      "keyNameRequired": "Please enter task key and name",
+      "addFailed": "Create failed",
+      "addSuccess": "Created successfully",
+      "updateFailed": "Update failed",
+      "updateSuccess": "Updated successfully",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully",
+      "executing": "Running task...",
+      "executeStarted": "Task \"{name}\" has been started",
+      "executeFailed": "Execution failed",
+      "logLoadFailed": "Failed to load logs"
+    },
+    "log": {
+      "titleSuffix": "Run logs",
+      "columns": {
+        "id": "ID",
+        "startTime": "Start time",
+        "completeTime": "End time",
+        "status": "Status",
+        "result": "Result",
+        "createdAt": "Created at"
+      },
+      "incomplete": "In progress"
+    },
+    "logStatus": {
+      "running": "Running",
+      "success": "Success",
+      "failed": "Failed"
+    }
+  },
+  "usersManager": {
+    "title": "User Management",
+    "paginationTotal": "Total {total} records",
+    "form": {
+      "keyword": "Keyword"
+    },
+    "placeholder": {
+      "keyword": "Search by account or name",
+      "username": "Enter username",
+      "chineseName": "Enter display name",
+      "password": "Enter password",
+      "remark": "Enter remark"
+    },
+    "action": {
+      "addUser": "Add User"
+    },
+    "columns": {
+      "username": "Username",
+      "chineseName": "Name",
+      "admin": "Admin",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "remark": "Remark",
+      "action": "Actions"
+    },
+    "adminTag": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "modal": {
+      "createTitle": "Add User",
+      "editTitle": "Edit User"
+    },
+    "formModal": {
+      "username": "Username",
+      "chineseName": "Name",
+      "password": "Password",
+      "passwordEditHint": "Password (leave blank to keep)",
+      "admin": "Administrator",
+      "remark": "Remark"
+    },
+    "confirmDelete": "Delete this user? This cannot be undone.",
+    "message": {
+      "loadFailed": "Failed to load users",
+      "usernameRequired": "Please enter username",
+      "nameRequired": "Please enter name",
+      "passwordRequiredCreate": "Password is required for new users",
+      "saveFailed": "Save failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "settingCommon": {
+    "paginationTotal": "Total {total} records",
+    "boolYes": "Yes",
+    "boolNo": "No",
+    "cancel": "Cancel",
+    "save": "Save",
+    "testConnection": "Test connection",
+    "test": "Test",
+    "refresh": "Refresh",
+    "initFailed": "Failed to initialize data"
+  },
+  "settingIdc": {
+    "title": "IDC Settings",
+    "columns": {
+      "idc_key": "IDC Key",
+      "idc_name": "IDC Name",
+      "city": "City",
+      "description": "Remark",
+      "gmt_created": "Created At",
+      "gmt_updated": "Updated At",
+      "action": "Actions"
+    },
+    "form": {
+      "idc_key": "IDC Key",
+      "idc_name": "IDC Name",
+      "city": "City",
+      "description": "Remark"
+    },
+    "placeholder": {
+      "idc_key": "Enter IDC key",
+      "idc_name": "Enter IDC name",
+      "city": "Enter city",
+      "description": "Enter remark",
+      "idc_key_example": "e.g. cn-hz-a"
+    },
+    "modal": {
+      "createTitle": "New IDC",
+      "editTitle": "Edit IDC"
+    },
+    "confirmDelete": "Delete this IDC? This cannot be undone.",
+    "message": {
+      "loadFailed": "Failed to load IDC list",
+      "idcKeyRequired": "Please enter IDC key",
+      "idcNameRequired": "Please enter IDC name",
+      "cityRequired": "Please enter city",
+      "addFailed": "Create failed",
+      "updateFailed": "Update failed",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "settingEnv": {
+    "title": "Environment Settings",
+    "columns": {
+      "env_key": "Env Key",
+      "env_name": "Env Name",
+      "description": "Description",
+      "gmt_created": "Created At",
+      "gmt_updated": "Updated At",
+      "action": "Actions"
+    },
+    "form": {
+      "env_key": "Env Key",
+      "env_name": "Env Name",
+      "description": "Description"
+    },
+    "placeholder": {
+      "env_key": "Enter env key",
+      "env_name": "Enter env name",
+      "description": "Enter description",
+      "env_key_example": "e.g. prod / test"
+    },
+    "modal": {
+      "createTitle": "New Environment",
+      "editTitle": "Edit Environment"
+    },
+    "confirmDelete": "Delete this environment? This cannot be undone.",
+    "message": {
+      "loadFailed": "Failed to load environments",
+      "envKeyRequired": "Please enter env key",
+      "envNameRequired": "Please enter env name",
+      "addFailed": "Create failed",
+      "updateFailed": "Update failed",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "settingDatasource": {
+    "title": "Data Sources",
+    "columns": {
+      "name": "Data Source",
+      "type": "Type",
+      "host": "Host",
+      "port": "Port",
+      "idc": "IDC",
+      "env": "Environment",
+      "enable": "Enabled",
+      "status": "Status",
+      "status_text": "Status Detail",
+      "action": "Actions"
+    },
+    "form": {
+      "name": "Data Source",
+      "datasourceName": "Data source name",
+      "type": "Type",
+      "host": "Host",
+      "user": "User",
+      "password": "Password",
+      "passwordEditHint": "Password (leave blank to clear)",
+      "dbid": "DBID",
+      "idc": "IDC",
+      "env": "Environment",
+      "enable": "Enabled",
+      "execute_enable": "Query",
+      "dbmeta_enable": "Metadata",
+      "sensitive_enable": "Sensitive Scan",
+      "monitor_enable": "Monitoring",
+      "alarm_enable": "Alerts"
+    },
+    "placeholder": {
+      "name": "Enter data source name",
+      "type": "Select type",
+      "host": "Enter host",
+      "port": "Enter port",
+      "user": "Enter username",
+      "password": "Enter password",
+      "dbid": "For Oracle etc.",
+      "idc": "Select IDC",
+      "env": "Select environment"
+    },
+    "modal": {
+      "createTitle": "New Data Source",
+      "editTitle": "Edit Data Source"
+    },
+    "confirmDelete": "Delete this data source? This cannot be undone.",
+    "validation": {
+      "nameRequired": "Please enter data source name",
+      "typeRequired": "Please select type",
+      "hostRequired": "Please enter host",
+      "portRequired": "Please enter port",
+      "idcRequired": "Please select IDC",
+      "envRequired": "Please select environment",
+      "passwordRequired": "Password is required when creating"
+    },
+    "message": {
+      "loadFailed": "Failed to load data sources",
+      "checkFailed": "Connection check failed",
+      "checkSuccess": "Connection check succeeded",
+      "addFailed": "Create failed",
+      "updateFailed": "Update failed",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "settingAiModels": {
+    "tab": {
+      "settings": "Model Settings",
+      "defaults": "Default Models"
+    },
+    "defaultsIntro": "Assign default AI models per scenario (from enabled models). When unset, tasks fall back to existing logic (e.g. Dify agents).",
+    "defaults": {
+      "grading": "Default data classification model",
+      "gradingPlaceholder": "Leave empty to use built-in policy",
+      "tableComment": "Default table/column comment model",
+      "tableCommentPlaceholder": "For AI table/column comment tasks; falls back to Dify if unset",
+      "accuracy": "Default accuracy evaluation model",
+      "accuracyPlaceholder": "For table/column accuracy tasks; falls back to system default if unset"
+    },
+    "columns": {
+      "name": "Name",
+      "provider": "Provider",
+      "model_name": "Model ID",
+      "api_url": "API URL",
+      "priority": "Priority",
+      "enabled": "Enabled",
+      "status": "Status",
+      "description": "Description",
+      "action": "Actions"
+    },
+    "form": {
+      "name": "Name",
+      "provider": "Provider",
+      "api_url": "API URL",
+      "api_key": "API Key",
+      "api_key_edit_hint": "API Key (leave blank to keep)",
+      "model_name": "Model ID",
+      "priority": "Priority",
+      "enabled": "Enabled",
+      "timeout": "Timeout (s)",
+      "max_tokens": "Max Tokens",
+      "temperature": "Temperature",
+      "stream_enabled": "Streaming",
+      "description": "Description"
+    },
+    "placeholder": {
+      "name": "Enter model name",
+      "provider": "Select provider",
+      "model_name": "Enter model ID",
+      "name_example": "e.g. GPT-4, Qwen-7B",
+      "api_url_example": "e.g. https://api.openai.com/v1/chat/completions",
+      "model_id_example": "e.g. gpt-4, qwen-max",
+      "api_key": "Enter API key",
+      "description": "Enter description"
+    },
+    "modal": {
+      "createTitle": "New Model",
+      "editTitle": "Edit Model"
+    },
+    "provider": {
+      "ollama": "Ollama",
+      "lm_studio": "LM Studio",
+      "vllm": "vLLM",
+      "dify_local": "Dify (local)",
+      "openai": "OpenAI",
+      "deepseek": "DeepSeek",
+      "qwen": "Qwen"
+    },
+    "enabledOption": {
+      "on": "Enabled",
+      "off": "Disabled"
+    },
+    "confirmDelete": "Delete this model?",
+    "validation": {
+      "nameRequired": "Please enter model name",
+      "providerRequired": "Please select provider",
+      "apiUrlRequired": "Please enter API URL",
+      "modelIdRequired": "Please enter model ID"
+    },
+    "message": {
+      "loadFailed": "Failed to load models",
+      "testFailed": "Connection test failed",
+      "testSuccess": "Connection test succeeded",
+      "addFailed": "Create failed",
+      "updateFailed": "Update failed",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteSuccess": "Deleted successfully",
+      "toggleFailed": "Operation failed",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "defaultsLoadFailed": "Failed to load default models",
+      "defaultsSaved": "Default models saved"
+    }
+  },
+  "securityAudit": {
+    "title": "Query Audit",
+    "searchPlaceholder": "Search by username",
+    "refreshTip": "Refresh list",
+    "exportCurrentPage": "Export current page",
+    "exportFilePrefix": "query-audit",
+    "columns": {
+      "recordTime": "Record Time",
+      "username": "User",
+      "datasourceType": "Data Source",
+      "database": "Database",
+      "queryType": "Operation",
+      "sqlType": "SQL Type",
+      "content": "Execution Content",
+      "status": "Execution Status",
+      "result": "Execution Result"
+    },
+    "status": {
+      "success": "Success",
+      "intercept": "Intercepted",
+      "failed": "Failed"
+    },
+    "message": {
+      "loadFailed": "Failed to load audit logs",
+      "noDataToExport": "No data to export",
+      "exported": "Current page exported"
+    }
+  },
+  "securitySensitiveInventory": {
+    "title": "Sensitive Data Inventory",
+    "form": {
+      "datasourceType": "Instance Type",
+      "host": "Host",
+      "port": "Port",
+      "databaseName": "Database",
+      "tableName": "Table"
+    },
+    "placeholder": {
+      "datasourceType": "e.g. MySQL",
+      "host": "Host",
+      "port": "Port",
+      "fuzzy": "Fuzzy match"
+    },
+    "columns": {
+      "datasourceType": "Instance Type",
+      "host": "Host",
+      "port": "Port",
+      "databaseName": "Database",
+      "tableName": "Table",
+      "tableComment": "Table Comment",
+      "columnName": "Column",
+      "columnComment": "Column Comment",
+      "ruleType": "Rule Type",
+      "ruleKey": "Rule Key",
+      "ruleName": "Sensitive Description",
+      "level": "Level",
+      "status": "Status",
+      "createdAt": "First Collected At",
+      "updatedAt": "Re-collected At"
+    },
+    "level": {
+      "low": "Low",
+      "high": "High"
+    },
+    "status": {
+      "suspected": "Suspected Sensitive",
+      "nonSensitive": "Non-sensitive",
+      "confirmed": "Confirmed Sensitive"
+    }
+  },
+  "securitySensitiveRule": {
+    "title": "Sensitive Detection Rules",
+    "form": {
+      "ruleKey": "Rule",
+      "ruleName": "Rule Name",
+      "enable": "Enabled"
+    },
+    "placeholder": {
+      "ruleKey": "Fuzzy search by rule key",
+      "ruleName": "Fuzzy search by rule name",
+      "all": "All"
+    },
+    "ruleType": {
+      "data": "Data-based",
+      "column": "Column-name-based"
+    },
+    "columns": {
+      "ruleKey": "Rule",
+      "ruleName": "Rule Name",
+      "ruleType": "Rule Type",
+      "ruleExpress": "Rule Expression",
+      "rulePct": "Threshold",
+      "level": "Level",
+      "status": "Status",
+      "enable": "Enabled",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "action": "Action"
+    },
+    "action": {
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "deleteConfirm": "Delete this rule? This action cannot be undone.",
+    "level": {
+      "low": "Low",
+      "high": "High"
+    },
+    "status": {
+      "suspected": "Suspected Sensitive",
+      "nonSensitive": "Non-sensitive",
+      "confirmed": "Confirmed Sensitive"
+    },
+    "enable": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "modal": {
+      "createTitle": "Create Rule",
+      "editTitle": "Edit Rule",
+      "ruleType": "Rule Type",
+      "ruleKey": "Rule Key",
+      "ruleName": "Rule Name",
+      "ruleExpress": "Rule Expression",
+      "rulePct": "Threshold %",
+      "level": "Level",
+      "status": "Status",
+      "enable": "Enabled",
+      "ruleKeyPlaceholder": "e.g. realname, email",
+      "ruleNamePlaceholder": "Display name",
+      "ruleExpressPlaceholder": "Regex or matching expression",
+      "rulePctPlaceholder": "0-100"
+    },
+    "message": {
+      "loadFailed": "Failed to load rules",
+      "fillRuleKey": "Please fill in rule key",
+      "fillRuleName": "Please fill in rule name",
+      "fillRuleExpress": "Please fill in rule expression",
+      "createFailed": "Create failed",
+      "createSuccess": "Created successfully",
+      "updateFailed": "Update failed",
+      "updateSuccess": "Updated successfully",
+      "saveFailed": "Save failed",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully"
+    }
+  },
+  "securityDashboard": {
+    "kpiTitle": "Key Metrics",
+    "noData": "No data",
+    "value": "Value",
+    "overview": {
+      "todayQuery": "Today Queries",
+      "todayQueryTotal": "SQL executions today",
+      "totalQuery": "Total Queries",
+      "totalQueryTotal": "Accumulated query count",
+      "interceptQuery": "Risk Query Intercepts",
+      "interceptQueryTotal": "Accumulated risk intercepts",
+      "sensitiveDatabase": "Sensitive Databases",
+      "sensitiveDatabaseTotal": "Affected database count",
+      "sensitiveTable": "Sensitive Tables",
+      "sensitiveTableTotal": "Affected table count",
+      "sensitiveColumn": "Sensitive Columns",
+      "sensitiveColumnTotal": "Affected column count",
+      "sensitiveProtect": "Sensitive Protection Count",
+      "sensitiveProtectTotal": "Sensitive-related query count"
+    },
+    "chart": {
+      "sqlStatus": "SQL Status",
+      "sqlType": "SQL Type",
+      "sensitiveDatasource": "Sensitive Data Source",
+      "sensitiveType": "Sensitive Type",
+      "sqlStatusDistribution": "SQL Status Distribution",
+      "sqlTypeDistribution": "SQL Type Distribution",
+      "queryTrend15d": "15-day SQL Query Trend",
+      "interceptTrend15d": "15-day SQL Intercept Trend",
+      "yearlyQueryIntercept": "Yearly SQL Query and Risk Intercept Statistics",
+      "sensitiveDatasourceDistribution": "Sensitive Data Source Distribution",
+      "sensitiveTypeDistribution": "Sensitive Data Type Distribution"
+    },
+    "latestIntercept": "Latest SQL Intercept Records",
+    "latestSensitive": "Latest Sensitive Detection Records",
+    "columns": {
+      "interceptReason": "Intercept Reason",
+      "sqlType": "Execution Type",
+      "datasourceType": "Type",
+      "database": "Database",
+      "username": "User",
+      "date": "Date",
+      "sensitiveType": "Sensitive Type",
+      "tableName": "Table",
+      "columnName": "Column"
+    }
+  },
+  "securityPrivilege": {
+    "tabs": {
+      "grant": "Data Query Grant",
+      "list": "Granted Permissions"
+    },
+    "queryCardTitle": "Query Conditions",
+    "yes": "Yes",
+    "permission": {
+      "select": "Select",
+      "insert": "Insert",
+      "update": "Update",
+      "delete": "Delete",
+      "create": "Create DDL",
+      "alter": "Alter DDL"
+    },
+    "expire": {
+      "7d": "7 days",
+      "1m": "1 month",
+      "3m": "3 months",
+      "6m": "6 months",
+      "1y": "1 year"
+    },
+    "grantType": {
+      "database": "Database",
+      "table": "Table",
+      "databaseFull": "Grant by Database",
+      "tableFull": "Grant by Table"
+    },
+    "form": {
+      "username": "User",
+      "type": "Data Source Type",
+      "datasource": "Data Source",
+      "grantType": "Grant Scope",
+      "database": "Database",
+      "tables": "Tables",
+      "privileges": "Permissions",
+      "maxSelect": "Select Limit",
+      "maxUpdate": "Update Limit",
+      "maxDelete": "Delete Limit",
+      "expireDay": "Expiry",
+      "reason": "Reason"
+    },
+    "query": {
+      "username": "Applicant",
+      "datasourceType": "Data Source Type",
+      "grantType": "Grant Type",
+      "databaseName": "Database",
+      "tableName": "Table"
+    },
+    "placeholder": {
+      "selectUser": "Select user",
+      "select": "Please select",
+      "selectDatasource": "Select data source",
+      "reason": "Enter grant reason",
+      "username": "Username",
+      "datasourceType": "e.g. MySQL",
+      "all": "All",
+      "fuzzy": "Fuzzy match"
+    },
+    "transfer": {
+      "source": "Source Tables",
+      "target": "Granted Tables"
+    },
+    "action": {
+      "submitGrant": "Submit Grant"
+    },
+    "enable": {
+      "normal": "Enabled",
+      "forbidden": "Disabled"
+    },
+    "columns": {
+      "username": "Applicant",
+      "datasourceType": "Data Source Type",
+      "datasource": "Data Source",
+      "grantType": "Grant Type",
+      "databaseName": "Database",
+      "tableName": "Table",
+      "select": "Select",
+      "insert": "Insert",
+      "update": "Update",
+      "delete": "Delete",
+      "create": "Create",
+      "alter": "Alter",
+      "maxSelect": "Select Limit",
+      "maxUpdate": "Update Limit",
+      "maxDelete": "Delete Limit",
+      "enable": "Status",
+      "expireDate": "Expire Date",
+      "createdAt": "Granted At",
+      "reason": "Reason"
+    },
+    "message": {
+      "selectUser": "Please select a user",
+      "selectDatasourceType": "Please select data source type",
+      "selectDatasource": "Please select data source",
+      "selectGrantType": "Please select grant scope",
+      "selectDatabase": "Please select database",
+      "selectPermission": "Please select permissions",
+      "selectTable": "Please select tables",
+      "selectExpireDay": "Please select expiry",
+      "fillReason": "Please enter grant reason",
+      "grantSuccess": "Grant succeeded",
+      "grantFailed": "Grant failed: ",
+      "loadListFailed": "Failed to load granted list"
+    }
+  },
+  "patrolReport": {
+    "title": "Patrol Reports",
+    "columns": {
+      "id": "Log ID",
+      "alarmName": "Patrol Task",
+      "status": "Status",
+      "dataCount": "Data Count",
+      "ruleMatched": "Rule Match",
+      "emailSent": "Email Sent",
+      "startTime": "Start Time",
+      "completeTime": "Complete Time",
+      "errorMessage": "Error Message",
+      "action": "Action"
+    },
+    "status": {
+      "running": "Running",
+      "success": "Success",
+      "triggered": "Alert Triggered",
+      "failed": "Failed"
+    },
+    "match": {
+      "hit": "Matched",
+      "miss": "Not Matched"
+    },
+    "email": {
+      "sent": "Sent",
+      "unsent": "Not Sent"
+    },
+    "action": {
+      "viewOnline": "View Online"
+    },
+    "placeholder": {
+      "alarm": "Select patrol task",
+      "status": "Execution status",
+      "startDate": "Start date",
+      "endDate": "End date"
+    },
+    "drawer": {
+      "title": "Patrol Report",
+      "task": "Task",
+      "status": "Status",
+      "start": "Start",
+      "complete": "Complete",
+      "loading": "Loading report..."
+    },
+    "message": {
+      "queryFailed": "Failed to query patrol reports",
+      "loadFailed": "Failed to load patrol report",
+      "emptyReport": "No report content"
+    }
+  },
+  "patrolConfig": {
+    "title": "Patrol Configuration",
+    "query": {
+      "alarmName": "Alarm Name",
+      "datasourceType": "Data Source Type",
+      "status": "Status"
+    },
+    "placeholder": {
+      "all": "All",
+      "alarmName": "Enter alarm name",
+      "selectDatasourceType": "Select data source type",
+      "selectDatasource": "Select data source",
+      "databaseOptional": "Optional database",
+      "cronExample": "e.g. */10 * * * *",
+      "emailTo": "Separate multiple emails with ;",
+      "optional": "Optional",
+      "emailContentOptional": "Optional. Displayed above result in email",
+      "sqlQuery": "Enter SQL for patrol checks"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "action": {
+      "createAlarm": "Create Alarm",
+      "edit": "Edit",
+      "execute": "Execute",
+      "logs": "Logs",
+      "delete": "Delete"
+    },
+    "deleteConfirm": "Are you sure you want to delete this alarm?",
+    "ruleTextPrefix": "Data Count",
+    "operator": {
+      "gt": "Greater Than (>)",
+      "lt": "Less Than (<)",
+      "eq": "Equal (=)",
+      "gte": "Greater Than Or Equal (>=)",
+      "lte": "Less Than Or Equal (<=)",
+      "neq": "Not Equal (!=)"
+    },
+    "operatorText": {
+      "gt": "Greater Than",
+      "lt": "Less Than",
+      "eq": "Equal",
+      "gte": "Greater Than Or Equal",
+      "lte": "Less Than Or Equal",
+      "neq": "Not Equal"
+    },
+    "form": {
+      "alarmName": "Alarm Name",
+      "status": "Status",
+      "datasourceType": "Data Source Type",
+      "datasource": "Data Source",
+      "databaseNameOptional": "Database (Optional)",
+      "cronExpression": "Cron Expression",
+      "ruleOperator": "Rule Operator",
+      "ruleValue": "Rule Value",
+      "emailTo": "Recipient Emails",
+      "alarmDescription": "Alarm Description",
+      "emailContentOptional": "Email Content (Optional)",
+      "sqlQuery": "SQL Query"
+    },
+    "modal": {
+      "createTitle": "Create Patrol Alarm",
+      "editTitle": "Edit Patrol Alarm"
+    },
+    "columns": {
+      "alarmName": "Alarm Name",
+      "alarmDescription": "Alarm Description",
+      "datasourceType": "Data Source Type",
+      "databaseName": "Database",
+      "rule": "Rule",
+      "emailTo": "Recipient Emails",
+      "cronExpression": "Cron Expression",
+      "status": "Status",
+      "lastRunTime": "Last Run",
+      "nextRunTime": "Next Run",
+      "action": "Action"
+    },
+    "logModalTitle": "Execution Logs",
+    "logColumns": {
+      "startTime": "Start Time",
+      "completeTime": "Complete Time",
+      "status": "Status",
+      "dataCount": "Data Count",
+      "ruleMatched": "Rule Matched",
+      "emailSent": "Email Sent",
+      "errorMessage": "Error Message"
+    },
+    "logStatus": {
+      "success": "Success",
+      "failed": "Failed",
+      "triggered": "Triggered Alert"
+    },
+    "match": {
+      "hit": "Matched",
+      "miss": "Not Matched"
+    },
+    "email": {
+      "sent": "Sent",
+      "unsent": "Not Sent"
+    },
+    "message": {
+      "queryFailed": "Query failed",
+      "queryLogFailed": "Failed to query logs",
+      "enterAlarmName": "Please enter alarm name",
+      "selectDatasourceType": "Please select data source type",
+      "selectDatasource": "Please select data source",
+      "enterSql": "Please enter SQL query",
+      "selectOperator": "Please select rule operator",
+      "enterRuleValue": "Please enter rule value",
+      "enterCron": "Please enter cron expression",
+      "enterEmail": "Please enter recipient email",
+      "saveFailed": "Save failed",
+      "createSuccess": "Created successfully",
+      "updateSuccess": "Updated successfully",
+      "deleteFailed": "Delete failed",
+      "deleteSuccess": "Deleted successfully",
+      "executeFailed": "Execution failed",
+      "executeSuccess": "Executed successfully",
+      "toggleFailed": "Failed to switch status",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    }
+  },
+  "metaDashboard": {
+    "noData": "No data",
+    "overview": {
+      "datasourceCount": "Instances",
+      "databaseCount": "Total Databases",
+      "tableCount": "Total Tables",
+      "columnCount": "Total Columns"
+    },
+    "chart": {
+      "datasourceDistribution": "Datasource Instance Distribution",
+      "databaseDistribution": "Database Distribution",
+      "tableDistribution": "Table Distribution",
+      "columnDistribution": "Column Distribution"
+    },
+    "kpi": {
+      "idcCount": "IDC Count",
+      "envCount": "Environment Count",
+      "tableCount": "Table Count"
+    }
+  },
+  "metaQuality": {
+    "noData": "No data",
+    "kpi": {
+      "databaseCount": "Total Databases",
+      "tableCount": "Total Tables",
+      "columnCount": "Total Columns"
+    },
+    "rate": {
+      "databaseBusiness": "Database Business Association Rate",
+      "tableCommentCompleteness": "Table Comment Completeness",
+      "columnCommentCompleteness": "Column Comment Completeness",
+      "tableCommentAccuracy": "Table Comment Accuracy",
+      "columnCommentAccuracy": "Column Comment Accuracy"
+    },
+    "chart": {
+      "databaseBusiness": "Database Business Association",
+      "tableCommentCompleteness": "Table Comment Completeness",
+      "columnCommentCompleteness": "Column Comment Completeness",
+      "tableCommentAccuracy": "Table Comment Accuracy Distribution",
+      "columnCommentAccuracy": "Column Comment Accuracy Distribution"
+    }
+  },
+  "metaInstance": {
+    "title": "Database Instance List",
+    "columns": {
+      "type": "Instance Type",
+      "name": "Instance Name",
+      "host": "Instance Host",
+      "port": "Instance Port",
+      "role": "Role",
+      "enable": "Enabled",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "placeholder": {
+      "type": "Enter instance type",
+      "name": "Enter instance name",
+      "host": "Enter instance host",
+      "port": "Enter instance port"
+    },
+    "option": {
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "message": {
+      "fetchFailed": "Failed to query instances"
+    }
+  },
+  "metaDatabase": {
+    "title": "Database List",
+    "columns": {
+      "databaseName": "Database Name",
+      "aliasName": "Database Alias",
+      "charset": "Charset",
+      "datasourceType": "Database Type",
+      "host": "Host",
+      "port": "Port",
+      "opsOwner": "Ops Owner",
+      "opsOwnerPhone": "Ops Owner Phone",
+      "deleted": "Deleted",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "operation": "Operation"
+    },
+    "placeholder": {
+      "databaseName": "Enter database name",
+      "datasourceType": "Enter database type",
+      "host": "Enter host",
+      "port": "Enter port",
+      "optional": "Optional",
+      "linkBusiness": "Select business items to link"
+    },
+    "option": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "action": {
+      "linkBusiness": "Link Business"
+    },
+    "modal": {
+      "linkTitle": "Link Business Information",
+      "databaseLabel": "Database",
+      "linkHint": "Select multiple application names. After saving, mappings will be written into database-business links; deselecting removes links.",
+      "emptyBusiness": "No business info found. Please add applications first in Data Dictionary -> Business Information.",
+      "editTitle": "Edit Database Information"
+    },
+    "message": {
+      "fetchFailed": "Failed to query databases",
+      "loadBusinessFailed": "Failed to load business information",
+      "saveRelationFailed": "Failed to save links",
+      "relationSaved": "Business links saved",
+      "updateFailed": "Update failed",
+      "updateSuccess": "Updated successfully"
+    }
+  },
+  "metaTable": {
+    "title": "Table List",
+    "option": {
+      "all": "All",
+      "has": "Yes",
+      "none": "No"
+    },
+    "aiFixed": {
+      "pendingReview": "Pending review",
+      "notApply": "Do not apply",
+      "pendingApply": "Pending apply",
+      "applied": "Applied"
+    },
+    "columns": {
+      "tableName": "Table Name",
+      "tableType": "Table Type",
+      "charset": "Charset",
+      "tableComment": "Table Comment",
+      "commentAccuracy": "Comment Accuracy",
+      "aiComment": "AI Comment",
+      "aiApplyStatus": "AI Comment Status",
+      "databaseName": "Database",
+      "datasourceType": "Database Type",
+      "host": "Host",
+      "port": "Port",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "placeholder": {
+      "tableName": "Enter table name",
+      "databaseName": "Enter database name",
+      "datasourceType": "Enter database type",
+      "host": "Enter host",
+      "port": "Enter port",
+      "aiComment": "Enter AI comment"
+    },
+    "form": {
+      "hasTableComment": "Has table comment",
+      "hasAiComment": "Has AI comment",
+      "aiStatus": "AI comment status"
+    },
+    "message": {
+      "keepOneColumn": "Keep at least one column visible",
+      "fetchFailed": "Failed to query tables",
+      "selectRowsFirst": "Select rows to operate first",
+      "batchFailed": "Batch update failed",
+      "batchSuccess": "Batch update succeeded",
+      "saveFailed": "Save failed",
+      "saved": "Saved"
+    },
+    "accuracy": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "medium": "Fair",
+      "poor": "Poor"
+    },
+    "action": {
+      "applyAiComment": "Apply AI comment",
+      "notApplyAiComment": "Do not apply AI comment",
+      "columnSettings": "Column settings",
+      "doubleClickEdit": "Double-click to edit AI comment"
+    },
+    "columnPickerHint": "Time columns are hidden by default; enable them in column settings.",
+    "emptyAiComment": "No AI comment"
+  },
+  "metaColumn": {
+    "title": "Column List",
+    "option": {
+      "all": "All",
+      "has": "Yes",
+      "none": "No"
+    },
+    "aiFixed": {
+      "pendingReview": "Pending review",
+      "notApply": "Do not apply",
+      "pendingApply": "Pending apply",
+      "applied": "Applied"
+    },
+    "columns": {
+      "columnName": "Column Name",
+      "dataType": "Data Type",
+      "nullable": "Nullable",
+      "defaultValue": "Default",
+      "columnComment": "Column Comment",
+      "commentAccuracy": "Comment Accuracy",
+      "aiComment": "AI Comment",
+      "aiApplyStatus": "AI Comment Status",
+      "tableName": "Table Name",
+      "databaseName": "Database",
+      "datasourceType": "Database Type",
+      "host": "Host",
+      "port": "Port",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "placeholder": {
+      "columnName": "Enter column name",
+      "tableName": "Enter table name",
+      "databaseName": "Enter database name",
+      "datasourceType": "Enter database type",
+      "host": "Enter host",
+      "port": "Enter port",
+      "aiComment": "Enter AI comment"
+    },
+    "form": {
+      "hasColumnComment": "Has column comment",
+      "hasAiComment": "Has AI comment",
+      "aiStatus": "AI comment status"
+    },
+    "message": {
+      "keepOneColumn": "Keep at least one column visible",
+      "fetchFailed": "Failed to query columns",
+      "selectRowsFirst": "Select rows to operate first",
+      "batchFailed": "Batch update failed",
+      "batchSuccess": "Batch update succeeded",
+      "saveFailed": "Save failed",
+      "saved": "Saved"
+    },
+    "accuracy": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "medium": "Fair",
+      "poor": "Poor"
+    },
+    "action": {
+      "applyAiComment": "Apply AI comment",
+      "notApplyAiComment": "Do not apply AI comment",
+      "columnSettings": "Column settings",
+      "doubleClickEdit": "Double-click to edit AI comment"
+    },
+    "columnPickerHint": "Time columns are hidden by default; enable them in column settings.",
+    "emptyAiComment": "No AI comment"
+  },
+  "metaBusinessInfo": {
+    "title": "Business Information",
+    "intro": "Maintain business descriptions for databases (application name, description, owners, etc.), stored separately from technical metadata.",
+    "columns": {
+      "id": "ID",
+      "appName": "Application Name",
+      "appDescription": "Description",
+      "appOwner": "Owner",
+      "ownerEmail": "Owner Email",
+      "ownerPhone": "Owner Phone",
+      "remark": "Remark",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "operation": "Actions"
+    },
+    "placeholder": {
+      "fuzzyQuery": "Fuzzy search"
+    },
+    "modal": {
+      "createTitle": "Add Business Information",
+      "editTitle": "Edit Business Information",
+      "appNamePlaceholder": "Unique name, e.g. order-service",
+      "appDescriptionPlaceholder": "Business context and scope"
+    },
+    "confirmDelete": "Delete this business record?",
+    "message": {
+      "loadFailed": "Failed to load",
+      "appNameRequired": "Please enter application name",
+      "saveFailed": "Save failed",
+      "createSuccess": "Created successfully",
+      "saveSuccess": "Saved successfully",
+      "deleteFailed": "Delete failed",
+      "deleted": "Deleted"
+    }
+  },
+  "metaDatabaseBusiness": {
+    "title": "Database–Business Link",
+    "intro": "Link metadata databases to business applications by database name and application name; the application must exist under Business Information first.",
+    "columns": {
+      "id": "ID",
+      "databaseName": "Database Name",
+      "appName": "Application Name",
+      "appDescription": "Application Description",
+      "appOwner": "Owner",
+      "remark": "Remark",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "operation": "Actions"
+    },
+    "placeholder": {
+      "fuzzyQuery": "Fuzzy search",
+      "databaseNameMatch": "Same as database_name in metadata",
+      "selectApp": "Select an application maintained in Business Information"
+    },
+    "modal": {
+      "createTitle": "Add Link",
+      "editTitle": "Edit Link"
+    },
+    "action": {
+      "createLink": "Add Link"
+    },
+    "confirmDelete": "Delete this link?",
+    "message": {
+      "loadFailed": "Failed to load",
+      "addAppFirst": "Add at least one application in Business Information first",
+      "databaseNameRequired": "Please enter database name",
+      "appNameRequired": "Please select application name",
+      "saveFailed": "Save failed",
+      "createSuccess": "Created successfully",
+      "saveSuccess": "Saved successfully",
+      "deleteFailed": "Delete failed",
+      "deleted": "Deleted"
+    }
+  },
+  "dataQuery": {
+    "tab": "Query",
+    "form": {
+      "datasourceType": "Data Source Type",
+      "datasource": "Data Source",
+      "database": "Database"
+    },
+    "placeholder": {
+      "datasourceType": "Select data source type",
+      "datasource": "Select data source",
+      "database": "Select database",
+      "searchTable": "Search tables",
+      "sqlInput": "Enter SQL query (supports executing selected fragment)"
+    },
+    "datasource": {
+      "available": "Available",
+      "unavailable": "Unavailable"
+    },
+    "tableListTitle": "Table List",
+    "expandTableList": "Expand table list",
+    "collapseTableList": "Collapse table list",
+    "currentEngine": "Current Engine: ",
+    "currentDatabase": "Database: ",
+    "selectedFragmentTip": "Fragment selected. Only selected fragment will run.",
+    "currentTable": "Current Table: ",
+    "foundDataPrefix": "Found",
+    "foundDataSuffix": "rows",
+    "action": {
+      "aiGenerate": "AI Generate SQL",
+      "addFavorite": "Add to Favorites",
+      "openFavorite": "Open Favorites",
+      "executeSql": "Execute SQL",
+      "explain": "Explain Plan",
+      "showIndex": "Show Indexes",
+      "showColumns": "Show Columns",
+      "showCreate": "Show Create Table",
+      "showTableSize": "Show Table Size",
+      "exportExcel": "Export Result to Excel",
+      "delete": "Delete"
+    },
+    "favorite": {
+      "title": "SQL Favorites",
+      "columns": {
+        "createdAt": "Created At",
+        "content": "Content",
+        "action": "Action"
+      }
+    },
+    "ai": {
+      "title": "AI Generate SQL",
+      "hint": "Describe the SQL you want to generate, for example: query all users older than 18 in user table",
+      "placeholder": "Enter SQL description"
+    },
+    "export": {
+      "sheetName": "Query Result"
+    },
+    "message": {
+      "keepOneTab": "Keep at least one tab",
+      "selectTableFirst": "Please select a table from the left panel first",
+      "selectDatasourceFirst": "Please select a data source first",
+      "selectDatasourceAndInputSql": "Please select data source and input SQL first",
+      "executeFailed": "Execution failed",
+      "executeSuccessPrefix": "Execution succeeded, elapsed: ",
+      "executeFailedPrefix": "Execution failed: ",
+      "ms": " ms, ",
+      "favoriteIncomplete": "Data source/SQL is incomplete, cannot favorite",
+      "favoriteSuccess": "Added to favorites successfully",
+      "favoriteFailed": "Failed to add to favorites",
+      "selectDatasourceBeforeFavorite": "Please select data source before opening favorites",
+      "deleteSuccess": "Deleted successfully",
+      "deleteFailed": "Delete failed",
+      "enterAiQuestion": "Please enter SQL description",
+      "aiGenerateSuccess": "SQL generated successfully",
+      "aiGenerateFailed": "SQL generation failed",
+      "noExportData": "No data to export",
+      "copyLogged": "Data copy has been logged. Please follow data security policy."
+    }
   }
 }

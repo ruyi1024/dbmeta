@@ -14,6 +14,7 @@ import {
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface PieItem {
   type: string;
@@ -39,29 +40,29 @@ const dashboardData = ref<DashboardData>({});
 const overviewItems = computed<AnalysisOverviewItem[]>(() => [
   {
     icon: SvgCardIcon,
-    title: '实例数',
-    totalTitle: '实例数',
+    title: $t('page.metaDashboard.overview.datasourceCount'),
+    totalTitle: $t('page.metaDashboard.overview.datasourceCount'),
     totalValue: toNumber(dashboardData.value.datasourceCount),
     value: toNumber(dashboardData.value.datasourceCount),
   },
   {
     icon: SvgCakeIcon,
-    title: '数据库总数',
-    totalTitle: '数据库总数',
+    title: $t('page.metaDashboard.overview.databaseCount'),
+    totalTitle: $t('page.metaDashboard.overview.databaseCount'),
     totalValue: toNumber(dashboardData.value.databaseCount),
     value: toNumber(dashboardData.value.databaseCount),
   },
   {
     icon: SvgDownloadIcon,
-    title: '数据表总数',
-    totalTitle: '数据表总数',
+    title: $t('page.metaDashboard.overview.tableCount'),
+    totalTitle: $t('page.metaDashboard.overview.tableCount'),
     totalValue: toNumber(dashboardData.value.tableCount),
     value: toNumber(dashboardData.value.tableCount),
   },
   {
     icon: SvgBellIcon,
-    title: '数据字段总数',
-    totalTitle: '数据字段总数',
+    title: $t('page.metaDashboard.overview.columnCount'),
+    totalTitle: $t('page.metaDashboard.overview.columnCount'),
     totalValue: toNumber(dashboardData.value.columnCount),
     value: toNumber(dashboardData.value.columnCount),
   },
@@ -79,7 +80,7 @@ const { renderEcharts: renderColumnChart } = useEcharts(columnChartRef);
 
 function normalizePieData(data?: PieItem[]) {
   if (!data || data.length === 0) {
-    return [{ type: '暂无数据', value: 1 }];
+    return [{ type: $t('page.metaDashboard.noData'), value: 1 }];
   }
   return data;
 }
@@ -162,12 +163,12 @@ function renderPie(
 function renderAllCharts() {
   renderPie(
     renderDatasourceChart,
-    '数据源实例分布',
+    $t('page.metaDashboard.chart.datasourceDistribution'),
     dashboardData.value.datasourcePieDataList,
   );
-  renderPie(renderDatabaseChart, '数据库分布', dashboardData.value.databasePieDataList);
-  renderPie(renderTableChart, '数据表分布', dashboardData.value.tablePieDataList);
-  renderPie(renderColumnChart, '数据字段分布', dashboardData.value.columnPieDataList);
+  renderPie(renderDatabaseChart, $t('page.metaDashboard.chart.databaseDistribution'), dashboardData.value.databasePieDataList);
+  renderPie(renderTableChart, $t('page.metaDashboard.chart.tableDistribution'), dashboardData.value.tablePieDataList);
+  renderPie(renderColumnChart, $t('page.metaDashboard.chart.columnDistribution'), dashboardData.value.columnPieDataList);
 }
 
 async function fetchDashboard() {
@@ -192,16 +193,16 @@ onMounted(fetchDashboard);
     <AnalysisOverview :items="overviewItems" />
 
     <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-      <AnalysisChartCard title="数据源实例分布">
+      <AnalysisChartCard :title="$t('page.metaDashboard.chart.datasourceDistribution')">
         <EchartsUI ref="datasourceChartRef" class="h-[340px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="数据库分布">
+      <AnalysisChartCard :title="$t('page.metaDashboard.chart.databaseDistribution')">
         <EchartsUI ref="databaseChartRef" class="h-[340px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="数据表分布">
+      <AnalysisChartCard :title="$t('page.metaDashboard.chart.tableDistribution')">
         <EchartsUI ref="tableChartRef" class="h-[340px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="数据字段分布">
+      <AnalysisChartCard :title="$t('page.metaDashboard.chart.columnDistribution')">
         <EchartsUI ref="columnChartRef" class="h-[340px]" />
       </AnalysisChartCard>
     </div>
@@ -209,17 +210,17 @@ onMounted(fetchDashboard);
     <a-row :gutter="[16, 16]" class="mt-5">
       <a-col :lg="8" :md="8" :sm="12" :xs="24">
         <a-card :loading="loading">
-          <a-statistic title="机房数量" :value="dashboardData.datasourceIdcCount || 0" />
+          <a-statistic :title="$t('page.metaDashboard.kpi.idcCount')" :value="dashboardData.datasourceIdcCount || 0" />
         </a-card>
       </a-col>
       <a-col :lg="8" :md="8" :sm="12" :xs="24">
         <a-card :loading="loading">
-          <a-statistic title="环境数量" :value="dashboardData.datasourceEnvCount || 0" />
+          <a-statistic :title="$t('page.metaDashboard.kpi.envCount')" :value="dashboardData.datasourceEnvCount || 0" />
         </a-card>
       </a-col>
       <a-col :lg="8" :md="8" :sm="12" :xs="24">
         <a-card :loading="loading">
-          <a-statistic title="数据表数" :value="dashboardData.tableCount || 0" />
+          <a-statistic :title="$t('page.metaDashboard.kpi.tableCount')" :value="dashboardData.tableCount || 0" />
         </a-card>
       </a-col>
     </a-row>

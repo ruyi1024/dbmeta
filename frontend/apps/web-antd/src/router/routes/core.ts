@@ -92,6 +92,30 @@ const coreRoutes: RouteRecordRaw[] = [
       },
     ],
   },
+  /** 商业版提示（无企业模块时由守卫重定向至此，不在菜单展示） */
+  {
+    component: BasicLayout,
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      hideInTab: true,
+      title: $t('page.commercial.title'),
+    },
+    name: 'CommercialLayout',
+    path: '/commercial',
+    redirect: '/commercial/upgrade',
+    children: [
+      {
+        name: 'CommercialUpgrade',
+        path: 'upgrade',
+        component: () => import('#/views/_core/commercial/upgrade.vue'),
+        meta: {
+          title: $t('page.commercial.title'),
+          hideInMenu: true,
+        },
+      },
+    ],
+  },
 ];
 
 export { coreRoutes, fallbackNotFoundRoute };

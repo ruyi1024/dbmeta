@@ -23,6 +23,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'PatrolConfigPage' });
 
@@ -66,7 +67,45 @@ interface OptionItem {
 function formatTime(v?: string) {
   if (!v) return '-';
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString(undefined, { hour12: false });
+}
+
+function normalizeAlarmRows(list: unknown): AlarmRow[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((item: any) => ({
+    alarm_description: String(item?.alarm_description ?? ''),
+    alarm_name: String(item?.alarm_name ?? ''),
+    cron_expression: String(item?.cron_expression ?? ''),
+    database_name: String(item?.database_name ?? ''),
+    datasource_id: item?.datasource_id === undefined ? undefined : Number(item.datasource_id),
+    datasource_type: String(item?.datasource_type ?? ''),
+    email_content: String(item?.email_content ?? ''),
+    email_to: String(item?.email_to ?? ''),
+    id: item?.id === undefined ? undefined : Number(item.id),
+    last_run_time: item?.last_run_time ? String(item.last_run_time) : '',
+    next_run_time: item?.next_run_time ? String(item.next_run_time) : '',
+    rule_operator: String(item?.rule_operator ?? ''),
+    rule_value: item?.rule_value === undefined ? undefined : Number(item.rule_value),
+    sql_query: String(item?.sql_query ?? ''),
+    status: item?.status === undefined ? undefined : Number(item.status),
+  }));
+}
+
+function normalizeAlarmLogRows(list: unknown): AlarmLogRow[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((item: any) => ({
+    alarm_id: item?.alarm_id === undefined ? undefined : Number(item.alarm_id),
+    alarm_name: String(item?.alarm_name ?? ''),
+    complete_time: item?.complete_time ? String(item.complete_time) : '',
+    created_at: item?.created_at ? String(item.created_at) : '',
+    data_count: item?.data_count === undefined ? undefined : Number(item.data_count),
+    email_sent: Boolean(item?.email_sent),
+    error_message: String(item?.error_message ?? ''),
+    id: item?.id === undefined ? undefined : Number(item.id),
+    rule_matched: Boolean(item?.rule_matched),
+    start_time: item?.start_time ? String(item.start_time) : '',
+    status: String(item?.status ?? ''),
+  }));
 }
 
 const listLoading = ref(false);
@@ -82,7 +121,7 @@ const listPagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '15', '30', '50'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   total: 0,
 });
 
@@ -118,28 +157,28 @@ const logPagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '15', '30'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   total: 0,
 });
 
 const operatorOptions = [
-  { label: '大于(>)', value: '>' },
-  { label: '小于(<)', value: '<' },
-  { label: '等于(=)', value: '=' },
-  { label: '大于等于(>=)', value: '>=' },
-  { label: '小于等于(<=)', value: '<=' },
-  { label: '不等于(!=)', value: '!=' },
+  { label: $t('page.patrolConfig.operator.gt'), value: '>' },
+  { label: $t('page.patrolConfig.operator.lt'), value: '<' },
+  { label: $t('page.patrolConfig.operator.eq'), value: '=' },
+  { label: $t('page.patrolConfig.operator.gte'), value: '>=' },
+  { label: $t('page.patrolConfig.operator.lte'), value: '<=' },
+  { label: $t('page.patrolConfig.operator.neq'), value: '!=' },
 ];
 
 function operatorText(op?: string) {
   return (
     {
-      '!=': '不等于',
-      '<': '小于',
-      '<=': '小于等于',
-      '=': '等于',
-      '>': '大于',
-      '>=': '大于等于',
+      '!=': $t('page.patrolConfig.operatorText.neq'),
+      '<': $t('page.patrolConfig.operatorText.lt'),
+      '<=': $t('page.patrolConfig.operatorText.lte'),
+      '=': $t('page.patrolConfig.operatorText.eq'),
+      '>': $t('page.patrolConfig.operatorText.gt'),
+      '>=': $t('page.patrolConfig.operatorText.gte'),
     }[op || ''] || op || '-'
   );
 }
@@ -208,17 +247,17 @@ async function fetchList() {
     const response = await baseRequestClient.get('/v1/data/alarm/list', { params });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(String(payload?.msg ?? '查询失败'));
+      message.error(String(payload?.msg ?? $t('page.patrolConfig.message.queryFailed')));
       listData.value = [];
       listPagination.total = 0;
       return;
     }
-    listData.value = Array.isArray(payload?.data) ? payload.data : [];
+    listData.value = normalizeAlarmRows(payload?.data);
     listPagination.total = Number(payload?.total ?? listData.value.length) || listData.value.length;
   } catch (e: unknown) {
     listData.value = [];
     listPagination.total = 0;
-    message.error((e as Error)?.message || '查询失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.queryFailed'));
   } finally {
     listLoading.value = false;
   }
@@ -237,17 +276,17 @@ async function fetchLogs() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(String(payload?.msg ?? '查询日志失败'));
+      message.error(String(payload?.msg ?? $t('page.patrolConfig.message.queryLogFailed')));
       logData.value = [];
       logPagination.total = 0;
       return;
     }
-    logData.value = Array.isArray(payload?.data) ? payload.data : [];
+    logData.value = normalizeAlarmLogRows(payload?.data);
     logPagination.total = Number(payload?.total ?? logData.value.length) || logData.value.length;
   } catch (e: unknown) {
     logData.value = [];
     logPagination.total = 0;
-    message.error((e as Error)?.message || '查询日志失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.queryLogFailed'));
   } finally {
     logLoading.value = false;
   }
@@ -281,14 +320,14 @@ async function openEdit(record: AlarmRow) {
 }
 
 async function submitForm() {
-  if (!formModel.alarm_name?.trim()) return message.warning('请输入告警名称');
-  if (!formModel.datasource_type?.trim()) return message.warning('请选择数据源类型');
-  if (!formModel.datasource_id) return message.warning('请选择数据源');
-  if (!formModel.sql_query?.trim()) return message.warning('请输入SQL查询');
-  if (!formModel.rule_operator?.trim()) return message.warning('请选择规则操作符');
-  if (formModel.rule_value === undefined || formModel.rule_value === null) return message.warning('请输入规则值');
-  if (!formModel.cron_expression?.trim()) return message.warning('请输入Cron表达式');
-  if (!formModel.email_to?.trim()) return message.warning('请输入接收邮箱');
+  if (!formModel.alarm_name?.trim()) return message.warning($t('page.patrolConfig.message.enterAlarmName'));
+  if (!formModel.datasource_type?.trim()) return message.warning($t('page.patrolConfig.message.selectDatasourceType'));
+  if (!formModel.datasource_id) return message.warning($t('page.patrolConfig.message.selectDatasource'));
+  if (!formModel.sql_query?.trim()) return message.warning($t('page.patrolConfig.message.enterSql'));
+  if (!formModel.rule_operator?.trim()) return message.warning($t('page.patrolConfig.message.selectOperator'));
+  if (formModel.rule_value === undefined || formModel.rule_value === null) return message.warning($t('page.patrolConfig.message.enterRuleValue'));
+  if (!formModel.cron_expression?.trim()) return message.warning($t('page.patrolConfig.message.enterCron'));
+  if (!formModel.email_to?.trim()) return message.warning($t('page.patrolConfig.message.enterEmail'));
 
   createEditSaving.value = true;
   try {
@@ -313,14 +352,18 @@ async function submitForm() {
         : await baseRequestClient.put('/v1/data/alarm/update', payload);
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '保存失败'));
+      message.error(String(body?.msg ?? $t('page.patrolConfig.message.saveFailed')));
       return;
     }
-    message.success(createEditMode.value === 'create' ? '创建成功' : '更新成功');
+    message.success(
+      createEditMode.value === 'create'
+        ? $t('page.patrolConfig.message.createSuccess')
+        : $t('page.patrolConfig.message.updateSuccess'),
+    );
     createEditOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '保存失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.saveFailed'));
   } finally {
     createEditSaving.value = false;
   }
@@ -332,13 +375,13 @@ async function handleDelete(record: AlarmRow) {
     const response = await baseRequestClient.delete(`/v1/data/alarm/delete/${record.id}`);
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '删除失败'));
+      message.error(String(body?.msg ?? $t('page.patrolConfig.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.patrolConfig.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.deleteFailed'));
   }
 }
 
@@ -348,13 +391,13 @@ async function handleExecute(record: AlarmRow) {
     const response = await baseRequestClient.post('/v1/data/alarm/execute', { id: record.id });
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '执行失败'));
+      message.error(String(body?.msg ?? $t('page.patrolConfig.message.executeFailed')));
       return;
     }
-    message.success('执行成功');
+    message.success($t('page.patrolConfig.message.executeSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '执行失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.executeFailed'));
   }
 }
 
@@ -367,13 +410,13 @@ async function handleToggle(record: AlarmRow, checked: boolean) {
     });
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '状态切换失败'));
+      message.error(String(body?.msg ?? $t('page.patrolConfig.message.toggleFailed')));
       return;
     }
-    message.success(checked ? '已启用' : '已禁用');
+    message.success(checked ? $t('page.patrolConfig.message.enabled') : $t('page.patrolConfig.message.disabled'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '状态切换失败');
+    message.error((e as Error)?.message || $t('page.patrolConfig.message.toggleFailed'));
   }
 }
 
@@ -385,27 +428,28 @@ function openLogs(record: AlarmRow) {
 }
 
 const listColumns: TableColumnsType<AlarmRow> = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
-  { title: '告警名称', dataIndex: 'alarm_name', key: 'alarm_name', width: 180 },
-  { title: '告警描述', dataIndex: 'alarm_description', key: 'alarm_description', width: 220 },
-  { title: '数据源类型', dataIndex: 'datasource_type', key: 'datasource_type', width: 120 },
-  { title: '规则', key: 'rule', width: 160 },
-  { title: '接收邮箱', dataIndex: 'email_to', key: 'email_to', width: 220 },
-  { title: 'Cron表达式', dataIndex: 'cron_expression', key: 'cron_expression', width: 150 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
-  { title: '上次运行', dataIndex: 'last_run_time', key: 'last_run_time', width: 170 },
-  { title: '下次运行', dataIndex: 'next_run_time', key: 'next_run_time', width: 170 },
-  { title: '操作', key: 'action', width: 220, fixed: 'right' },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: $t('page.patrolConfig.columns.alarmName'), dataIndex: 'alarm_name', key: 'alarm_name', width: 180, ellipsis: true },
+  { title: $t('page.patrolConfig.columns.alarmDescription'), dataIndex: 'alarm_description', key: 'alarm_description', width: 220, ellipsis: true },
+  { title: $t('page.patrolConfig.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', width: 120 },
+  { title: $t('page.patrolConfig.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', width: 140, ellipsis: true },
+  { title: $t('page.patrolConfig.columns.rule'), key: 'rule', width: 180 },
+  { title: $t('page.patrolConfig.columns.emailTo'), dataIndex: 'email_to', key: 'email_to', width: 240, ellipsis: true },
+  { title: $t('page.patrolConfig.columns.cronExpression'), dataIndex: 'cron_expression', key: 'cron_expression', width: 150, ellipsis: true },
+  { title: $t('page.patrolConfig.columns.status'), dataIndex: 'status', key: 'status', width: 130 },
+  { title: $t('page.patrolConfig.columns.lastRunTime'), dataIndex: 'last_run_time', key: 'last_run_time', width: 170 },
+  { title: $t('page.patrolConfig.columns.nextRunTime'), dataIndex: 'next_run_time', key: 'next_run_time', width: 170 },
+  { title: $t('page.patrolConfig.columns.action'), key: 'action', width: 220, fixed: 'right' },
 ];
 
 const logColumns: TableColumnsType<AlarmLogRow> = [
-  { title: '开始时间', dataIndex: 'start_time', key: 'start_time', width: 170 },
-  { title: '完成时间', dataIndex: 'complete_time', key: 'complete_time', width: 170 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '数据量', dataIndex: 'data_count', key: 'data_count', width: 90 },
-  { title: '规则命中', dataIndex: 'rule_matched', key: 'rule_matched', width: 100 },
-  { title: '邮件发送', dataIndex: 'email_sent', key: 'email_sent', width: 100 },
-  { title: '错误信息', dataIndex: 'error_message', key: 'error_message', width: 220 },
+  { title: $t('page.patrolConfig.logColumns.startTime'), dataIndex: 'start_time', key: 'start_time', width: 170 },
+  { title: $t('page.patrolConfig.logColumns.completeTime'), dataIndex: 'complete_time', key: 'complete_time', width: 170 },
+  { title: $t('page.patrolConfig.logColumns.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: $t('page.patrolConfig.logColumns.dataCount'), dataIndex: 'data_count', key: 'data_count', width: 90 },
+  { title: $t('page.patrolConfig.logColumns.ruleMatched'), dataIndex: 'rule_matched', key: 'rule_matched', width: 100 },
+  { title: $t('page.patrolConfig.logColumns.emailSent'), dataIndex: 'email_sent', key: 'email_sent', width: 100 },
+  { title: $t('page.patrolConfig.logColumns.errorMessage'), dataIndex: 'error_message', key: 'error_message', width: 260, ellipsis: true },
 ];
 
 const datasourceTypeOptions = computed(() =>
@@ -424,31 +468,31 @@ onMounted(async () => {
 
 <template>
   <div class="p-5">
-    <Card title="巡检配置">
+    <Card :title="$t('page.patrolConfig.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="告警名称" class="query-item">
-            <Input v-model:value="listQuery.alarm_name" allow-clear class="query-control" placeholder="请输入告警名称" @press-enter="fetchList" />
+          <Form.Item :label="$t('page.patrolConfig.query.alarmName')" class="query-item">
+            <Input v-model:value="listQuery.alarm_name" allow-clear class="query-control" :placeholder="$t('page.patrolConfig.placeholder.alarmName')" @press-enter="fetchList" />
           </Form.Item>
-          <Form.Item label="数据源类型" class="query-item">
-            <Select v-model:value="listQuery.datasource_type" allow-clear class="query-control" placeholder="全部" :options="datasourceTypeOptions" />
+          <Form.Item :label="$t('page.patrolConfig.query.datasourceType')" class="query-item">
+            <Select v-model:value="listQuery.datasource_type" allow-clear class="query-control" :placeholder="$t('page.patrolConfig.placeholder.all')" :options="datasourceTypeOptions" />
           </Form.Item>
-          <Form.Item label="状态" class="query-item">
+          <Form.Item :label="$t('page.patrolConfig.query.status')" class="query-item">
             <Select
               v-model:value="listQuery.status"
               allow-clear
               class="query-control"
-              placeholder="全部"
+              :placeholder="$t('page.patrolConfig.placeholder.all')"
               :options="[
-                { value: 0, label: '禁用' },
-                { value: 1, label: '启用' },
+                { value: 0, label: $t('page.patrolConfig.status.disabled') },
+                { value: 1, label: $t('page.patrolConfig.status.enabled') },
               ]"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="fetchList">查询</Button>
+            <Button type="primary" @click="fetchList">{{ $t('page.common.search') }}</Button>
             <Button
               @click="
                 () => {
@@ -460,9 +504,9 @@ onMounted(async () => {
                 }
               "
             >
-              重置
+              {{ $t('page.common.reset') }}
             </Button>
-            <Button type="primary" ghost @click="openCreate">创建告警</Button>
+            <Button type="primary" ghost @click="openCreate">{{ $t('page.patrolConfig.action.createAlarm') }}</Button>
           </Space>
         </div>
       </Form>
@@ -472,8 +516,12 @@ onMounted(async () => {
         :data-source="listData"
         :loading="listLoading"
         :pagination="listPagination"
+        bordered
+        size="middle"
+        table-layout="fixed"
+        :row-class-name="(_record: AlarmRow, index: number) => (index % 2 === 1 ? 'table-row-striped' : '')"
         :row-key="(record: AlarmRow, index: number) => record.id ?? `alarm-${index}`"
-        :scroll="{ x: 1900 }"
+        :scroll="{ x: 2050 }"
         @change="
           (pag: TablePaginationConfig) => {
             if (pag.current !== undefined) listPagination.current = pag.current;
@@ -489,20 +537,38 @@ onMounted(async () => {
             </Tooltip>
           </template>
           <template v-else-if="column.key === 'rule'">
-            数据量 {{ operatorText(record.rule_operator) }} {{ record.rule_value ?? 0 }}
+            {{ $t('page.patrolConfig.ruleTextPrefix') }} {{ operatorText(record.rule_operator) }} {{ record.rule_value ?? 0 }}
+          </template>
+          <template v-else-if="column.key === 'database_name'">
+            <Tooltip :title="record.database_name || '-'">
+              <span class="inline-block max-w-[120px] truncate">{{ record.database_name || '-' }}</span>
+            </Tooltip>
+          </template>
+          <template v-else-if="column.key === 'email_to'">
+            <Tooltip :title="record.email_to || '-'">
+              <span class="inline-block max-w-[220px] truncate">{{ record.email_to || '-' }}</span>
+            </Tooltip>
+          </template>
+          <template v-else-if="column.key === 'cron_expression'">
+            <code class="rounded bg-muted px-1 py-[1px] text-[12px]">{{ record.cron_expression || '-' }}</code>
           </template>
           <template v-else-if="column.key === 'status'">
-            <Switch :checked="Number(record.status) === 1" @change="(checked: boolean) => handleToggle(record, checked)" />
+            <div class="flex items-center gap-2">
+              <Tag :color="Number(record.status) === 1 ? 'green' : 'default'">
+                {{ Number(record.status) === 1 ? $t('page.patrolConfig.status.enabled') : $t('page.patrolConfig.status.disabled') }}
+              </Tag>
+              <Switch :checked="Number(record.status) === 1" size="small" @change="(checked: boolean) => handleToggle(record, checked)" />
+            </div>
           </template>
           <template v-else-if="column.key === 'last_run_time'">{{ formatTime(record.last_run_time) }}</template>
           <template v-else-if="column.key === 'next_run_time'">{{ formatTime(record.next_run_time) }}</template>
           <template v-else-if="column.key === 'action'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">编辑</Button>
-              <Button type="link" size="small" @click="handleExecute(record)">执行</Button>
-              <Button type="link" size="small" @click="openLogs(record)">日志</Button>
-              <Popconfirm title="确定要删除这个告警吗？" placement="left" @confirm="handleDelete(record)">
-                <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.patrolConfig.action.edit') }}</Button>
+              <Button type="link" size="small" @click="handleExecute(record)">{{ $t('page.patrolConfig.action.execute') }}</Button>
+              <Button type="link" size="small" @click="openLogs(record)">{{ $t('page.patrolConfig.action.logs') }}</Button>
+              <Popconfirm :title="$t('page.patrolConfig.deleteConfirm')" placement="left" @confirm="handleDelete(record)">
+                <Button type="link" size="small" danger>{{ $t('page.patrolConfig.action.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -512,7 +578,7 @@ onMounted(async () => {
 
     <Modal
       v-model:open="createEditOpen"
-      :title="createEditMode === 'create' ? '创建巡检告警' : '编辑巡检告警'"
+      :title="createEditMode === 'create' ? $t('page.patrolConfig.modal.createTitle') : $t('page.patrolConfig.modal.editTitle')"
       :confirm-loading="createEditSaving"
       width="860px"
       destroy-on-close
@@ -520,22 +586,22 @@ onMounted(async () => {
     >
       <Form layout="vertical" class="mt-2">
         <div class="form-grid">
-          <Form.Item label="告警名称" required>
-            <Input v-model:value="formModel.alarm_name" placeholder="请输入告警名称" />
+          <Form.Item :label="$t('page.patrolConfig.form.alarmName')" required>
+            <Input v-model:value="formModel.alarm_name" :placeholder="$t('page.patrolConfig.placeholder.alarmName')" />
           </Form.Item>
-          <Form.Item label="状态">
+          <Form.Item :label="$t('page.patrolConfig.form.status')">
             <Select
               v-model:value="formModel.status"
               :options="[
-                { value: 0, label: '禁用' },
-                { value: 1, label: '启用' },
+                { value: 0, label: $t('page.patrolConfig.status.disabled') },
+                { value: 1, label: $t('page.patrolConfig.status.enabled') },
               ]"
             />
           </Form.Item>
-          <Form.Item label="数据源类型" required>
+          <Form.Item :label="$t('page.patrolConfig.form.datasourceType')" required>
             <Select
               v-model:value="formModel.datasource_type"
-              placeholder="请选择数据源类型"
+              :placeholder="$t('page.patrolConfig.placeholder.selectDatasourceType')"
               :options="datasourceTypeOptions"
               @change="
                 (v: string) => {
@@ -547,10 +613,10 @@ onMounted(async () => {
               "
             />
           </Form.Item>
-          <Form.Item label="数据源" required>
+          <Form.Item :label="$t('page.patrolConfig.form.datasource')" required>
             <Select
               v-model:value="formModel.datasource_id"
-              placeholder="请选择数据源"
+              :placeholder="$t('page.patrolConfig.placeholder.selectDatasource')"
               :options="datasourceOptions"
               @change="
                 (v: number) => {
@@ -561,29 +627,29 @@ onMounted(async () => {
               "
             />
           </Form.Item>
-          <Form.Item label="数据库（可选）">
-            <Select v-model:value="formModel.database_name" allow-clear placeholder="可选择指定数据库" :options="databaseOptions" />
+          <Form.Item :label="$t('page.patrolConfig.form.databaseNameOptional')">
+            <Select v-model:value="formModel.database_name" allow-clear :placeholder="$t('page.patrolConfig.placeholder.databaseOptional')" :options="databaseOptions" />
           </Form.Item>
-          <Form.Item label="Cron表达式" required>
-            <Input v-model:value="formModel.cron_expression" placeholder="如 */10 * * * *" />
+          <Form.Item :label="$t('page.patrolConfig.form.cronExpression')" required>
+            <Input v-model:value="formModel.cron_expression" :placeholder="$t('page.patrolConfig.placeholder.cronExample')" />
           </Form.Item>
-          <Form.Item label="规则操作符" required>
+          <Form.Item :label="$t('page.patrolConfig.form.ruleOperator')" required>
             <Select v-model:value="formModel.rule_operator" :options="operatorOptions" />
           </Form.Item>
-          <Form.Item label="规则值" required>
+          <Form.Item :label="$t('page.patrolConfig.form.ruleValue')" required>
             <InputNumber v-model:value="formModel.rule_value" :min="0" class="w-full" />
           </Form.Item>
-          <Form.Item label="接收邮箱" required class="col-span-2">
-            <Input v-model:value="formModel.email_to" placeholder="多个邮箱请用 ; 分隔" />
+          <Form.Item :label="$t('page.patrolConfig.form.emailTo')" required class="col-span-2">
+            <Input v-model:value="formModel.email_to" :placeholder="$t('page.patrolConfig.placeholder.emailTo')" />
           </Form.Item>
-          <Form.Item label="告警描述" class="col-span-2">
-            <Input.TextArea v-model:value="formModel.alarm_description" :rows="2" placeholder="可选" />
+          <Form.Item :label="$t('page.patrolConfig.form.alarmDescription')" class="col-span-2">
+            <Input.TextArea v-model:value="formModel.alarm_description" :rows="2" :placeholder="$t('page.patrolConfig.placeholder.optional')" />
           </Form.Item>
-          <Form.Item label="告警邮件内容（可选）" class="col-span-2">
-            <Input.TextArea v-model:value="formModel.email_content" :rows="3" placeholder="可选，发送邮件时展示在结果上方" />
+          <Form.Item :label="$t('page.patrolConfig.form.emailContentOptional')" class="col-span-2">
+            <Input.TextArea v-model:value="formModel.email_content" :rows="3" :placeholder="$t('page.patrolConfig.placeholder.emailContentOptional')" />
           </Form.Item>
-          <Form.Item label="SQL查询" required class="col-span-2">
-            <Input.TextArea v-model:value="formModel.sql_query" :rows="5" placeholder="请输入用于巡检判断的SQL" />
+          <Form.Item :label="$t('page.patrolConfig.form.sqlQuery')" required class="col-span-2">
+            <Input.TextArea v-model:value="formModel.sql_query" :rows="5" :placeholder="$t('page.patrolConfig.placeholder.sqlQuery')" />
           </Form.Item>
         </div>
       </Form>
@@ -591,7 +657,7 @@ onMounted(async () => {
 
     <Modal
       v-model:open="logOpen"
-      :title="`执行日志 - ${currentAlarm?.alarm_name || '-'}`"
+      :title="`${$t('page.patrolConfig.logModalTitle')} - ${currentAlarm?.alarm_name || '-'}`"
       width="960px"
       :footer="null"
       destroy-on-close
@@ -601,6 +667,10 @@ onMounted(async () => {
         :data-source="logData"
         :loading="logLoading"
         :pagination="logPagination"
+        bordered
+        size="middle"
+        table-layout="fixed"
+        :row-class-name="(_record: AlarmLogRow, index: number) => (index % 2 === 1 ? 'table-row-striped' : '')"
         :row-key="(record: AlarmLogRow, index: number) => record.id ?? `alarm-log-${index}`"
         :scroll="{ x: 1200 }"
         @change="
@@ -614,14 +684,16 @@ onMounted(async () => {
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
             <Tag :color="record.status === 'success' ? 'green' : record.status === 'failed' ? 'red' : record.status === 'triggered' ? 'orange' : 'blue'">
-              {{ record.status || '-' }}
+              {{ record.status === 'success' ? $t('page.patrolConfig.logStatus.success') : record.status === 'failed' ? $t('page.patrolConfig.logStatus.failed') : record.status === 'triggered' ? $t('page.patrolConfig.logStatus.triggered') : record.status || '-' }}
             </Tag>
           </template>
+          <template v-else-if="column.key === 'start_time'">{{ formatTime(record.start_time) }}</template>
+          <template v-else-if="column.key === 'complete_time'">{{ formatTime(record.complete_time) }}</template>
           <template v-else-if="column.key === 'rule_matched'">
-            <Badge :status="record.rule_matched ? 'error' : 'default'" :text="record.rule_matched ? '命中' : '未命中'" />
+            <Badge :status="record.rule_matched ? 'error' : 'default'" :text="record.rule_matched ? $t('page.patrolConfig.match.hit') : $t('page.patrolConfig.match.miss')" />
           </template>
           <template v-else-if="column.key === 'email_sent'">
-            <Badge :status="record.email_sent ? 'success' : 'default'" :text="record.email_sent ? '已发送' : '未发送'" />
+            <Badge :status="record.email_sent ? 'success' : 'default'" :text="record.email_sent ? $t('page.patrolConfig.email.sent') : $t('page.patrolConfig.email.unsent')" />
           </template>
           <template v-else-if="column.key === 'error_message'">
             <Tooltip :title="record.error_message || '-'">
@@ -635,6 +707,10 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+:deep(.table-row-striped > td) {
+  background: rgba(0, 0, 0, 0.015);
+}
+
 .query-grid {
   column-gap: 12px;
   display: grid;

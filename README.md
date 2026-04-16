@@ -1,117 +1,166 @@
-实施总结
-已实现基于 AI Chat 的数据库查询功能，包括：
-后端实现
-数据库模型 (src/model/chat.go)：ChatSession、ChatMessage、SemanticSqlRule
-数据库迁移 (src/database/db.go)：添加了三个表的自动迁移
-会话管理服务 (src/service/chat_session.go)：创建、获取、列表、删除会话
-规则引擎 (src/service/sql_generator.go)：规则匹配、参数提取、SQL模板生成
-AI SQL生成器 (src/service/sql_generator.go)：构建Prompt、调用DeepSeek API生成SQL
-查询执行器 (src/service/query_executor.go)：SQL验证、执行、结果格式化
-控制器 (src/controller/ai/chat_query.go)：所有API接口实现
-路由配置 (router/router.go)：添加了所有新API路由
-前端实现
-API服务 (web/src/pages/ai/chat/services/chatQuery.ts)：所有API调用的TypeScript接口
-会话管理组件 (web/src/pages/ai/chat/components/SessionManager.tsx)：会话列表、创建、删除、编辑
-规则管理页面 (web/src/pages/ai/chat/rules/index.tsx)：规则的CRUD管理界面
-核心功能
-语义转SQL：支持规则引擎和AI混合生成
-多轮对话：基于Session ID的会话管理
-SQL安全性：仅允许SELECT查询，防止SQL注入
-查询结果格式化：根据查询类型格式化显示
-元数据支持：自动获取数据库、表、字段信息用于SQL生成
-所有代码已通过编译检查，可以开始测试。
+# DBMeta · Open Source Data Governance Platform
 
+[中文](./README.md) | [English](./README.en.md)
 
+DBMeta 是一个面向数据库治理场景的开源平台，提供从元数据管理、质量治理、任务编排到 AI 辅助分析的统一能力。
 
-功能特性
-支持多种模型提供商：Ollama、LM Studio、vLLM、Dify 本地、OpenAI、DeepSeek、Qwen
-模型配置存储在数据库中，支持动态管理
-支持启用/禁用模型
-支持优先级设置，按优先级选择模型
-自动故障转移：主模型失败时自动切换到备用模型
-支持流式和非流式响应
-API 密钥加密存储
-完整的模型管理界面
-所有待办事项已完成，代码已通过 linter 检查。系统已支持多模型 AI 服务，并具备故障转移能力。
+本仓库为 **核心开源仓库**，包含后端服务、前端工程与部署脚本，适用于企业内部自托管与二次开发。
 
+---
 
-完成的工作总结
-后端实现
-数据库模型 (src/model/ai_model.go)
-创建了 AIModel 结构体，包含所有必要的字段
-定义了提供商类型常量
-数据库迁移 (src/database/db.go)
-添加了 ai_models 表的自动迁移
-模型管理服务 (src/service/ai_model.go)
-实现了模型的 CRUD 操作
-实现了 API 密钥的加密/解密
-实现了模型连接测试
-统一 AI 客户端 (src/service/ai_client.go)
-定义了 AIClient 接口
-实现了 OpenAI 兼容客户端（Ollama, LM Studio, vLLM, Dify 本地）
-实现了 OpenAI、DeepSeek、Qwen 客户端
-支持流式和非流式响应
-模型路由和故障转移 (src/service/ai_router.go)
-实现了按优先级选择模型
-实现了自动故障转移机制
-模型管理控制器 (src/controller/ai/model.go)
-实现了所有模型管理 API 接口
-更新现有代码
-更新了 chat.go 使用新的模型服务
-更新了 sql_generator.go 使用新的模型服务
-路由配置 (router/router.go)
-添加了所有模型管理相关的路由
-前端实现
-API 服务 (web/src/pages/ai/models/service.ts)
-实现了所有模型管理相关的 API 调用
-模型管理页面 (web/src/pages/ai/models/index.tsx)
-实现了模型列表展示
-实现了模型创建、编辑、删除功能
-实现了模型测试和启用/禁用切换
-表单组件
-创建了 CreateForm 和 UpdateForm 组件
-功能特性
-支持多种模型提供商：Ollama、LM Studio、vLLM、Dify 本地、OpenAI、DeepSeek、Qwen
-模型配置存储在数据库中，支持动态管理
-支持启用/禁用模型
-支持优先级设置，按优先级选择模型
-自动故障转移：主模型失败时自动切换到备用模型
-支持流式和非流式响应
-API 密钥加密存储
-完整的模型管理界面
-所有待办事项已完成，代码已通过 linter 检查。系统已支持多模型 AI 服务，并具备故障转移能力。
+## 产品定位
 
+DBMeta 旨在解决数据库治理中的三类核心问题：
 
-实现总结
-已实现聊天和 Agent 模式切换功能：
-已完成的功能：
-模式切换UI - 在输入框上方添加了 Segmented 组件，支持"聊天"和"Agent"两种模式切换
-Agent模式会话管理 - 切换到Agent模式时自动创建会话，会话ID存储在状态中
-双模式API调用 - handleSend 函数根据当前模式调用不同接口：
-聊天模式：/api/v1/ai/chat
-Agent模式：/api/v1/ai/chat/query
-数据源选择器 - 仅在Agent模式下显示，支持选择数据源（可选），数据库和表的选择器已预留
-响应格式化显示 - Agent模式的响应包含：
-SQL查询代码块（如果有）
-查询结果表格（如果有）
-Message接口扩展 - 添加了 sqlQuery 和 queryResult 字段
-主要特性：
-模式切换不影响当前消息历史
-Agent模式会话后台自动管理
-数据源选择为可选，不选择时仍可进行普通对话
-SQL和查询结果以格式化方式展示
-所有功能已实现并集成到聊天界面中。
+- **资产不可见**：数据源、库表字段与业务关系分散在多个系统，缺乏统一视图
+- **治理难闭环**：质量规则、执行任务、问题跟踪割裂，难以持续运营
+- **分析门槛高**：SQL 编写、模型接入与跨角色协作成本高
 
-工作流程：
-用户输入问题    ↓从语义中提取数据库名和表名    ↓通过meta_database/meta_table查找host和port    ↓通过datasource表查找数据源ID    ↓生成SQL（如果还没找到，从SQL中再次提取）    ↓执行查询并返回结果
-所有功能已实现并集成。Agent模式现在可以自动从语义中识别数据库和表，无需用户手动选择数据源。
+DBMeta 通过“治理模型 + 任务系统 + AI 能力”融合，构建可持续演进的数据治理工作台。
 
+---
 
-使用示例
-创建规则时，启用"多轮对话"
-配置问题流程，例如：
-第一个问题：key: "user_id", question: "请输入查询用户的ID", type: "number", required: true
-第二个问题：key: "db_type", question: "请选择数据库类型", type: "select", options: ["MySQL", "PostgreSQL"]
-在SQL模板中使用占位符：SELECT * FROM users WHERE id = {user_id} AND type = {db_type}
-用户输入"查询用户详细数据"时，系统会依次提示收集必要信息，收集完成后生成并执行SQL
-所有功能已实现并通过编译检查。前端 linter 错误是类型定义问题，不影响运行时功能。
+## 核心亮点
+
+### 1) 治理闭环一体化
+- 覆盖数据源、实例、库、表、字段、业务信息等治理对象
+- 提供质量规则、质量任务、问题追踪、治理看板
+- 支持从“配置治理”升级到“运营治理”
+
+### 2) 开箱即用的任务体系
+- 周期任务与手动执行并存
+- 任务状态、执行日志、结果追踪完整
+- 可扩展任务模型，便于接入自定义治理流程
+
+### 3) AI 增强的分析体验
+- 提供对话、规则、会话、模型管理能力
+- 支持多模型配置与路由策略
+- 在治理场景内落地 AI，而非孤立聊天工具
+
+### 4) 全栈工程化交付
+- 后端与前端协同，支持同源访问
+- 提供 Docker 一键部署路径
+- 目录结构清晰，便于团队协作与二次开发
+
+---
+
+## 功能模块
+
+| 模块 | 能力 |
+|---|---|
+| 元数据治理 | 数据源管理、库表字段管理、业务信息维护 |
+| 数据查询 | 查询入口、收藏、权限边界控制 |
+| 数据质量 | 规则、任务、问题、仪表盘 |
+| AI 能力 | AI 对话、规则、模型配置、会话管理 |
+| 容量分析 | 容量统计、增长分析、TopN 视图 |
+| 系统任务 | 定时执行、任务日志、任务配置 |
+
+---
+
+## 项目结构
+
+```text
+dbmeta-core/
+├─ app/                 # 启动与引导
+├─ router/              # 路由注册
+├─ setting/             # 配置解析
+├─ src/
+│  ├─ controller/       # HTTP 控制器
+│  ├─ service/          # 业务服务层
+│  ├─ model/            # 数据模型
+│  ├─ database/         # 数据库初始化与迁移
+│  ├─ task/             # 定时与后台任务
+│  ├─ module/           # 模块注册与扩展点
+│  └─ ...
+├─ frontend/            # 前端工程（Vben Monorepo）
+├─ webassets/           # 嵌入式静态资源
+└─ docker/              # Docker 部署文件
+```
+
+---
+
+## 快速开始
+
+### 1) 环境要求
+
+- Go 1.19+
+- MySQL 8+
+- Redis 6+
+- Node.js / pnpm（前端开发时需要）
+
+### 2) 本地运行（后端）
+
+```bash
+go mod tidy
+go run . -c ./setting.yml
+```
+
+> 建议先复制 `setting.example.yml` 生成本地配置，再填写数据库连接信息。
+
+### 3) Docker 一键部署
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+默认访问：`http://127.0.0.1:8086`
+
+---
+
+## 配置说明
+
+- 示例配置：`setting.example.yml`
+- 本地配置建议使用：`setting.yml`（已在 `.gitignore` 中）
+- 业务通知相关配置已迁移到数据库配置表维护
+- 生产环境请使用独立配置文件与密钥管理策略
+
+---
+
+## 开发指南
+
+### 后端开发
+- 入口文件：`main.go`
+- 核心引导：`app/bootstrap.go`
+- 路由定义：`router/router.go`
+
+### 前端开发
+- 前端位于 `frontend/`
+- 参考前端子工程内文档与脚本启动开发环境
+
+### 质量检查
+
+```bash
+go build .
+```
+
+---
+
+## 常见问题
+
+### 启动端口冲突
+在配置中设置 `server.addr` 为其他端口后重启。
+
+### 前端接口指向错误
+检查前端开发环境代理配置，确认目标后端地址正确。
+
+### 启动后页面空白
+确认 `webassets` 静态资源与当前后端版本匹配。
+
+---
+
+## 贡献
+
+欢迎通过 Issue / Pull Request 参与改进：
+
+- Bug 修复
+- 文档完善
+- 治理规则与任务扩展
+- AI 能力优化与模型适配
+
+建议提交前执行基本构建校验并附带测试说明。
+
+---
+
+## License
+
+本项目遵循仓库根目录中的许可证文件。

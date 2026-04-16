@@ -8,6 +8,7 @@ import { Button, Card, Form, Input, Space, Table, Tag, Tooltip } from 'ant-desig
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'DataSecuritySensitiveInventory' });
 
@@ -55,26 +56,26 @@ function formatTime(v?: string) {
 /** 与库表注释一致：1 低敏、2 高敏；兼容旧数据 0/1 展示 */
 function levelTag(level?: number) {
   if (level === 0) {
-    return { color: 'orange', text: '低敏' };
+    return { color: 'orange', text: $t('page.securitySensitiveInventory.level.low') };
   }
   if (level === 1) {
-    return { color: 'orange', text: '低敏' };
+    return { color: 'orange', text: $t('page.securitySensitiveInventory.level.low') };
   }
   if (level === 2) {
-    return { color: 'red', text: '高敏' };
+    return { color: 'red', text: $t('page.securitySensitiveInventory.level.high') };
   }
   return { color: 'default', text: level !== undefined ? String(level) : '-' };
 }
 
 function statusTag(status?: number) {
   if (status === -1) {
-    return { color: 'orange', text: '疑似敏感' };
+    return { color: 'orange', text: $t('page.securitySensitiveInventory.status.suspected') };
   }
   if (status === 0) {
-    return { color: 'default', text: '非敏感' };
+    return { color: 'default', text: $t('page.securitySensitiveInventory.status.nonSensitive') };
   }
   if (status === 1) {
-    return { color: 'green', text: '确认敏感' };
+    return { color: 'green', text: $t('page.securitySensitiveInventory.status.confirmed') };
   }
   return { color: 'default', text: status !== undefined ? String(status) : '-' };
 }
@@ -96,7 +97,7 @@ const pagination = reactive<TablePaginationConfig>({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   pageSizeOptions: ['10', '15', '30', '50', '100'],
 });
 
@@ -166,21 +167,21 @@ function resetSearch() {
 }
 
 const columns: TableColumnsType<SensitiveMetaRow> = [
-  { title: '实例类型', dataIndex: 'datasource_type', key: 'datasource_type', width: 100, ellipsis: true },
-  { title: '主机', dataIndex: 'host', key: 'host', width: 140, ellipsis: true },
-  { title: '端口', dataIndex: 'port', key: 'port', width: 72 },
-  { title: '数据库', dataIndex: 'database_name', key: 'database_name', width: 150, ellipsis: true },
-  { title: '数据表', dataIndex: 'table_name', key: 'table_name', width: 150, ellipsis: true },
-  { title: '表备注', dataIndex: 'table_comment', key: 'table_comment', width: 140, ellipsis: true },
-  { title: '数据列', dataIndex: 'column_name', key: 'column_name', width: 150, ellipsis: true },
-  { title: '列备注', dataIndex: 'column_comment', key: 'column_comment', width: 140, ellipsis: true },
-  { title: '采集类型', dataIndex: 'rule_type', key: 'rule_type', width: 100, ellipsis: true },
-  { title: '敏感规则', dataIndex: 'rule_key', key: 'rule_key', width: 110, ellipsis: true },
-  { title: '敏感说明', dataIndex: 'rule_name', key: 'rule_name', ellipsis: true },
-  { title: '级别', dataIndex: 'level', key: 'level', width: 88 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '初采日期', dataIndex: 'gmt_created', key: 'gmt_created', width: 180 },
-  { title: '复采日期', dataIndex: 'gmt_updated', key: 'gmt_updated', width: 180 },
+  { title: $t('page.securitySensitiveInventory.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', width: 100, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.host'), dataIndex: 'host', key: 'host', width: 140, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.port'), dataIndex: 'port', key: 'port', width: 72 },
+  { title: $t('page.securitySensitiveInventory.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', width: 150, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.tableName'), dataIndex: 'table_name', key: 'table_name', width: 150, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.tableComment'), dataIndex: 'table_comment', key: 'table_comment', width: 140, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.columnName'), dataIndex: 'column_name', key: 'column_name', width: 150, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.columnComment'), dataIndex: 'column_comment', key: 'column_comment', width: 140, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.ruleType'), dataIndex: 'rule_type', key: 'rule_type', width: 100, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.ruleKey'), dataIndex: 'rule_key', key: 'rule_key', width: 110, ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.ruleName'), dataIndex: 'rule_name', key: 'rule_name', ellipsis: true },
+  { title: $t('page.securitySensitiveInventory.columns.level'), dataIndex: 'level', key: 'level', width: 88 },
+  { title: $t('page.securitySensitiveInventory.columns.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: $t('page.securitySensitiveInventory.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', width: 180 },
+  { title: $t('page.securitySensitiveInventory.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', width: 180 },
 ];
 
 onMounted(() => {
@@ -190,59 +191,59 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="敏感信息盘点">
+    <Card :title="$t('page.securitySensitiveInventory.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="实例类型" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveInventory.form.datasourceType')" class="query-item">
             <Input
               v-model:value="searchForm.datasource_type"
               allow-clear
               class="query-control"
-              placeholder="如 MySQL"
+              :placeholder="$t('page.securitySensitiveInventory.placeholder.datasourceType')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="主机" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveInventory.form.host')" class="query-item">
             <Input
               v-model:value="searchForm.host"
               allow-clear
               class="query-control"
-              placeholder="主机"
+              :placeholder="$t('page.securitySensitiveInventory.placeholder.host')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="端口" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveInventory.form.port')" class="query-item">
             <Input
               v-model:value="searchForm.port"
               allow-clear
               class="query-control"
-              placeholder="端口"
+              :placeholder="$t('page.securitySensitiveInventory.placeholder.port')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="数据库" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveInventory.form.databaseName')" class="query-item">
             <Input
               v-model:value="searchForm.database_name"
               allow-clear
               class="query-control"
-              placeholder="模糊匹配"
+              :placeholder="$t('page.securitySensitiveInventory.placeholder.fuzzy')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="数据表" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveInventory.form.tableName')" class="query-item">
             <Input
               v-model:value="searchForm.table_name"
               allow-clear
               class="query-control"
-              placeholder="模糊匹配"
+              :placeholder="$t('page.securitySensitiveInventory.placeholder.fuzzy')"
               @press-enter="handleSearch"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="resetSearch">重置</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="resetSearch">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>

@@ -21,6 +21,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'DataSecuritySensitiveRule' });
 
@@ -58,19 +59,19 @@ function extractApiBody(response: unknown): Record<string, unknown> {
 function formatTime(v?: string) {
   if (!v) return '-';
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('zh-CN', { hour12: false });
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString(undefined, { hour12: false });
 }
 
 function levelTag(level?: number) {
-  if (level === 0) return { color: 'orange', text: '低敏' };
-  if (level === 1) return { color: 'red', text: '高敏' };
+  if (level === 0) return { color: 'orange', text: $t('page.securitySensitiveRule.level.low') };
+  if (level === 1) return { color: 'red', text: $t('page.securitySensitiveRule.level.high') };
   return { color: 'default', text: level !== undefined ? String(level) : '-' };
 }
 
 function statusTag(status?: number) {
-  if (status === -1) return { color: 'orange', text: '疑似敏感' };
-  if (status === 0) return { color: 'default', text: '非敏感' };
-  if (status === 1) return { color: 'green', text: '确认敏感' };
+  if (status === -1) return { color: 'orange', text: $t('page.securitySensitiveRule.status.suspected') };
+  if (status === 0) return { color: 'default', text: $t('page.securitySensitiveRule.status.nonSensitive') };
+  if (status === 1) return { color: 'green', text: $t('page.securitySensitiveRule.status.confirmed') };
   return { color: 'default', text: status !== undefined ? String(status) : '-' };
 }
 
@@ -89,7 +90,7 @@ const pagination = reactive<TablePaginationConfig>({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   pageSizeOptions: ['10', '15', '30', '50'],
 });
 
@@ -151,7 +152,7 @@ async function fetchList() {
   } catch (e: unknown) {
     allRows.value = [];
     pagination.total = 0;
-    message.error((e as Error)?.message || '加载规则失败');
+    message.error((e as Error)?.message || $t('page.securitySensitiveRule.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -201,15 +202,15 @@ function openEdit(record: SensitiveRuleRow) {
 
 async function submitModal() {
   if (!formModel.rule_key?.trim()) {
-    message.warning('请填写规则标识');
+    message.warning($t('page.securitySensitiveRule.message.fillRuleKey'));
     return Promise.reject();
   }
   if (!formModel.rule_name?.trim()) {
-    message.warning('请填写规则名');
+    message.warning($t('page.securitySensitiveRule.message.fillRuleName'));
     return Promise.reject();
   }
   if (!formModel.rule_express?.trim()) {
-    message.warning('请填写采集表达式');
+    message.warning($t('page.securitySensitiveRule.message.fillRuleExpress'));
     return Promise.reject();
   }
   saving.value = true;
@@ -228,10 +229,10 @@ async function submitModal() {
       const response = await baseRequestClient.post('/v1/sensitive/rule', payload);
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '添加失败'));
+        message.error(String(body.msg ?? $t('page.securitySensitiveRule.message.createFailed')));
         throw new Error('biz');
       }
-      message.success('添加成功');
+      message.success($t('page.securitySensitiveRule.message.createSuccess'));
     } else {
       const response = await baseRequestClient.put('/v1/sensitive/rule', {
         ...payload,
@@ -239,16 +240,16 @@ async function submitModal() {
       });
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '修改失败'));
+        message.error(String(body.msg ?? $t('page.securitySensitiveRule.message.updateFailed')));
         throw new Error('biz');
       }
-      message.success('修改成功');
+      message.success($t('page.securitySensitiveRule.message.updateSuccess'));
     }
     modalOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
     if ((e as Error)?.message !== 'biz') {
-      message.error((e as Error)?.message || '保存失败');
+      message.error((e as Error)?.message || $t('page.securitySensitiveRule.message.saveFailed'));
     }
     throw e;
   } finally {
@@ -266,28 +267,28 @@ async function handleDelete(record: SensitiveRuleRow) {
     } as any);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.msg ?? '删除失败'));
+      message.error(String(body.msg ?? $t('page.securitySensitiveRule.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.securitySensitiveRule.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.securitySensitiveRule.message.deleteFailed'));
   }
 }
 
 const columns: TableColumnsType<SensitiveRuleRow> = [
-  { title: '规则', dataIndex: 'rule_key', key: 'rule_key', width: 120, ellipsis: true },
-  { title: '规则名', dataIndex: 'rule_name', key: 'rule_name', width: 140, ellipsis: true },
-  { title: '规则类型', dataIndex: 'rule_type', key: 'rule_type', width: 100 },
-  { title: '采集表达式', dataIndex: 'rule_express', key: 'rule_express', ellipsis: true },
-  { title: '采集阈值', dataIndex: 'rule_pct', key: 'rule_pct', width: 90 },
-  { title: '级别', dataIndex: 'level', key: 'level', width: 88 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '启用', dataIndex: 'enable', key: 'enable', width: 80 },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', width: 170 },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
-  { title: '操作', key: 'action', width: 140, fixed: 'right' },
+  { title: $t('page.securitySensitiveRule.columns.ruleKey'), dataIndex: 'rule_key', key: 'rule_key', width: 120, ellipsis: true },
+  { title: $t('page.securitySensitiveRule.columns.ruleName'), dataIndex: 'rule_name', key: 'rule_name', width: 140, ellipsis: true },
+  { title: $t('page.securitySensitiveRule.columns.ruleType'), dataIndex: 'rule_type', key: 'rule_type', width: 100 },
+  { title: $t('page.securitySensitiveRule.columns.ruleExpress'), dataIndex: 'rule_express', key: 'rule_express', ellipsis: true },
+  { title: $t('page.securitySensitiveRule.columns.rulePct'), dataIndex: 'rule_pct', key: 'rule_pct', width: 90 },
+  { title: $t('page.securitySensitiveRule.columns.level'), dataIndex: 'level', key: 'level', width: 88 },
+  { title: $t('page.securitySensitiveRule.columns.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: $t('page.securitySensitiveRule.columns.enable'), dataIndex: 'enable', key: 'enable', width: 80 },
+  { title: $t('page.securitySensitiveRule.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', width: 170 },
+  { title: $t('page.securitySensitiveRule.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
+  { title: $t('page.securitySensitiveRule.columns.action'), key: 'action', width: 140, fixed: 'right' },
 ];
 
 onMounted(() => {
@@ -297,45 +298,45 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="敏感信息探测规则">
+    <Card :title="$t('page.securitySensitiveRule.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="规则" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveRule.form.ruleKey')" class="query-item">
             <Input
               v-model:value="searchForm.rule_key"
               allow-clear
               class="query-control"
-              placeholder="规则标识模糊查询"
+              :placeholder="$t('page.securitySensitiveRule.placeholder.ruleKey')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="规则名" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveRule.form.ruleName')" class="query-item">
             <Input
               v-model:value="searchForm.rule_name"
               allow-clear
               class="query-control"
-              placeholder="规则名模糊查询"
+              :placeholder="$t('page.securitySensitiveRule.placeholder.ruleName')"
               @press-enter="handleSearch"
             />
           </Form.Item>
-          <Form.Item label="启用" class="query-item">
+          <Form.Item :label="$t('page.securitySensitiveRule.form.enable')" class="query-item">
             <Select
               v-model:value="searchForm.enable"
               allow-clear
               class="query-control"
-              placeholder="全部"
+              :placeholder="$t('page.securitySensitiveRule.placeholder.all')"
               :options="[
-                { value: 0, label: '禁用' },
-                { value: 1, label: '启用' },
+                { value: 0, label: $t('page.securitySensitiveRule.enable.disabled') },
+                { value: 1, label: $t('page.securitySensitiveRule.enable.enabled') },
               ]"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="resetSearch">重置</Button>
-            <Button type="primary" ghost @click="openCreate">新建</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="resetSearch">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" ghost @click="openCreate">{{ $t('page.securitySensitiveRule.action.create') }}</Button>
           </Space>
         </div>
       </Form>
@@ -351,7 +352,7 @@ onMounted(() => {
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'rule_type'">
-            {{ record.rule_type === 'column' ? '基于列名' : record.rule_type === 'data' ? '基于数据' : record.rule_type || '-' }}
+            {{ record.rule_type === 'column' ? $t('page.securitySensitiveRule.ruleType.column') : record.rule_type === 'data' ? $t('page.securitySensitiveRule.ruleType.data') : record.rule_type || '-' }}
           </template>
           <template v-else-if="column.key === 'rule_express'">
             <Tooltip :title="record.rule_express">
@@ -365,7 +366,7 @@ onMounted(() => {
             <Tag :color="statusTag(record.status).color">{{ statusTag(record.status).text }}</Tag>
           </template>
           <template v-else-if="column.key === 'enable'">
-            <Tag :color="record.enable === 1 ? 'green' : 'default'">{{ record.enable === 1 ? '启用' : '禁用' }}</Tag>
+            <Tag :color="record.enable === 1 ? 'green' : 'default'">{{ record.enable === 1 ? $t('page.securitySensitiveRule.enable.enabled') : $t('page.securitySensitiveRule.enable.disabled') }}</Tag>
           </template>
           <template v-else-if="column.key === 'gmt_created'">
             {{ formatTime(record.gmt_created) }}
@@ -375,13 +376,13 @@ onMounted(() => {
           </template>
           <template v-else-if="column.key === 'action'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">修改</Button>
+              <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.securitySensitiveRule.action.edit') }}</Button>
               <Popconfirm
-                title="确认删除该规则？删除后不可恢复。"
+                :title="$t('page.securitySensitiveRule.deleteConfirm')"
                 placement="left"
                 @confirm="handleDelete(record)"
               >
-                <Button type="link" size="small" danger>删除</Button>
+                <Button type="link" size="small" danger>{{ $t('page.securitySensitiveRule.action.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -391,59 +392,59 @@ onMounted(() => {
 
     <Modal
       v-model:open="modalOpen"
-      :title="modalMode === 'create' ? '新建规则' : '修改规则'"
+      :title="modalMode === 'create' ? $t('page.securitySensitiveRule.modal.createTitle') : $t('page.securitySensitiveRule.modal.editTitle')"
       :confirm-loading="saving"
       width="640px"
       destroy-on-close
       @ok="submitModal"
     >
       <Form layout="vertical" class="mt-2">
-        <Form.Item label="规则类型" required>
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.ruleType')" required>
           <Select
             v-model:value="formModel.rule_type"
             :options="[
-              { value: 'data', label: '基于数据' },
-              { value: 'column', label: '基于列名' },
+              { value: 'data', label: $t('page.securitySensitiveRule.ruleType.data') },
+              { value: 'column', label: $t('page.securitySensitiveRule.ruleType.column') },
             ]"
           />
         </Form.Item>
-        <Form.Item label="规则标识" required>
-          <Input v-model:value="formModel.rule_key" placeholder="如 realname、email" :disabled="modalMode === 'edit'" />
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.ruleKey')" required>
+          <Input v-model:value="formModel.rule_key" :placeholder="$t('page.securitySensitiveRule.modal.ruleKeyPlaceholder')" :disabled="modalMode === 'edit'" />
         </Form.Item>
-        <Form.Item label="规则名" required>
-          <Input v-model:value="formModel.rule_name" placeholder="展示名称" />
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.ruleName')" required>
+          <Input v-model:value="formModel.rule_name" :placeholder="$t('page.securitySensitiveRule.modal.ruleNamePlaceholder')" />
         </Form.Item>
-        <Form.Item label="采集表达式" required>
-          <Input.TextArea v-model:value="formModel.rule_express" :rows="4" placeholder="正则或匹配表达式" />
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.ruleExpress')" required>
+          <Input.TextArea v-model:value="formModel.rule_express" :rows="4" :placeholder="$t('page.securitySensitiveRule.modal.ruleExpressPlaceholder')" />
         </Form.Item>
-        <Form.Item label="采集阈值 %" required>
-          <InputNumber v-model:value="formModel.rule_pct" :min="0" :max="100" class="w-full" placeholder="0-100" />
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.rulePct')" required>
+          <InputNumber v-model:value="formModel.rule_pct" :min="0" :max="100" class="w-full" :placeholder="$t('page.securitySensitiveRule.modal.rulePctPlaceholder')" />
         </Form.Item>
-        <Form.Item label="级别" required>
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.level')" required>
           <Select
             v-model:value="formModel.level"
             :options="[
-              { value: 0, label: '低敏' },
-              { value: 1, label: '高敏' },
+              { value: 0, label: $t('page.securitySensitiveRule.level.low') },
+              { value: 1, label: $t('page.securitySensitiveRule.level.high') },
             ]"
           />
         </Form.Item>
-        <Form.Item label="状态" required>
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.status')" required>
           <Select
             v-model:value="formModel.status"
             :options="[
-              { value: -1, label: '疑似敏感' },
-              { value: 0, label: '非敏感' },
-              { value: 1, label: '确认敏感' },
+              { value: -1, label: $t('page.securitySensitiveRule.status.suspected') },
+              { value: 0, label: $t('page.securitySensitiveRule.status.nonSensitive') },
+              { value: 1, label: $t('page.securitySensitiveRule.status.confirmed') },
             ]"
           />
         </Form.Item>
-        <Form.Item label="启用" required>
+        <Form.Item :label="$t('page.securitySensitiveRule.modal.enable')" required>
           <Select
             v-model:value="formModel.enable"
             :options="[
-              { value: 0, label: '禁用' },
-              { value: 1, label: '启用' },
+              { value: 0, label: $t('page.securitySensitiveRule.enable.disabled') },
+              { value: 1, label: $t('page.securitySensitiveRule.enable.enabled') },
             ]"
           />
         </Form.Item>

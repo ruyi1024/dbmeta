@@ -18,6 +18,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface TaskListItem {
   createdAt?: string;
@@ -73,24 +74,37 @@ const formModel = reactive({
 });
 
 const columns: TableColumnsType<TaskListItem> = [
-  { title: '任务名称', dataIndex: 'taskName', key: 'taskName', width: 200 },
-  { title: '任务类型', dataIndex: 'taskType', key: 'taskType', width: 120 },
-  { title: '数据源', dataIndex: 'datasourceId', key: 'datasourceId', width: 100 },
-  { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 150 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '开始时间', dataIndex: 'startTime', key: 'startTime', width: 180 },
-  { title: '结束时间', dataIndex: 'endTime', key: 'endTime', width: 180 },
-  { title: '执行时长', dataIndex: 'duration', key: 'duration', width: 100 },
-  { title: '创建人', dataIndex: 'createdBy', key: 'createdBy', width: 100 },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'option', width: 180, fixed: 'right' },
+  { title: $t('page.qualityTasks.columns.taskName'), dataIndex: 'taskName', key: 'taskName', width: 200 },
+  { title: $t('page.qualityTasks.columns.taskType'), dataIndex: 'taskType', key: 'taskType', width: 120 },
+  { title: $t('page.qualityTasks.columns.datasource'), dataIndex: 'datasourceId', key: 'datasourceId', width: 100 },
+  { title: $t('page.qualityTasks.columns.databaseName'), dataIndex: 'databaseName', key: 'databaseName', width: 150 },
+  { title: $t('page.qualityTasks.columns.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: $t('page.qualityTasks.columns.startTime'), dataIndex: 'startTime', key: 'startTime', width: 180 },
+  { title: $t('page.qualityTasks.columns.endTime'), dataIndex: 'endTime', key: 'endTime', width: 180 },
+  { title: $t('page.qualityTasks.columns.duration'), dataIndex: 'duration', key: 'duration', width: 100 },
+  { title: $t('page.qualityTasks.columns.createdBy'), dataIndex: 'createdBy', key: 'createdBy', width: 100 },
+  { title: $t('page.qualityTasks.columns.createdAt'), dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: $t('page.qualityTasks.columns.operation'), key: 'option', width: 180, fixed: 'right' },
 ];
 
 function statusTag(status: string) {
-  if (status === 'running') return { color: 'processing', text: '执行中' };
-  if (status === 'success') return { color: 'success', text: '成功' };
-  if (status === 'failed') return { color: 'error', text: '失败' };
-  return { color: 'default', text: '待执行' };
+  if (status === 'running') return { color: 'processing', text: $t('page.qualityTasks.status.running') };
+  if (status === 'success') return { color: 'success', text: $t('page.qualityTasks.status.success') };
+  if (status === 'failed') return { color: 'error', text: $t('page.qualityTasks.status.failed') };
+  return { color: 'default', text: $t('page.qualityTasks.status.pending') };
+}
+
+function taskTypeLabel(taskType: string) {
+  switch (taskType) {
+    case '全量':
+      return $t('page.qualityTasks.taskTypeOption.full');
+    case '增量':
+      return $t('page.qualityTasks.taskTypeOption.incremental');
+    case '定时':
+      return $t('page.qualityTasks.taskTypeOption.scheduled');
+    default:
+      return taskType;
+  }
 }
 
 function formatDate(value?: string) {
@@ -114,7 +128,7 @@ async function fetchTasks() {
     dataSource.value = Array.isArray(list) ? list : [];
     pagination.total = Number(total) || dataSource.value.length;
   } catch (error: any) {
-    message.error(error?.message || '获取任务失败');
+    message.error(error?.message || $t('page.qualityTasks.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -151,7 +165,7 @@ function onDatabaseChange(value: string) {
 
 async function submitCreate() {
   if (!formModel.taskName || !formModel.databaseName) {
-    message.warning('请完善任务名称和数据库');
+    message.warning($t('page.qualityTasks.message.nameDbRequired'));
     return;
   }
   saving.value = true;
@@ -162,14 +176,14 @@ async function submitCreate() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.code && payload.code !== 200) {
-      message.error(payload?.msg || '创建失败');
+      message.error(payload?.msg || $t('page.qualityTasks.message.createFailed'));
       return;
     }
-    message.success('创建成功');
+    message.success($t('page.qualityTasks.message.createSuccess'));
     modalVisible.value = false;
     fetchTasks();
   } catch (error: any) {
-    message.error(error?.message || '创建失败');
+    message.error(error?.message || $t('page.qualityTasks.message.createFailed'));
   } finally {
     saving.value = false;
   }
@@ -183,13 +197,13 @@ async function handleStart(record: TaskListItem) {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.code && payload.code !== 200) {
-      message.error(payload?.msg || '启动失败');
+      message.error(payload?.msg || $t('page.qualityTasks.message.startFailed'));
       return;
     }
-    message.success('任务已启动');
+    message.success($t('page.qualityTasks.message.started'));
     fetchTasks();
   } catch (error: any) {
-    message.error(error?.message || '启动失败');
+    message.error(error?.message || $t('page.qualityTasks.message.startFailed'));
   }
 }
 
@@ -198,13 +212,13 @@ async function handleDelete(id: number) {
     const response = await baseRequestClient.delete(`/v1/dataquality/tasks/${id}`);
     const payload = (response as any)?.data ?? response;
     if (payload?.code && payload.code !== 200) {
-      message.error(payload?.msg || '删除失败');
+      message.error(payload?.msg || $t('page.qualityTasks.message.deleteFailed'));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.qualityTasks.message.deleteSuccess'));
     fetchTasks();
   } catch (error: any) {
-    message.error(error?.message || '删除失败');
+    message.error(error?.message || $t('page.qualityTasks.message.deleteFailed'));
   }
 }
 
@@ -231,30 +245,30 @@ onMounted(fetchTasks);
 
 <template>
   <div class="p-5">
-    <Card title="评估任务管理">
+    <Card :title="$t('page.qualityTasks.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="任务类型" class="query-item">
+          <Form.Item :label="$t('page.qualityTasks.form.taskType')" class="query-item">
             <Select v-model:value="queryForm.taskType" allow-clear class="query-control">
-              <Select.Option value="全量">全量评估</Select.Option>
-              <Select.Option value="增量">增量评估</Select.Option>
-              <Select.Option value="定时">定时评估</Select.Option>
+              <Select.Option value="全量">{{ $t('page.qualityTasks.taskTypeOption.full') }}</Select.Option>
+              <Select.Option value="增量">{{ $t('page.qualityTasks.taskTypeOption.incremental') }}</Select.Option>
+              <Select.Option value="定时">{{ $t('page.qualityTasks.taskTypeOption.scheduled') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="状态" class="query-item">
+          <Form.Item :label="$t('page.qualityTasks.form.status')" class="query-item">
             <Select v-model:value="queryForm.status" allow-clear class="query-control">
-              <Select.Option value="pending">待执行</Select.Option>
-              <Select.Option value="running">执行中</Select.Option>
-              <Select.Option value="success">成功</Select.Option>
-              <Select.Option value="failed">失败</Select.Option>
+              <Select.Option value="pending">{{ $t('page.qualityTasks.status.pending') }}</Select.Option>
+              <Select.Option value="running">{{ $t('page.qualityTasks.status.running') }}</Select.Option>
+              <Select.Option value="success">{{ $t('page.qualityTasks.status.success') }}</Select.Option>
+              <Select.Option value="failed">{{ $t('page.qualityTasks.status.failed') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="openCreate">新建任务</Button>
-            <Button type="primary" ghost @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="openCreate">{{ $t('page.qualityTasks.action.newTask') }}</Button>
+            <Button type="primary" ghost @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>
@@ -268,7 +282,10 @@ onMounted(fetchTasks);
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'status'">
+          <template v-if="column.key === 'taskType'">
+            {{ taskTypeLabel(record.taskType) }}
+          </template>
+          <template v-else-if="column.key === 'status'">
             <Tag :color="statusTag(record.status).color">{{ statusTag(record.status).text }}</Tag>
           </template>
           <template v-else-if="column.key === 'startTime'">
@@ -281,7 +298,11 @@ onMounted(fetchTasks);
             {{ formatDate(record.createdAt) }}
           </template>
           <template v-else-if="column.key === 'duration'">
-            {{ record.duration ? `${record.duration}秒` : '-' }}
+            {{
+              record.duration
+                ? $t('page.qualityTasks.durationSeconds', { n: record.duration })
+                : '-'
+            }}
           </template>
           <template v-else-if="column.key === 'option'">
             <Space>
@@ -291,10 +312,10 @@ onMounted(fetchTasks);
                 size="small"
                 @click="handleStart(record)"
               >
-                启动
+                {{ $t('page.qualityTasks.action.start') }}
               </Button>
-              <Popconfirm title="确定要删除这个任务吗？" @confirm="handleDelete(record.id)">
-                <Button type="link" danger size="small">删除</Button>
+              <Popconfirm :title="$t('page.qualityTasks.confirmDelete')" @confirm="handleDelete(record.id)">
+                <Button type="link" danger size="small">{{ $t('page.common.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -304,23 +325,23 @@ onMounted(fetchTasks);
 
     <Modal
       v-model:open="modalVisible"
-      title="新建评估任务"
+      :title="$t('page.qualityTasks.modal.createTitle')"
       :confirm-loading="saving"
       width="640px"
       @ok="submitCreate"
     >
       <Form layout="vertical">
-        <Form.Item label="任务名称" required>
-          <Input v-model:value="formModel.taskName" placeholder="请输入任务名称" />
+        <Form.Item :label="$t('page.qualityTasks.formModal.taskName')" required>
+          <Input v-model:value="formModel.taskName" :placeholder="$t('page.qualityTasks.placeholder.taskName')" />
         </Form.Item>
-        <Form.Item label="任务类型" required>
+        <Form.Item :label="$t('page.qualityTasks.formModal.taskType')" required>
           <Select v-model:value="formModel.taskType">
-            <Select.Option value="全量">全量评估</Select.Option>
-            <Select.Option value="增量">增量评估</Select.Option>
-            <Select.Option value="定时">定时评估</Select.Option>
+            <Select.Option value="全量">{{ $t('page.qualityTasks.taskTypeOption.full') }}</Select.Option>
+            <Select.Option value="增量">{{ $t('page.qualityTasks.taskTypeOption.incremental') }}</Select.Option>
+            <Select.Option value="定时">{{ $t('page.qualityTasks.taskTypeOption.scheduled') }}</Select.Option>
           </Select>
         </Form.Item>
-        <Form.Item label="数据库" required>
+        <Form.Item :label="$t('page.qualityTasks.formModal.database')" required>
           <Select
             v-model:value="formModel.databaseName"
             show-search
@@ -335,18 +356,18 @@ onMounted(fetchTasks);
             </Select.Option>
           </Select>
         </Form.Item>
-        <Form.Item label="表过滤条件(JSON)">
+        <Form.Item :label="$t('page.qualityTasks.formModal.tableFilter')">
           <Input.TextArea
             v-model:value="formModel.tableFilter"
             :rows="3"
-            placeholder='例如: {"include": ["table1", "table2"]}'
+            :placeholder="$t('page.qualityTasks.placeholder.tableFilter')"
           />
         </Form.Item>
-        <Form.Item label="调度配置(JSON)">
+        <Form.Item :label="$t('page.qualityTasks.formModal.scheduleConfig')">
           <Input.TextArea
             v-model:value="formModel.scheduleConfig"
             :rows="3"
-            placeholder='例如: {"cron": "0 0 2 * * ?"}'
+            :placeholder="$t('page.qualityTasks.placeholder.scheduleConfig')"
           />
         </Form.Item>
       </Form>

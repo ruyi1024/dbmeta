@@ -1,5 +1,0 @@
-{
-	"machine_id": "3a:8d:3d:53:ff:e0;3a:8d:3d:53:ef:f0;00:16:3e:1b:23:34;00:e0:4c:68:00:93",
-	"expire_date": "2026-12-30T00:00:00Z",
-	"max_datasource": 20
-}

@@ -1,14 +1,16 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'Setting',
     path: '/setting',
-    redirect: '/setting/index',
+    redirect: '/setting/idc',
     meta: {
       icon: 'lucide:settings',
       order: 6,
-      title: '设置',
+      title: $t('menu.setting.title'),
     },
     children: [
       {
@@ -16,8 +18,9 @@ const routes: RouteRecordRaw[] = [
         path: '/setting/index',
         component: () => import('#/views/config-center/index.vue'),
         meta: {
+          hideInMenu: true,
           icon: 'lucide:sliders-horizontal',
-          title: '设置',
+          title: $t('menu.setting.title'),
         },
       },
       {
@@ -26,7 +29,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/config/idc/index.vue'),
         meta: {
           icon: 'lucide:building-2',
-          title: '机房',
+          title: $t('menu.setting.idc'),
         },
       },
       {
@@ -35,7 +38,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/config/env/index.vue'),
         meta: {
           icon: 'lucide:layers',
-          title: '环境',
+          title: $t('menu.setting.env'),
         },
       },
       {
@@ -44,7 +47,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/config/datasource/index.vue'),
         meta: {
           icon: 'lucide:database',
-          title: '数据源',
+          title: $t('menu.setting.datasource'),
         },
       },
       {
@@ -53,7 +56,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/config/ai-models/index.vue'),
         meta: {
           icon: 'lucide:bot',
-          title: '模型',
+          title: $t('menu.setting.models'),
+        },
+      },
+      {
+        name: 'SettingNotice',
+        path: '/setting/notice',
+        component: () => import('#/views/config/notice/index.vue'),
+        meta: {
+          icon: 'lucide:messages-square',
+          title: $t('menu.setting.notice'),
         },
       },
     ],

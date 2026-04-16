@@ -1,13 +1,15 @@
 package data
 
 import (
-	"dbmcloud/src/database"
-	"dbmcloud/src/libary/mail"
-	"dbmcloud/src/model"
-	"dbmcloud/src/service"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/libary/mail"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/service"
 	"encoding/json"
 	"fmt"
+	stdhtml "html"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -345,6 +347,50 @@ func DataAlarmLogs(c *gin.Context) {
 	})
 }
 
+// GetDataAlarmReport 获取巡检报告详情（含HTML内容）
+func GetDataAlarmReport(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "日志ID不能为空"})
+		return
+	}
+
+	logId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || logId <= 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "无效的日志ID"})
+		return
+	}
+
+	var logRow model.DataAlarmLog
+	if err := database.DB.Where("id = ?", logId).First(&logRow).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "msg": "巡检报告不存在"})
+		return
+	}
+
+	var completeTime string
+	if logRow.CompleteTime != nil {
+		completeTime = logRow.CompleteTime.Format("2006-01-02 15:04:05")
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"id":            logRow.Id,
+			"alarm_id":      logRow.AlarmId,
+			"alarm_name":    logRow.AlarmName,
+			"status":        logRow.Status,
+			"data_count":    logRow.DataCount,
+			"rule_matched":  logRow.RuleMatched,
+			"email_sent":    logRow.EmailSent,
+			"error_message": logRow.ErrorMessage,
+			"start_time":    logRow.StartTime.Format("2006-01-02 15:04:05"),
+			"complete_time": completeTime,
+			"created_at":    logRow.CreatedAt.Format("2006-01-02 15:04:05"),
+			"report_html":   logRow.ReportHTML,
+		},
+	})
+}
+
 // GetDataAlarmDetail 获取数据告警详情
 func GetDataAlarmDetail(c *gin.Context) {
 	id := c.Param("id")
@@ -532,6 +578,7 @@ func executeAlarmTaskInternal(alarm *model.DataAlarm) {
 	if result.Error != nil {
 		log.Status = "failed"
 		log.ErrorMessage = "数据源不存在: " + result.Error.Error()
+		log.ReportHTML = buildAlarmErrorReportHTML(alarm, log.ErrorMessage)
 		completeTime := time.Now()
 		log.CompleteTime = &completeTime
 		database.DB.Save(&log)
@@ -549,6 +596,7 @@ func executeAlarmTaskInternal(alarm *model.DataAlarm) {
 	if err != nil {
 		log.Status = "failed"
 		log.ErrorMessage = "SQL执行失败: " + err.Error()
+		log.ReportHTML = buildAlarmErrorReportHTML(alarm, log.ErrorMessage)
 		completeTime := time.Now()
 		log.CompleteTime = &completeTime
 		database.DB.Save(&log)
@@ -562,11 +610,13 @@ func executeAlarmTaskInternal(alarm *model.DataAlarm) {
 	// 判断规则是否匹配
 	ruleMatched := checkRule(dataCount, alarm.RuleOperator, alarm.RuleValue)
 	log.RuleMatched = ruleMatched
+	reportHTML := buildAlarmEmailBody(alarm, dataCount, data)
+	log.ReportHTML = reportHTML
 
 	// 如果规则匹配，发送邮件
 	if ruleMatched {
 		log.Status = "triggered"
-		emailSent := sendAlarmEmail(alarm, dataCount, data)
+		emailSent := sendAlarmEmail(alarm, reportHTML)
 		log.EmailSent = emailSent
 	} else {
 		log.Status = "success"
@@ -602,7 +652,7 @@ func checkRule(dataCount int, operator string, ruleValue int) bool {
 }
 
 // sendAlarmEmail 发送告警邮件
-func sendAlarmEmail(alarm *model.DataAlarm, dataCount int, data []map[string]interface{}) bool {
+func sendAlarmEmail(alarm *model.DataAlarm, reportHTML string) bool {
 	// 解析邮箱列表（支持英文分号分隔）
 	emailList := strings.Split(alarm.EmailTo, ";")
 	var cleanEmails []string
@@ -620,11 +670,8 @@ func sendAlarmEmail(alarm *model.DataAlarm, dataCount int, data []map[string]int
 	// 构造邮件主题
 	subject := fmt.Sprintf("数据告警 - %s", alarm.AlarmName)
 
-	// 构造邮件内容
-	body := buildAlarmEmailBody(alarm, dataCount, data)
-
 	// 发送邮件
-	if err := mail.Send(cleanEmails, subject, body); err != nil {
+	if err := mail.Send(cleanEmails, subject, reportHTML); err != nil {
 		zap.L().Error("发送告警邮件失败", zap.Error(err))
 		return false
 	}
@@ -632,37 +679,55 @@ func sendAlarmEmail(alarm *model.DataAlarm, dataCount int, data []map[string]int
 	return true
 }
 
+func buildAlarmErrorReportHTML(alarm *model.DataAlarm, errMsg string) string {
+	var body strings.Builder
+	body.WriteString("<html><body>")
+	body.WriteString("<h2>巡检报告（执行失败）</h2>")
+	body.WriteString(fmt.Sprintf("<p><strong>告警名称：</strong>%s</p>", stdhtml.EscapeString(alarm.AlarmName)))
+	body.WriteString(fmt.Sprintf("<p><strong>触发时间：</strong>%s</p>", time.Now().Format("2006-01-02 15:04:05")))
+	body.WriteString(fmt.Sprintf("<p><strong>失败原因：</strong>%s</p>", stdhtml.EscapeString(errMsg)))
+	body.WriteString("</body></html>")
+	return body.String()
+}
+
 // buildAlarmEmailBody 构造告警邮件内容
 func buildAlarmEmailBody(alarm *model.DataAlarm, dataCount int, data []map[string]interface{}) string {
-	var html strings.Builder
+	var body strings.Builder
 
-	html.WriteString("<html><body>")
-	html.WriteString("<h2>数据告警通知</h2>")
-	html.WriteString(fmt.Sprintf("<p><strong>告警名称：</strong>%s</p>", alarm.AlarmName))
-	html.WriteString(fmt.Sprintf("<p><strong>告警描述：</strong>%s</p>", alarm.AlarmDescription))
-	html.WriteString(fmt.Sprintf("<p><strong>触发时间：</strong>%s</p>", time.Now().Format("2006-01-02 15:04:05")))
-	html.WriteString(fmt.Sprintf("<p><strong>数据量：</strong>%d 条</p>", dataCount))
-	html.WriteString(fmt.Sprintf("<p><strong>规则：</strong>数据量 %s %d</p>", getOperatorText(alarm.RuleOperator), alarm.RuleValue))
+	body.WriteString("<html><body>")
+	body.WriteString("<h2>数据告警通知</h2>")
+	body.WriteString(fmt.Sprintf("<p><strong>告警名称：</strong>%s</p>", stdhtml.EscapeString(alarm.AlarmName)))
+	body.WriteString(fmt.Sprintf("<p><strong>告警描述：</strong>%s</p>", stdhtml.EscapeString(alarm.AlarmDescription)))
+	body.WriteString(fmt.Sprintf("<p><strong>触发时间：</strong>%s</p>", time.Now().Format("2006-01-02 15:04:05")))
+	body.WriteString(fmt.Sprintf("<p><strong>数据量：</strong>%d 条</p>", dataCount))
+	body.WriteString(fmt.Sprintf("<p><strong>规则：</strong>数据量 %s %d</p>", stdhtml.EscapeString(getOperatorText(alarm.RuleOperator)), alarm.RuleValue))
 
 	// 如果有自定义邮件内容描述，显示在表格上方
 	if alarm.EmailContent != "" {
-		html.WriteString("<div style='margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #1890ff;'>")
-		html.WriteString("<h3>告警说明：</h3>")
-		html.WriteString("<p>" + strings.ReplaceAll(alarm.EmailContent, "\n", "<br>") + "</p>")
-		html.WriteString("</div>")
+		body.WriteString("<div style='margin: 20px 0; padding: 15px; background-color: #f5f5f5; border-left: 4px solid #1890ff;'>")
+		body.WriteString("<h3>告警说明：</h3>")
+		body.WriteString("<p>" + strings.ReplaceAll(stdhtml.EscapeString(alarm.EmailContent), "\n", "<br>") + "</p>")
+		body.WriteString("</div>")
 	}
 
 	// 显示数据表格
 	if len(data) > 0 {
-		html.WriteString("<h3>查询结果：</h3>")
-		html.WriteString("<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>")
+		body.WriteString("<h3>查询结果：</h3>")
+		body.WriteString("<table border='1' cellpadding='6' cellspacing='0' style='border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 12px;'>")
+
+		// 固定列顺序，避免 map 遍历导致的列错位
+		columns := make([]string, 0, len(data[0]))
+		for key := range data[0] {
+			columns = append(columns, key)
+		}
+		sort.Strings(columns)
 
 		// 表头
-		html.WriteString("<tr style='background-color: #f0f0f0;'>")
-		for key := range data[0] {
-			html.WriteString(fmt.Sprintf("<th>%s</th>", key))
+		body.WriteString("<tr style='background-color: #f0f0f0;'>")
+		for _, key := range columns {
+			body.WriteString(fmt.Sprintf("<th style='word-break: break-all;'>%s</th>", stdhtml.EscapeString(key)))
 		}
-		html.WriteString("</tr>")
+		body.WriteString("</tr>")
 
 		// 数据行（最多显示100行）
 		maxRows := 100
@@ -670,21 +735,30 @@ func buildAlarmEmailBody(alarm *model.DataAlarm, dataCount int, data []map[strin
 			maxRows = len(data)
 		}
 		for i := 0; i < maxRows; i++ {
-			html.WriteString("<tr>")
-			for _, value := range data[i] {
-				html.WriteString(fmt.Sprintf("<td>%v</td>", value))
+			rowStyle := ""
+			if i%2 == 1 {
+				rowStyle = " style='background-color:#fafafa;'"
 			}
-			html.WriteString("</tr>")
+			body.WriteString("<tr" + rowStyle + ">")
+			for _, key := range columns {
+				value := data[i][key]
+				cell := "-"
+				if value != nil {
+					cell = fmt.Sprintf("%v", value)
+				}
+				body.WriteString(fmt.Sprintf("<td style='word-break: break-all; white-space: pre-wrap;'>%s</td>", stdhtml.EscapeString(cell)))
+			}
+			body.WriteString("</tr>")
 		}
-		html.WriteString("</table>")
+		body.WriteString("</table>")
 
 		if len(data) > maxRows {
-			html.WriteString(fmt.Sprintf("<p><em>（仅显示前 %d 条，共 %d 条）</em></p>", maxRows, len(data)))
+			body.WriteString(fmt.Sprintf("<p><em>（仅显示前 %d 条，共 %d 条）</em></p>", maxRows, len(data)))
 		}
 	}
 
-	html.WriteString("</body></html>")
-	return html.String()
+	body.WriteString("</body></html>")
+	return body.String()
 }
 
 // getOperatorText 获取操作符文本

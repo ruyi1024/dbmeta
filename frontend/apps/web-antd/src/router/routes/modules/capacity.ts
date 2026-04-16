@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'DataCapacity',
@@ -8,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:hard-drive',
       order: 2,
-      title: '数据容量',
+      title: $t('menu.capacity.title'),
     },
     children: [
       {
@@ -17,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/capacity/dashboard/index.vue'),
         meta: {
           icon: 'lucide:layout-dashboard',
-          title: '数据容量概览',
+          title: $t('menu.capacity.overview'),
         },
       },
       {
@@ -26,7 +28,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/capacity/database-query/index.vue'),
         meta: {
           icon: 'lucide:search',
-          title: '数据库容量查询',
+          title: $t('menu.capacity.database'),
         },
       },
       {
@@ -35,7 +37,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/capacity/table-query/index.vue'),
         meta: {
           icon: 'lucide:table-2',
-          title: '数据表容量查询',
+          title: $t('menu.capacity.table'),
         },
       },
     ],

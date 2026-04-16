@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,9 +14,9 @@ limitations under the License.
 package ai
 
 import (
-	"dbmcloud/log"
-	"dbmcloud/src/model"
-	"dbmcloud/src/service"
+	"dbmeta-core/log"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/service"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -45,9 +45,9 @@ func GetAIModelDefaults(c *gin.Context) {
 }
 
 type aiModelDefaultsUpdateReq struct {
-	GradingModelId            *int `json:"grading_model_id"`
+	GradingModelId             *int `json:"grading_model_id"`
 	TableColumnAccuracyModelId *int `json:"table_column_accuracy_model_id"`
-	TableColumnCommentModelId *int `json:"table_column_comment_model_id"`
+	TableColumnCommentModelId  *int `json:"table_column_comment_model_id"`
 }
 
 // UpdateAIModelDefaults 更新各场景默认模型

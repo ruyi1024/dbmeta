@@ -1,8 +1,8 @@
 package task
 
 import (
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
 	"fmt"
 	"time"
 )

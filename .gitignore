@@ -9,6 +9,7 @@ nohup.out
 __debug_bin.exe
 /tmp/*
 tmp/runner-build.exe
+tmp/runner-build.exe~
 *.log
 *.exe
 *.sql

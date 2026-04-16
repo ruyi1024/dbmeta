@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import { Page } from '@vben/common-ui';
+
+import { $t } from '#/locales';
 </script>
 
 <template>
-  <Page auto-content-height description="统一管理系统功能参数与开关。">
+  <Page auto-content-height :description="$t('page.configCenter.description')">
     <div class="rounded-2xl bg-card p-6 text-sm text-muted-foreground">
-      设置建设中，后续可在这里接入任务、告警、AI 等模块设置。
+      {{ $t('page.configCenter.placeholder') }}
     </div>
   </Page>
 </template>

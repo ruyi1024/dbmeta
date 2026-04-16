@@ -9,6 +9,7 @@ import { Page } from '@vben/common-ui';
 import { Button, Drawer, Empty, Input, Spin, Tag, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface InsightReport {
   created_at?: string;
@@ -44,7 +45,7 @@ function reportBgUrl(report: InsightReport): string {
 /** 从 Markdown 正文提取卡片用摘要（标题下方展示） */
 function plainTextPreview(raw: string, maxLen: number): string {
   const t = String(raw ?? '').trim();
-  if (!t) return '暂无描述';
+  if (!t) return $t('page.insight.previewEmpty');
   let s = t
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
@@ -53,7 +54,7 @@ function plainTextPreview(raw: string, maxLen: number): string {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!s) return '暂无描述';
+  if (!s) return $t('page.insight.previewEmpty');
   if (s.length <= maxLen) return s;
   return `${s.slice(0, maxLen).replace(/\s+\S*$/, '')}…`;
 }
@@ -95,7 +96,7 @@ async function fetchReports() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(String(payload?.msg ?? '加载报告失败'));
+      message.error(String(payload?.msg ?? $t('page.insight.message.loadFailed')));
       reports.value = [];
       return;
     }
@@ -109,12 +110,12 @@ async function fetchReports() {
           description_preview: plainTextPreview(String(report_content ?? ''), 120),
           id: item.id,
           report_content,
-          task_name: item.task_name || '未命名洞察报告',
+          task_name: item.task_name || $t('page.insight.unnamedReport'),
         };
       });
   } catch (e: unknown) {
     reports.value = [];
-    message.error((e as Error)?.message || '加载报告失败');
+    message.error((e as Error)?.message || $t('page.insight.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -133,7 +134,7 @@ const md = new MarkdownIt({
 });
 
 const markdownHtml = computed(() => {
-  const raw = currentReport.value?.report_content || '暂无内容';
+  const raw = currentReport.value?.report_content || $t('page.insight.noContent');
   const rendered = md.render(raw);
   return DOMPurify.sanitize(rendered);
 });
@@ -144,19 +145,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page auto-content-height description="查看已生成的数据洞察报告，按书架样式浏览。">
+  <Page auto-content-height :description="$t('page.insight.description')">
     <div class="mb-4 flex items-center justify-between gap-3">
       <Input
         v-model:value="keyword"
         allow-clear
         class="max-w-[320px]"
-        placeholder="按报告名称检索"
+        :placeholder="$t('page.insight.searchPlaceholder')"
       />
-      <Button @click="fetchReports">刷新</Button>
+      <Button @click="fetchReports">{{ $t('page.common.refresh') }}</Button>
     </div>
 
     <Spin :spinning="loading">
-      <Empty v-if="filteredReports.length === 0" description="暂无已生成的洞察报告" />
+      <Empty
+        v-if="filteredReports.length === 0"
+        :description="$t('page.insight.empty')"
+      />
       <div v-else class="bookshelf">
         <div
           v-for="report in filteredReports"
@@ -178,7 +182,7 @@ onMounted(() => {
               </Tooltip>
             </div>
             <div class="book-meta">
-              <Tag color="blue">洞察报告</Tag>
+              <Tag color="blue">{{ $t('page.insight.reportTag') }}</Tag>
               <span>{{ formatTime(report.created_at) }}</span>
             </div>
           </div>
@@ -188,12 +192,14 @@ onMounted(() => {
 
     <Drawer
       v-model:open="detailOpen"
-      :title="currentReport?.task_name || '洞察报告'"
+      :title="currentReport?.task_name || $t('page.insight.reportTag')"
       width="62%"
       placement="right"
       destroy-on-close
     >
-      <div class="detail-date">生成时间：{{ formatTime(currentReport?.created_at) }}</div>
+      <div class="detail-date">
+        {{ $t('page.insight.generatedAt') }}{{ formatTime(currentReport?.created_at) }}
+      </div>
       <div class="detail-content markdown-body" v-html="markdownHtml" />
     </Drawer>
   </Page>

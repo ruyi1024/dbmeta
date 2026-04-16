@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'Meta',
@@ -7,7 +9,7 @@ const routes: RouteRecordRaw[] = [
     redirect: '/meta/dashboard',
     meta: {
       icon: 'lucide:database',
-      title: '数据字典',
+      title: $t('menu.dictionary.title'),
       order: 1,
     },
     children: [
@@ -17,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/dashboard/index.vue'),
         meta: {
           icon: 'lucide:layout-dashboard',
-          title: '元数据概览',
+          title: $t('menu.dictionary.overview'),
         },
       },
       {
@@ -26,7 +28,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/quality/index.vue'),
         meta: {
           icon: 'lucide:badge-check',
-          title: '元数据质量',
+          title: $t('menu.dictionary.quality'),
         },
       },
       {
@@ -35,7 +37,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/instance/index.vue'),
         meta: {
           icon: 'lucide:server',
-          title: '实例信息',
+          title: $t('menu.dictionary.instance'),
         },
       },
       {
@@ -44,7 +46,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/database/index.vue'),
         meta: {
           icon: 'lucide:database-zap',
-          title: '数据库信息',
+          title: $t('menu.dictionary.database'),
         },
       },
       {
@@ -53,7 +55,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/business-info/index.vue'),
         meta: {
           icon: 'lucide:building-2',
-          title: '业务信息',
+          title: $t('menu.dictionary.businessInfo'),
         },
       },
       {
@@ -62,7 +64,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/database-business/index.vue'),
         meta: {
           icon: 'lucide:link-2',
-          title: '数据库业务信息',
+          title: $t('menu.dictionary.databaseBusiness'),
         },
       },
       {
@@ -71,7 +73,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/table/index.vue'),
         meta: {
           icon: 'lucide:table',
-          title: '数据表信息',
+          title: $t('menu.dictionary.table'),
         },
       },
       {
@@ -80,7 +82,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/meta/column/index.vue'),
         meta: {
           icon: 'lucide:columns-3',
-          title: '数据字段信息',
+          title: $t('menu.dictionary.column'),
         },
       },
     ],

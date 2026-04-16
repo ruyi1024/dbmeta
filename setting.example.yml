@@ -1,12 +1,25 @@
 log:
-  path: "/tmp/lepus.log"
+  path: "/tmp/dbmeta.log"
   level: "info"
   debug: false
+
+# HTTP（可选）。不设 server.addr 时：开源版默认 :8086；企业版二进制在未配置时默认 :8088，便于与开源同时本地调试。
+# 需固定端口或生产部署时取消注释，例如：
+# server:
+#   addr: ":8086"
+
+# License（商业部署须使用有效 LICENSE.ENC，并关闭以下跳过项）
+# 可选跳过方式（任选其一即可，无需 LICENSE.ENC）：
+#   - 本配置 license.devSkip: true（仅建议本地开发）
+#   - 环境变量 DBMETA_LICENSE_SKIP=1（或 true/yes/on）
+#   - 开源构建：go build -tags opensource
+license:
+  devSkip: false
 
 token:
   storage: "mysql"
   key: "S9p2+dsfM1CzLF=="
-  name: "lepus"
+  name: "dbmeta"
   expired: "3d"
 
 decrypt:
@@ -24,87 +37,3 @@ dataSource:
   redisHost: 127.0.0.1
   redisPort: 6379
   redisPassword: xxxxxx
-  #nsq
-  nsqServer: 127.0.0.1:4150
-
-notice:
-  #mail
-  mailHost: xxxxxx
-  mailPort: xxxxxx
-  mailUser: xxxxxx
-  mailPass: xxxxxx
-  mailFrom: xxxxxx
-  #aliyun:
-  accessKeyId: xxxxxx
-  accessKeySecret: xxxxxx
-  smsSignName: xxxxxx
-  smsTemplateCode: xxxxxx
-  phoneTemplateCode: xxxxxx
-  phonePlayTimes: 2
-  #wechat
-  wechatAppId: xxxxxx
-  wechatAppSecret: xxxxxx
-  wechatSendTemplateId: xxxxxx
-
-# AI配置
-ai:
-  deepseekApiKey: "sk-xxxxxxxxxxxx"
-  deepseekApiUrl: "https://api.deepseek.com/v1/chat/completions"
-  deepseekModel: "deepseek-chat"
-  timeout: 30
-  # dify配置
-  difyBaseUrl: "https://api.dify.ai/v1/chat-messages"
-  difyTimeout: 30
-  # 多智能体配置
-  agents:
-    - id: "query_agent"
-      name: "AI查数智能体"
-      icon: "🔮"
-      description: "专业的数据查询智能体，帮助您进行复杂的数据分析和查询"
-      apiKey: "app-xxxxxxxxxxxx"
-      enabled: true
-      welcomeMessage: "您好！我是AI查数智能体🔮，专注于帮助您进行数据查询和分析。我可以协助您编写SQL查询、优化查询性能、解释查询结果等。请告诉我您需要什么帮助！"
-      customQuestions:
-        - "如何优化慢查询？"
-        - "数据库索引策略有哪些？"
-        - "如何分析查询执行计划？"
-        - "数据库连接池配置建议"
-      guideQuestions:
-        - "我想查询用户数据"
-        - "帮我分析数据库性能"
-        - "如何编写复杂SQL查询"
-        - "数据库优化建议"
-    - id: "analysis_agent"
-      name: "AI分析智能体"
-      icon: "📊"
-      description: "专业的数据分析智能体，提供深度数据分析和洞察"
-      apiKey: "app-yyyyyyyyyyyy"
-      enabled: true
-      welcomeMessage: "您好！我是AI分析智能体📊，专业提供数据分析和商业洞察服务。我可以帮助您分析数据趋势、制作数据可视化图表、发现业务指标异常等。有什么数据需要分析吗？"
-      customQuestions:
-        - "如何进行数据建模？"
-        - "异常数据检测方法"
-        - "数据趋势分析技巧"
-        - "业务指标监控方案"
-      guideQuestions:
-        - "分析销售数据趋势"
-        - "用户行为数据分析"
-        - "业务KPI指标分析"
-        - "数据异常诊断"
-    - id: "report_agent"
-      name: "AI报表智能体"
-      icon: "📈"
-      description: "专业的报表生成智能体，快速生成各类数据报表"
-      apiKey: "app-zzzzzzzzzzzz"
-      enabled: true
-      welcomeMessage: "您好！我是AI报表智能体📈，专注于自动化报表生成和数据可视化。我可以帮助您创建各种类型的报表、设计数据看板、自动化报表流程等。需要生成什么报表吗？"
-      customQuestions:
-        - "如何设计数据看板？"
-        - "报表自动化方案"
-        - "数据可视化最佳实践"
-        - "多维度报表设计"
-      guideQuestions:
-        - "生成销售业绩报表"
-        - "创建运营数据看板"
-        - "制作财务分析报告"
-        - "设计实时监控报表"

@@ -17,6 +17,7 @@ import {
 import { message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface IssueListItem {
   columnName: string;
@@ -59,31 +60,31 @@ const editForm = reactive({
 });
 
 const columns: TableColumnsType<IssueListItem> = [
-  { title: '数据库名', dataIndex: 'databaseName', key: 'databaseName', width: 150 },
-  { title: '表名', dataIndex: 'tableName', key: 'tableName', width: 150 },
-  { title: '字段名', dataIndex: 'columnName', key: 'columnName', width: 150 },
-  { title: '问题类型', dataIndex: 'issueType', key: 'issueType', width: 120 },
-  { title: '严重程度', dataIndex: 'issueLevel', key: 'issueLevel', width: 100 },
-  { title: '问题描述', dataIndex: 'issueDesc', key: 'issueDesc' },
-  { title: '问题数量', dataIndex: 'issueCount', key: 'issueCount', width: 100, sorter: true },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '处理人', dataIndex: 'handler', key: 'handler', width: 100 },
-  { title: '最后检查时间', dataIndex: 'lastCheckTime', key: 'lastCheckTime', width: 180 },
-  { title: '操作', key: 'option', width: 100, fixed: 'right' },
+  { title: $t('page.qualityIssues.columns.databaseName'), dataIndex: 'databaseName', key: 'databaseName', width: 150 },
+  { title: $t('page.qualityIssues.columns.tableName'), dataIndex: 'tableName', key: 'tableName', width: 150 },
+  { title: $t('page.qualityIssues.columns.columnName'), dataIndex: 'columnName', key: 'columnName', width: 150 },
+  { title: $t('page.qualityIssues.columns.issueType'), dataIndex: 'issueType', key: 'issueType', width: 120 },
+  { title: $t('page.qualityIssues.columns.issueLevel'), dataIndex: 'issueLevel', key: 'issueLevel', width: 100 },
+  { title: $t('page.qualityIssues.columns.issueDesc'), dataIndex: 'issueDesc', key: 'issueDesc' },
+  { title: $t('page.qualityIssues.columns.issueCount'), dataIndex: 'issueCount', key: 'issueCount', width: 100, sorter: true },
+  { title: $t('page.qualityIssues.columns.status'), dataIndex: 'status', key: 'status', width: 100 },
+  { title: $t('page.qualityIssues.columns.handler'), dataIndex: 'handler', key: 'handler', width: 100 },
+  { title: $t('page.qualityIssues.columns.lastCheckTime'), dataIndex: 'lastCheckTime', key: 'lastCheckTime', width: 180 },
+  { title: $t('page.qualityIssues.columns.option'), key: 'option', width: 100, fixed: 'right' },
 ];
 
 function levelTag(level: string) {
-  if (level === 'high') return { color: 'red', text: '高' };
-  if (level === 'medium') return { color: 'orange', text: '中' };
-  if (level === 'low') return { color: 'blue', text: '低' };
-  return { color: 'default', text: level || '未知' };
+  if (level === 'high') return { color: 'red', text: $t('page.qualityIssues.level.high') };
+  if (level === 'medium') return { color: 'orange', text: $t('page.qualityIssues.level.medium') };
+  if (level === 'low') return { color: 'blue', text: $t('page.qualityIssues.level.low') };
+  return { color: 'default', text: level || $t('page.qualityIssues.level.unknown') };
 }
 
 function statusTag(status: number) {
-  if (status === 1) return { color: 'red', text: '待处理' };
-  if (status === 2) return { color: 'orange', text: '处理中' };
-  if (status === 3) return { color: 'green', text: '已处理' };
-  return { color: 'default', text: '已忽略' };
+  if (status === 1) return { color: 'red', text: $t('page.qualityIssues.status.pending') };
+  if (status === 2) return { color: 'orange', text: $t('page.qualityIssues.status.processing') };
+  if (status === 3) return { color: 'green', text: $t('page.qualityIssues.status.done') };
+  return { color: 'default', text: $t('page.qualityIssues.status.ignored') };
 }
 
 async function fetchIssues(sorter?: Record<string, string>) {
@@ -103,7 +104,7 @@ async function fetchIssues(sorter?: Record<string, string>) {
     dataSource.value = Array.isArray(list) ? list : [];
     pagination.total = Number(total) || dataSource.value.length;
   } catch (error: any) {
-    message.error(error?.message || '获取质量问题失败');
+    message.error(error?.message || $t('page.qualityIssues.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -154,14 +155,14 @@ async function submitHandle() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.code && payload.code !== 200) {
-      message.error(payload?.msg || '更新失败');
+      message.error(payload?.msg || $t('page.qualityIssues.message.updateFailed'));
       return;
     }
-    message.success('更新成功');
+    message.success($t('page.qualityIssues.message.updateSuccess'));
     modalVisible.value = false;
     fetchIssues();
   } catch (error: any) {
-    message.error(error?.message || '更新失败');
+    message.error(error?.message || $t('page.qualityIssues.message.updateFailed'));
   } finally {
     saving.value = false;
   }
@@ -172,45 +173,45 @@ onMounted(fetchIssues);
 
 <template>
   <div class="p-5">
-    <Card title="质量问题列表">
+    <Card :title="$t('page.qualityIssues.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="表名" class="query-item">
-            <Input v-model:value="queryForm.tableName" allow-clear class="query-control" placeholder="请输入表名" />
+          <Form.Item :label="$t('page.qualityIssues.form.tableName')" class="query-item">
+            <Input v-model:value="queryForm.tableName" allow-clear class="query-control" :placeholder="$t('page.qualityIssues.placeholder.tableName')" />
           </Form.Item>
-          <Form.Item label="字段名" class="query-item">
-            <Input v-model:value="queryForm.columnName" allow-clear class="query-control" placeholder="请输入字段名" />
+          <Form.Item :label="$t('page.qualityIssues.form.columnName')" class="query-item">
+            <Input v-model:value="queryForm.columnName" allow-clear class="query-control" :placeholder="$t('page.qualityIssues.placeholder.columnName')" />
           </Form.Item>
-          <Form.Item label="问题类型" class="query-item">
+          <Form.Item :label="$t('page.qualityIssues.form.issueType')" class="query-item">
             <Select v-model:value="queryForm.issueType" allow-clear class="query-control">
-              <Select.Option value="完整性">完整性</Select.Option>
-              <Select.Option value="准确性">准确性</Select.Option>
-              <Select.Option value="唯一性">唯一性</Select.Option>
-              <Select.Option value="一致性">一致性</Select.Option>
-              <Select.Option value="及时性">及时性</Select.Option>
+              <Select.Option value="完整性">{{ $t('page.qualityIssues.issueType.completeness') }}</Select.Option>
+              <Select.Option value="准确性">{{ $t('page.qualityIssues.issueType.accuracy') }}</Select.Option>
+              <Select.Option value="唯一性">{{ $t('page.qualityIssues.issueType.uniqueness') }}</Select.Option>
+              <Select.Option value="一致性">{{ $t('page.qualityIssues.issueType.consistency') }}</Select.Option>
+              <Select.Option value="及时性">{{ $t('page.qualityIssues.issueType.timeliness') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="严重程度" class="query-item">
+          <Form.Item :label="$t('page.qualityIssues.form.issueLevel')" class="query-item">
             <Select v-model:value="queryForm.issueLevel" allow-clear class="query-control">
-              <Select.Option value="high">高</Select.Option>
-              <Select.Option value="medium">中</Select.Option>
-              <Select.Option value="low">低</Select.Option>
+              <Select.Option value="high">{{ $t('page.qualityIssues.level.high') }}</Select.Option>
+              <Select.Option value="medium">{{ $t('page.qualityIssues.level.medium') }}</Select.Option>
+              <Select.Option value="low">{{ $t('page.qualityIssues.level.low') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="状态" class="query-item">
+          <Form.Item :label="$t('page.qualityIssues.form.status')" class="query-item">
             <Select v-model:value="queryForm.status" allow-clear class="query-control">
-              <Select.Option :value="1">待处理</Select.Option>
-              <Select.Option :value="2">处理中</Select.Option>
-              <Select.Option :value="3">已处理</Select.Option>
-              <Select.Option :value="0">已忽略</Select.Option>
+              <Select.Option :value="1">{{ $t('page.qualityIssues.status.pending') }}</Select.Option>
+              <Select.Option :value="2">{{ $t('page.qualityIssues.status.processing') }}</Select.Option>
+              <Select.Option :value="3">{{ $t('page.qualityIssues.status.done') }}</Select.Option>
+              <Select.Option :value="0">{{ $t('page.qualityIssues.status.ignored') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Tag color="blue">AI智能诊断</Tag>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Tag color="blue">{{ $t('page.qualityIssues.aiDiagnosis') }}</Tag>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>
@@ -236,7 +237,7 @@ onMounted(fetchIssues);
             </Tooltip>
           </template>
           <template v-else-if="column.key === 'option'">
-            <Button type="link" size="small" @click="openHandleModal(record)">处理</Button>
+            <Button type="link" size="small" @click="openHandleModal(record)">{{ $t('page.qualityIssues.action.handle') }}</Button>
           </template>
         </template>
       </Table>
@@ -244,24 +245,24 @@ onMounted(fetchIssues);
 
     <Modal
       v-model:open="modalVisible"
-      title="处理质量问题"
+      :title="$t('page.qualityIssues.modal.title')"
       :confirm-loading="saving"
       @ok="submitHandle"
     >
       <Form layout="vertical">
-        <Form.Item label="处理状态" required>
+        <Form.Item :label="$t('page.qualityIssues.modal.handleStatus')" required>
           <Select v-model:value="editForm.status">
-            <Select.Option :value="1">待处理</Select.Option>
-            <Select.Option :value="2">处理中</Select.Option>
-            <Select.Option :value="3">已处理</Select.Option>
-            <Select.Option :value="0">已忽略</Select.Option>
+            <Select.Option :value="1">{{ $t('page.qualityIssues.status.pending') }}</Select.Option>
+            <Select.Option :value="2">{{ $t('page.qualityIssues.status.processing') }}</Select.Option>
+            <Select.Option :value="3">{{ $t('page.qualityIssues.status.done') }}</Select.Option>
+            <Select.Option :value="0">{{ $t('page.qualityIssues.status.ignored') }}</Select.Option>
           </Select>
         </Form.Item>
-        <Form.Item label="处理人">
-          <Input v-model:value="editForm.handler" placeholder="请输入处理人" />
+        <Form.Item :label="$t('page.qualityIssues.modal.handler')">
+          <Input v-model:value="editForm.handler" :placeholder="$t('page.qualityIssues.placeholder.handler')" />
         </Form.Item>
-        <Form.Item label="处理备注">
-          <Input.TextArea v-model:value="editForm.handleRemark" :rows="4" placeholder="请输入处理备注" />
+        <Form.Item :label="$t('page.qualityIssues.modal.handleRemark')">
+          <Input.TextArea v-model:value="editForm.handleRemark" :rows="4" :placeholder="$t('page.qualityIssues.placeholder.handleRemark')" />
         </Form.Item>
       </Form>
     </Modal>

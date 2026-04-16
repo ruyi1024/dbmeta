@@ -1,10 +1,12 @@
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import { $t } from '#/locales';
+
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
-import { Badge, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tooltip, message } from 'ant-design-vue';
+import { Badge, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
 
@@ -51,12 +53,6 @@ function extractApiBody(response: unknown): Record<string, unknown> {
   return r;
 }
 
-function formatTime(v?: string) {
-  if (!v) return '-';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('zh-CN', { hour12: false });
-}
-
 const loading = ref(false);
 const allRows = ref<DatasourceRow[]>([]);
 const typeOptions = ref<OptionItem[]>([]);
@@ -75,7 +71,7 @@ const pagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '15', '30', '50'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.settingCommon.paginationTotal', { total }),
   total: 0,
 });
 
@@ -110,12 +106,10 @@ const formModel = reactive<DatasourceRow>({
   user: '',
 });
 
-function boolOptions() {
-  return [
-    { value: 0, label: '否' },
-    { value: 1, label: '是' },
-  ];
-}
+const boolOptions = computed(() => [
+  { value: 0, label: $t('page.settingCommon.boolNo') },
+  { value: 1, label: $t('page.settingCommon.boolYes') },
+]);
 
 function resetFormModel() {
   formModel.id = undefined;
@@ -164,7 +158,7 @@ async function fetchList() {
   } catch (e: unknown) {
     allRows.value = [];
     pagination.total = 0;
-    message.error((e as Error)?.message || '加载数据源失败');
+    message.error((e as Error)?.message || $t('page.settingDatasource.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -216,13 +210,14 @@ function openEdit(record: DatasourceRow) {
 }
 
 function validateForm(): string | null {
-  if (!formModel.name?.trim()) return '请填写数据源名称';
-  if (!formModel.type?.trim()) return '请选择类型';
-  if (!formModel.host?.trim()) return '请填写主机';
-  if (!formModel.port?.trim()) return '请填写端口';
-  if (!formModel.idc?.trim()) return '请选择机房';
-  if (!formModel.env?.trim()) return '请选择环境';
-  if (modalMode.value === 'create' && !formModel.pass?.trim()) return '新建时请填写密码';
+  if (!formModel.name?.trim()) return $t('page.settingDatasource.validation.nameRequired');
+  if (!formModel.type?.trim()) return $t('page.settingDatasource.validation.typeRequired');
+  if (!formModel.host?.trim()) return $t('page.settingDatasource.validation.hostRequired');
+  if (!formModel.port?.trim()) return $t('page.settingDatasource.validation.portRequired');
+  if (!formModel.idc?.trim()) return $t('page.settingDatasource.validation.idcRequired');
+  if (!formModel.env?.trim()) return $t('page.settingDatasource.validation.envRequired');
+  if (modalMode.value === 'create' && !formModel.pass?.trim())
+    return $t('page.settingDatasource.validation.passwordRequired');
   return null;
 }
 
@@ -257,12 +252,12 @@ async function handleTestConnection() {
     const response = await baseRequestClient.post('/v1/datasource/check', buildPayload());
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.msg ?? '连接检查失败'));
+      message.error(String(body.msg ?? $t('page.settingDatasource.message.checkFailed')));
       return;
     }
-    message.success('连接检查成功');
+    message.success($t('page.settingDatasource.message.checkSuccess'));
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '连接检查失败');
+    message.error((e as Error)?.message || $t('page.settingDatasource.message.checkFailed'));
   } finally {
     testing.value = false;
   }
@@ -281,24 +276,24 @@ async function submitModal() {
       const response = await baseRequestClient.post('/v1/datasource/list', payload);
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '新增失败'));
+        message.error(String(body.msg ?? $t('page.settingDatasource.message.addFailed')));
         throw new Error('biz');
       }
-      message.success('新增成功');
+      message.success($t('page.settingDatasource.message.createSuccess'));
     } else {
       const response = await baseRequestClient.put('/v1/datasource/list', { ...payload, id: formModel.id });
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '修改失败'));
+        message.error(String(body.msg ?? $t('page.settingDatasource.message.updateFailed')));
         throw new Error('biz');
       }
-      message.success('修改成功');
+      message.success($t('page.settingDatasource.message.updateSuccess'));
     }
     modalOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
     if ((e as Error)?.message !== 'biz') {
-      message.error((e as Error)?.message || '保存失败');
+      message.error((e as Error)?.message || $t('page.settingDatasource.message.saveFailed'));
     }
     throw e;
   } finally {
@@ -314,65 +309,65 @@ async function handleDelete(record: DatasourceRow) {
     } as any);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.msg ?? '删除失败'));
+      message.error(String(body.msg ?? $t('page.settingDatasource.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.settingDatasource.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.settingDatasource.message.deleteFailed'));
   }
 }
 
-const columns: TableColumnsType<DatasourceRow> = [
-  { title: '数据源', dataIndex: 'name', key: 'name', width: 180 },
-  { title: '类型', dataIndex: 'type', key: 'type', width: 130 },
-  { title: '主机', dataIndex: 'host', key: 'host', width: 180 },
-  { title: '端口', dataIndex: 'port', key: 'port', width: 90 },
-  { title: '机房', dataIndex: 'idc', key: 'idc', width: 100 },
-  { title: '环境', dataIndex: 'env', key: 'env', width: 100 },
-  { title: '启用', dataIndex: 'enable', key: 'enable', width: 70 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
-  { title: '状态说明', dataIndex: 'status_text', key: 'status_text', width: 180 },
-  { title: '操作', key: 'action', width: 140, fixed: 'right' },
-];
+const columns = computed<TableColumnsType<DatasourceRow>>(() => [
+  { title: $t('page.settingDatasource.columns.name'), dataIndex: 'name', key: 'name', width: 180 },
+  { title: $t('page.settingDatasource.columns.type'), dataIndex: 'type', key: 'type', width: 130 },
+  { title: $t('page.settingDatasource.columns.host'), dataIndex: 'host', key: 'host', width: 180 },
+  { title: $t('page.settingDatasource.columns.port'), dataIndex: 'port', key: 'port', width: 90 },
+  { title: $t('page.settingDatasource.columns.idc'), dataIndex: 'idc', key: 'idc', width: 100 },
+  { title: $t('page.settingDatasource.columns.env'), dataIndex: 'env', key: 'env', width: 100 },
+  { title: $t('page.settingDatasource.columns.enable'), dataIndex: 'enable', key: 'enable', width: 70 },
+  { title: $t('page.settingDatasource.columns.status'), dataIndex: 'status', key: 'status', width: 80 },
+  { title: $t('page.settingDatasource.columns.status_text'), dataIndex: 'status_text', key: 'status_text', width: 180 },
+  { title: $t('page.settingDatasource.columns.action'), key: 'action', width: 140, fixed: 'right' },
+]);
 
 onMounted(async () => {
   try {
     await loadOptions();
     await fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '初始化数据失败');
+    message.error((e as Error)?.message || $t('page.settingCommon.initFailed'));
   }
 });
 </script>
 
 <template>
   <div class="p-5">
-    <Card title="数据源设置">
+    <Card :title="$t('page.settingDatasource.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="数据源" class="query-item">
-            <Input v-model:value="searchForm.name" allow-clear class="query-control" placeholder="请输入数据源名称" @press-enter="handleSearch" />
+          <Form.Item :label="$t('page.settingDatasource.columns.name')" class="query-item">
+            <Input v-model:value="searchForm.name" allow-clear class="query-control" :placeholder="$t('page.settingDatasource.placeholder.name')" @press-enter="handleSearch" />
           </Form.Item>
-          <Form.Item label="类型" class="query-item">
+          <Form.Item :label="$t('page.settingDatasource.columns.type')" class="query-item">
             <Select
               v-model:value="searchForm.type"
               allow-clear
               class="query-control"
-              placeholder="请选择类型"
+              :placeholder="$t('page.settingDatasource.placeholder.type')"
               :options="typeOptions.map((item) => ({ label: item.name, value: item.name }))"
             />
           </Form.Item>
-          <Form.Item label="主机" class="query-item">
-            <Input v-model:value="searchForm.host" allow-clear class="query-control" placeholder="请输入主机" @press-enter="handleSearch" />
+          <Form.Item :label="$t('page.settingDatasource.columns.host')" class="query-item">
+            <Input v-model:value="searchForm.host" allow-clear class="query-control" :placeholder="$t('page.settingDatasource.placeholder.host')" @press-enter="handleSearch" />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" ghost @click="openCreate">新建</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" ghost @click="openCreate">{{ $t('page.common.create') }}</Button>
           </Space>
         </div>
       </Form>
@@ -382,7 +377,7 @@ onMounted(async () => {
         :data-source="pagedRows"
         :loading="loading"
         :pagination="pagination"
-        :row-key="(record: DatasourceRow, index: number) => record.id ?? `ds-${pagination.current}-${index}`"
+        :row-key="(record: DatasourceRow, index?: number) => record.id ?? `ds-${pagination.current}-${index ?? 0}`"
         :scroll="{ x: 1600 }"
         @change="handleTableChange"
       >
@@ -400,9 +395,9 @@ onMounted(async () => {
           </template>
           <template v-else-if="column.key === 'action'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">修改</Button>
-              <Popconfirm title="确认删除该数据源？删除后不可恢复。" placement="left" @confirm="handleDelete(record)">
-                <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.common.edit') }}</Button>
+              <Popconfirm :title="$t('page.settingDatasource.confirmDelete')" placement="left" @confirm="handleDelete(record)">
+                <Button type="link" size="small" danger>{{ $t('page.common.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -412,7 +407,7 @@ onMounted(async () => {
 
     <Modal
       v-model:open="modalOpen"
-      :title="modalMode === 'create' ? '新建数据源' : '修改数据源'"
+      :title="modalMode === 'create' ? $t('page.settingDatasource.modal.createTitle') : $t('page.settingDatasource.modal.editTitle')"
       :confirm-loading="saving"
       width="760px"
       destroy-on-close
@@ -420,70 +415,70 @@ onMounted(async () => {
     >
       <Form layout="vertical" class="mt-2">
         <div class="form-grid">
-          <Form.Item label="数据源名称" required>
-            <Input v-model:value="formModel.name" placeholder="请输入数据源名称" />
+          <Form.Item :label="$t('page.settingDatasource.form.datasourceName')" required>
+            <Input v-model:value="formModel.name" :placeholder="$t('page.settingDatasource.placeholder.name')" />
           </Form.Item>
-          <Form.Item label="类型" required>
+          <Form.Item :label="$t('page.settingDatasource.form.type')" required>
             <Select
               v-model:value="formModel.type"
-              placeholder="请选择类型"
+              :placeholder="$t('page.settingDatasource.placeholder.type')"
               :options="typeOptions.map((item) => ({ label: item.name, value: item.name }))"
             />
           </Form.Item>
-          <Form.Item label="主机" required>
-            <Input v-model:value="formModel.host" placeholder="请输入主机" />
+          <Form.Item :label="$t('page.settingDatasource.form.host')" required>
+            <Input v-model:value="formModel.host" :placeholder="$t('page.settingDatasource.placeholder.host')" />
           </Form.Item>
-          <Form.Item label="端口" required>
-            <Input v-model:value="formModel.port" placeholder="请输入端口" />
+          <Form.Item :label="$t('page.settingDatasource.form.port')" required>
+            <Input v-model:value="formModel.port" :placeholder="$t('page.settingDatasource.placeholder.port')" />
           </Form.Item>
-          <Form.Item label="用户">
-            <Input v-model:value="formModel.user" placeholder="请输入用户名" />
+          <Form.Item :label="$t('page.settingDatasource.form.user')">
+            <Input v-model:value="formModel.user" :placeholder="$t('page.settingDatasource.placeholder.user')" />
           </Form.Item>
-          <Form.Item :label="modalMode === 'create' ? '密码' : '密码（留空将清空）'">
-            <Input.Password v-model:value="formModel.pass" placeholder="请输入密码" />
+          <Form.Item :label="modalMode === 'create' ? $t('page.settingDatasource.form.password') : $t('page.settingDatasource.form.passwordEditHint')">
+            <Input.Password v-model:value="formModel.pass" :placeholder="$t('page.settingDatasource.placeholder.password')" />
           </Form.Item>
-          <Form.Item label="DBID">
-            <Input v-model:value="formModel.dbid" placeholder="Oracle 等场景可填写" />
+          <Form.Item :label="$t('page.settingDatasource.form.dbid')">
+            <Input v-model:value="formModel.dbid" :placeholder="$t('page.settingDatasource.placeholder.dbid')" />
           </Form.Item>
-          <Form.Item label="机房" required>
+          <Form.Item :label="$t('page.settingDatasource.form.idc')" required>
             <Select
               v-model:value="formModel.idc"
-              placeholder="请选择机房"
+              :placeholder="$t('page.settingDatasource.placeholder.idc')"
               :options="idcOptions.map((item) => ({ label: item.idc_name || item.idc_key, value: item.idc_key }))"
             />
           </Form.Item>
-          <Form.Item label="环境" required>
+          <Form.Item :label="$t('page.settingDatasource.form.env')" required>
             <Select
               v-model:value="formModel.env"
-              placeholder="请选择环境"
+              :placeholder="$t('page.settingDatasource.placeholder.env')"
               :options="envOptions.map((item) => ({ label: item.env_name || item.env_key, value: item.env_key }))"
             />
           </Form.Item>
-          <Form.Item label="启用">
-            <Select v-model:value="formModel.enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.enable')">
+            <Select v-model:value="formModel.enable" :options="boolOptions" />
           </Form.Item>
-          <Form.Item label="查询开关">
-            <Select v-model:value="formModel.execute_enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.execute_enable')">
+            <Select v-model:value="formModel.execute_enable" :options="boolOptions" />
           </Form.Item>
-          <Form.Item label="元数据开关">
-            <Select v-model:value="formModel.dbmeta_enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.dbmeta_enable')">
+            <Select v-model:value="formModel.dbmeta_enable" :options="boolOptions" />
           </Form.Item>
-          <Form.Item label="探敏开关">
-            <Select v-model:value="formModel.sensitive_enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.sensitive_enable')">
+            <Select v-model:value="formModel.sensitive_enable" :options="boolOptions" />
           </Form.Item>
-          <Form.Item label="监控开关">
-            <Select v-model:value="formModel.monitor_enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.monitor_enable')">
+            <Select v-model:value="formModel.monitor_enable" :options="boolOptions" />
           </Form.Item>
-          <Form.Item label="告警开关">
-            <Select v-model:value="formModel.alarm_enable" :options="boolOptions()" />
+          <Form.Item :label="$t('page.settingDatasource.form.alarm_enable')">
+            <Select v-model:value="formModel.alarm_enable" :options="boolOptions" />
           </Form.Item>
         </div>
       </Form>
       <template #footer>
         <Space>
-          <Button @click="modalOpen = false">取消</Button>
-          <Button :loading="testing" @click="handleTestConnection">测试连接</Button>
-          <Button type="primary" :loading="saving" @click="submitModal">保存</Button>
+          <Button @click="modalOpen = false">{{ $t('page.settingCommon.cancel') }}</Button>
+          <Button :loading="testing" @click="handleTestConnection">{{ $t('page.settingCommon.testConnection') }}</Button>
+          <Button type="primary" :loading="saving" @click="submitModal">{{ $t('page.settingCommon.save') }}</Button>
         </Space>
       </template>
     </Modal>

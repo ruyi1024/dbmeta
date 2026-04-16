@@ -16,6 +16,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'MetaDatabasePage' });
 
@@ -67,18 +68,18 @@ const editForm = reactive({
 });
 
 const columns: TableColumnsType<DatabaseItem> = [
-  { title: '数据库名', dataIndex: 'database_name', key: 'database_name', sorter: true },
-  { title: '数据库别名', dataIndex: 'alias_name', key: 'alias_name' },
-  { title: '库字符集', dataIndex: 'characters', key: 'characters' },
-  { title: '数据库类型', dataIndex: 'datasource_type', key: 'datasource_type', sorter: true },
-  { title: '所属主机', dataIndex: 'host', key: 'host' },
-  { title: '所属端口', dataIndex: 'port', key: 'port' },
-  { title: '运维负责人', dataIndex: 'ops_owner', key: 'ops_owner' },
-  { title: '运维负责人电话', dataIndex: 'ops_owner_phone', key: 'ops_owner_phone' },
-  { title: '是否删除', dataIndex: 'is_deleted', key: 'is_deleted' },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
-  { title: '操作', dataIndex: 'option', key: 'option', fixed: 'right', width: 200 },
+  { title: $t('page.metaDatabase.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', sorter: true },
+  { title: $t('page.metaDatabase.columns.aliasName'), dataIndex: 'alias_name', key: 'alias_name' },
+  { title: $t('page.metaDatabase.columns.charset'), dataIndex: 'characters', key: 'characters' },
+  { title: $t('page.metaDatabase.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', sorter: true },
+  { title: $t('page.metaDatabase.columns.host'), dataIndex: 'host', key: 'host' },
+  { title: $t('page.metaDatabase.columns.port'), dataIndex: 'port', key: 'port' },
+  { title: $t('page.metaDatabase.columns.opsOwner'), dataIndex: 'ops_owner', key: 'ops_owner' },
+  { title: $t('page.metaDatabase.columns.opsOwnerPhone'), dataIndex: 'ops_owner_phone', key: 'ops_owner_phone' },
+  { title: $t('page.metaDatabase.columns.deleted'), dataIndex: 'is_deleted', key: 'is_deleted' },
+  { title: $t('page.metaDatabase.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
+  { title: $t('page.metaDatabase.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
+  { title: $t('page.metaDatabase.columns.operation'), dataIndex: 'option', key: 'option', fixed: 'right', width: 200 },
 ];
 
 async function fetchDatabases(sorter?: Record<string, string>) {
@@ -99,7 +100,7 @@ async function fetchDatabases(sorter?: Record<string, string>) {
     dataSource.value = list;
     pagination.total = Number(payload?.total ?? list.length) || list.length;
   } catch (error: any) {
-    message.error(error?.message || '数据库查询失败');
+    message.error(error?.message || $t('page.metaDatabase.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -136,7 +137,7 @@ function formatDate(value?: string) {
 }
 
 function deletedText(value: number | string) {
-  return String(value) === '1' ? '是' : '否';
+  return String(value) === '1' ? $t('page.metaDatabase.option.yes') : $t('page.metaDatabase.option.no');
 }
 
 function openEdit(record: Record<string, any>) {
@@ -173,7 +174,7 @@ async function openLinkBusiness(record: DatabaseItem) {
       .map((x: { app_name?: string }) => String(x.app_name || '').trim())
       .filter(Boolean);
   } catch (error: any) {
-    message.error(error?.message || '加载业务信息失败');
+    message.error(error?.message || $t('page.metaDatabase.message.loadBusinessFailed'));
     linkModalOpen.value = false;
   } finally {
     linkLoading.value = false;
@@ -189,13 +190,13 @@ async function handleLinkSubmit() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(payload?.msg || '保存关联失败');
+      message.error(payload?.msg || $t('page.metaDatabase.message.saveRelationFailed'));
       return;
     }
-    message.success('业务关联已保存');
+    message.success($t('page.metaDatabase.message.relationSaved'));
     linkModalOpen.value = false;
   } catch (error: any) {
-    message.error(error?.message || '保存关联失败');
+    message.error(error?.message || $t('page.metaDatabase.message.saveRelationFailed'));
   } finally {
     linkSaving.value = false;
   }
@@ -212,14 +213,14 @@ async function handleUpdateSubmit() {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(payload?.msg || '修改失败');
+      message.error(payload?.msg || $t('page.metaDatabase.message.updateFailed'));
       return;
     }
-    message.success('修改成功');
+    message.success($t('page.metaDatabase.message.updateSuccess'));
     editVisible.value = false;
     fetchDatabases();
   } catch (error: any) {
-    message.error(error?.message || '修改失败');
+    message.error(error?.message || $t('page.metaDatabase.message.updateFailed'));
   } finally {
     editLoading.value = false;
   }
@@ -230,52 +231,52 @@ onMounted(fetchDatabases);
 
 <template>
   <div class="p-5">
-    <Card title="数据库列表">
+    <Card :title="$t('page.metaDatabase.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="数据库名" class="query-item">
+          <Form.Item :label="$t('page.metaDatabase.columns.databaseName')" class="query-item">
             <Input
               v-model:value="queryForm.database_name"
-              placeholder="请输入数据库名"
+              :placeholder="$t('page.metaDatabase.placeholder.databaseName')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="数据库类型" class="query-item">
+          <Form.Item :label="$t('page.metaDatabase.columns.datasourceType')" class="query-item">
             <Input
               v-model:value="queryForm.datasource_type"
-              placeholder="请输入数据库类型"
+              :placeholder="$t('page.metaDatabase.placeholder.datasourceType')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属主机" class="query-item">
+          <Form.Item :label="$t('page.metaDatabase.columns.host')" class="query-item">
             <Input
               v-model:value="queryForm.host"
-              placeholder="请输入所属主机"
+              :placeholder="$t('page.metaDatabase.placeholder.host')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属端口" class="query-item">
+          <Form.Item :label="$t('page.metaDatabase.columns.port')" class="query-item">
             <Input
               v-model:value="queryForm.port"
-              placeholder="请输入所属端口"
+              :placeholder="$t('page.metaDatabase.placeholder.port')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="是否删除" class="query-item">
+          <Form.Item :label="$t('page.metaDatabase.columns.deleted')" class="query-item">
             <Select v-model:value="queryForm.is_deleted" allow-clear class="query-control">
-              <Select.Option value="0">否</Select.Option>
-              <Select.Option value="1">是</Select.Option>
+              <Select.Option value="0">{{ $t('page.metaDatabase.option.no') }}</Select.Option>
+              <Select.Option value="1">{{ $t('page.metaDatabase.option.yes') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>
@@ -294,8 +295,8 @@ onMounted(fetchDatabases);
           </template>
           <template v-else-if="column.key === 'option'">
             <Space size="small">
-              <a @click="openEdit(record as DatabaseItem)">编辑</a>
-              <a @click="openLinkBusiness(record as DatabaseItem)">关联业务</a>
+              <a @click="openEdit(record as DatabaseItem)">{{ $t('page.common.edit') }}</a>
+              <a @click="openLinkBusiness(record as DatabaseItem)">{{ $t('page.metaDatabase.action.linkBusiness') }}</a>
             </Space>
           </template>
           <template v-else-if="column.key === 'gmt_created'">
@@ -309,27 +310,27 @@ onMounted(fetchDatabases);
 
       <Modal
         v-model:open="linkModalOpen"
-        title="关联业务信息"
+        :title="$t('page.metaDatabase.modal.linkTitle')"
         :confirm-loading="linkSaving"
         :ok-button-props="{ disabled: linkLoading }"
         width="560px"
         destroy-on-close
         @ok="handleLinkSubmit"
       >
-        <div v-if="linkLoading" class="py-8 text-center text-gray-500">加载中…</div>
+        <div v-if="linkLoading" class="py-8 text-center text-gray-500">{{ $t('page.common.loading') }}</div>
         <template v-else>
           <p class="mb-3 text-sm text-gray-500">
-            数据库：<strong>{{ linkDatabaseName }}</strong>
+            {{ $t('page.metaDatabase.modal.databaseLabel') }}：<strong>{{ linkDatabaseName }}</strong>
           </p>
           <p class="mb-2 text-sm text-gray-500">
-            多选应用名称，保存后将写入「库表业务关联」表；取消勾选可解除关联。
+            {{ $t('page.metaDatabase.modal.linkHint') }}
           </p>
           <Select
             v-model:value="selectedAppNames"
             mode="multiple"
             allow-clear
             show-search
-            placeholder="请选择要关联的业务（应用名称）"
+            :placeholder="$t('page.metaDatabase.placeholder.linkBusiness')"
             class="w-full"
             :options="businessOptions"
             :filter-option="
@@ -342,31 +343,31 @@ onMounted(fetchDatabases);
             :max-tag-count="8"
           />
           <p v-if="businessOptions.length === 0" class="mt-2 text-sm text-amber-600">
-            暂无业务信息，请先在「数据字典 → 业务信息」中维护应用。
+            {{ $t('page.metaDatabase.modal.emptyBusiness') }}
           </p>
         </template>
       </Modal>
 
       <Modal
         v-model:open="editVisible"
-        title="编辑数据库信息"
+        :title="$t('page.metaDatabase.modal.editTitle')"
         :confirm-loading="editLoading"
         @ok="handleUpdateSubmit"
       >
         <Form layout="vertical">
-          <Form.Item label="数据库别名">
+          <Form.Item :label="$t('page.metaDatabase.columns.aliasName')">
             <Input v-model:value="editForm.alias_name" />
           </Form.Item>
-          <Form.Item label="数据库运维负责人">
-            <Input v-model:value="editForm.ops_owner" placeholder="可选" />
+          <Form.Item :label="$t('page.metaDatabase.columns.opsOwner')">
+            <Input v-model:value="editForm.ops_owner" :placeholder="$t('page.metaDatabase.placeholder.optional')" />
           </Form.Item>
-          <Form.Item label="运维负责人电话">
-            <Input v-model:value="editForm.ops_owner_phone" placeholder="可选" />
+          <Form.Item :label="$t('page.metaDatabase.columns.opsOwnerPhone')">
+            <Input v-model:value="editForm.ops_owner_phone" :placeholder="$t('page.metaDatabase.placeholder.optional')" />
           </Form.Item>
-          <Form.Item label="是否删除">
+          <Form.Item :label="$t('page.metaDatabase.columns.deleted')">
             <Select v-model:value="editForm.is_deleted">
-              <Select.Option :value="0">否</Select.Option>
-              <Select.Option :value="1">是</Select.Option>
+              <Select.Option :value="0">{{ $t('page.metaDatabase.option.no') }}</Select.Option>
+              <Select.Option :value="1">{{ $t('page.metaDatabase.option.yes') }}</Select.Option>
             </Select>
           </Form.Item>
         </Form>

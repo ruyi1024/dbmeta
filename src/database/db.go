@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,19 +9,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package database
 
 import (
 	"database/sql"
-	"dbmcloud/log"
-	"dbmcloud/setting"
-	"dbmcloud/src/aes"
-	"dbmcloud/src/model"
+	"dbmeta-core/log"
+	"dbmeta-core/setting"
+	"dbmeta-core/src/aes"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/module"
 	"fmt"
 	"os"
 	"time"
@@ -128,8 +126,8 @@ func InitDb() *gorm.DB {
 		}
 		aesPassword, _ := aes.AesPassEncode(setting.Setting.Password, setting.Setting.DbPassKey)
 		aesRdsPassword, _ := aes.AesPassEncode(setting.Setting.RedisPassword, setting.Setting.DbPassKey)
-		db.Create(&model.Datasource{Id: 1, Name: "DBMETA-MySQL", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "MySQL", Host: setting.Setting.Host, Port: setting.Setting.Port, User: setting.Setting.User, Pass: aesPassword, Enable: 1, DbmetaEnable: 1, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
-		db.Create(&model.Datasource{Id: 3, Name: "DBMETA-Redis", GroupName: "Lepus", Idc: "default", Env: "prod", Type: "Redis", Host: setting.Setting.RedisHost, Port: setting.Setting.RedisPort, User: "", Pass: aesRdsPassword, Enable: 1, DbmetaEnable: 0, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
+		db.Create(&model.Datasource{Id: 1, Name: "DBMETA-MySQL", GroupName: "DBMETA", Idc: "default", Env: "prod", Type: "MySQL", Host: setting.Setting.Host, Port: setting.Setting.Port, User: setting.Setting.User, Pass: aesPassword, Enable: 1, DbmetaEnable: 1, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
+		db.Create(&model.Datasource{Id: 3, Name: "DBMETA-Redis", GroupName: "DBMETA", Idc: "default", Env: "prod", Type: "Redis", Host: setting.Setting.RedisHost, Port: setting.Setting.RedisPort, User: "", Pass: aesRdsPassword, Enable: 1, DbmetaEnable: 0, ExecuteEnable: 1, MonitorEnable: 1, AlarmEnable: 1})
 
 	}
 
@@ -439,19 +437,16 @@ func InitDb() *gorm.DB {
 		})
 	}
 
-	if !db.Migrator().HasTable(&model.TaskOption{}) {
-		if err = db.AutoMigrate(&model.TaskOption{}); err != nil {
-			log.Error("db sync error.", zap.Error(err))
-		}
+	// task_option：始终 AutoMigrate，便于为已存在表增加字段（如 commercial_only）
+	if err = db.AutoMigrate(&model.TaskOption{}); err != nil {
+		log.Error("db sync TaskOption error.", zap.Error(err))
 	}
 
 	// 初始化默认任务配置（如果不存在则创建）
 	defaultTasks := []model.TaskOption{
 		{TaskKey: "recycle_token", TaskName: "回收用户令牌", TaskDescription: "回收用户过期的ToKen", Crontab: "* * * * *"},
-		{TaskKey: "revoke_privileage", TaskName: "回收用户权限", TaskDescription: "检查用户查询数据库权限是否过期，并回收权限", Crontab: "1 * * * *"},
 		{TaskKey: "check_datasource", TaskName: "监测数据源状态", TaskDescription: "监测数据源连接状态是否正常", Crontab: "@every 30s"},
 		{TaskKey: "gather_dbmeta", TaskName: "采集元数据信息", TaskDescription: "采集数据库、数据表、数据列等元数据信息", Crontab: "*/3 * * * *"},
-		{TaskKey: "gather_sensitive", TaskName: "敏感数据探测分析", TaskDescription: "分析数据库数据，监测敏感信息", Crontab: "*/5 * * * *"},
 		{TaskKey: "ai_general_table_comment", TaskName: "AI生成表注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据表生成AI注释", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_general_column_comment", TaskName: "AI生成字段注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据字段生成AI注释", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_apply_table_comment", TaskName: "AI应用表注释", TaskDescription: "将待应用的AI注释应用到实际数据表", Crontab: "*/30 * * * *"},
@@ -483,10 +478,8 @@ func InitDb() *gorm.DB {
 	t, _ := time.Parse("2006-01-02 15:04:05", time.Now().Format("2006-01-02 15:04:05"))
 	defaultHeartbeats := []model.TaskHeartbeat{
 		{HeartbeatKey: "recycle_token", HeartbeatTime: t, HeartbeatEndTime: t},
-		{HeartbeatKey: "revoke_privileage", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "check_datasource", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_dbmeta", HeartbeatTime: t, HeartbeatEndTime: t},
-		{HeartbeatKey: "gather_sensitive", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_pumpkin", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
@@ -663,6 +656,14 @@ func InitDb() *gorm.DB {
 	if err = db.AutoMigrate(&model.AIModelDefault{}); err != nil {
 		log.Error("db sync AIModelDefault error.", zap.Error(err))
 	}
+	if err = db.AutoMigrate(&model.SettingKV{}); err != nil {
+		log.Error("db sync SettingKV error.", zap.Error(err))
+	}
+
+	// Pumpkin 容量：表级原始数据（gather_pumpkin 写入，growth/capacity 依赖）
+	if err = db.AutoMigrate(&model.PumpkinTableSize{}); err != nil {
+		log.Error("db sync PumpkinTableSize error.", zap.Error(err))
+	}
 
 	// Pumpkin growth tables
 	if err = db.AutoMigrate(&model.PumpkinTableGrowth{}); err != nil {
@@ -679,6 +680,15 @@ func InitDb() *gorm.DB {
 	}
 	if err = db.AutoMigrate(&model.DataAlarmLog{}); err != nil {
 		log.Error("db sync DataAlarmLog error.", zap.Error(err))
+	}
+
+	// 外部模块迁移扩展入口（如企业版插件）。
+	if err = module.ApplyMigrations(db); err != nil {
+		log.Error("db sync extension migrations error.", zap.Error(err))
+	}
+
+	if err := loadNoticeIntoSetting(db); err != nil {
+		log.Warn("load notice from settings table", zap.Error(err))
 	}
 
 	return db

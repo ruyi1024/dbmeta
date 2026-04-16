@@ -10,6 +10,7 @@ import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 import { Card, Col, Row, Spin, Table, Typography } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 const { Title } = Typography;
 
@@ -71,50 +72,50 @@ const overviewItems = computed<AnalysisOverviewItem[]>(() => {
   return [
     {
       icon: 'lucide:calendar-clock',
-      title: '今日查询',
-      totalTitle: '当日 SQL 执行次数',
+      title: $t('page.securityDashboard.overview.todayQuery'),
+      totalTitle: $t('page.securityDashboard.overview.todayQueryTotal'),
       totalValue: v('todayQueryCount'),
       value: v('todayQueryCount'),
     },
     {
       icon: 'lucide:bar-chart-3',
-      title: '查询总数',
-      totalTitle: '累计查询次数',
+      title: $t('page.securityDashboard.overview.totalQuery'),
+      totalTitle: $t('page.securityDashboard.overview.totalQueryTotal'),
       totalValue: v('totalQueryCount'),
       value: v('totalQueryCount'),
     },
     {
       icon: 'lucide:shield-alert',
-      title: '高危查询拦截',
-      totalTitle: '高危查询拦截累计',
+      title: $t('page.securityDashboard.overview.interceptQuery'),
+      totalTitle: $t('page.securityDashboard.overview.interceptQueryTotal'),
       totalValue: v('totalInterceptCount'),
       value: v('totalInterceptCount'),
     },
     {
       icon: 'lucide:database',
-      title: '敏感数据库',
-      totalTitle: '涉及库数量',
+      title: $t('page.securityDashboard.overview.sensitiveDatabase'),
+      totalTitle: $t('page.securityDashboard.overview.sensitiveDatabaseTotal'),
       totalValue: v('sensitiveDatabaseCount'),
       value: v('sensitiveDatabaseCount'),
     },
     {
       icon: 'lucide:table-2',
-      title: '敏感数据表',
-      totalTitle: '涉及表数量',
+      title: $t('page.securityDashboard.overview.sensitiveTable'),
+      totalTitle: $t('page.securityDashboard.overview.sensitiveTableTotal'),
       totalValue: v('sensitiveTableCount'),
       value: v('sensitiveTableCount'),
     },
     {
       icon: 'lucide:columns-3',
-      title: '敏感数据字段',
-      totalTitle: '涉及字段数量',
+      title: $t('page.securityDashboard.overview.sensitiveColumn'),
+      totalTitle: $t('page.securityDashboard.overview.sensitiveColumnTotal'),
       totalValue: v('sensitiveColumnCount'),
       value: v('sensitiveColumnCount'),
     },
     {
       icon: 'lucide:shield-check',
-      title: '敏感数据保护次数',
-      totalTitle: '敏感库相关查询',
+      title: $t('page.securityDashboard.overview.sensitiveProtect'),
+      totalTitle: $t('page.securityDashboard.overview.sensitiveProtectTotal'),
       totalValue: v('sensitiveQueryCount'),
       value: v('sensitiveQueryCount'),
     },
@@ -122,21 +123,21 @@ const overviewItems = computed<AnalysisOverviewItem[]>(() => {
 });
 
 const columnsIntercept: TableColumnsType = [
-  { title: '拦截原因', dataIndex: 'result', key: 'result', ellipsis: true },
-  { title: '执行类型', dataIndex: 'sql_type', key: 'sql_type' },
-  { title: '类型', dataIndex: 'datasource_type', key: 'datasource_type' },
-  { title: '数据库', dataIndex: 'database', key: 'database' },
-  { title: '用户', dataIndex: 'username', key: 'username' },
-  { title: '日期', dataIndex: 'gmt_created', key: 'gmt_created', width: 120 },
+  { title: $t('page.securityDashboard.columns.interceptReason'), dataIndex: 'result', key: 'result', ellipsis: true },
+  { title: $t('page.securityDashboard.columns.sqlType'), dataIndex: 'sql_type', key: 'sql_type' },
+  { title: $t('page.securityDashboard.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type' },
+  { title: $t('page.securityDashboard.columns.database'), dataIndex: 'database', key: 'database' },
+  { title: $t('page.securityDashboard.columns.username'), dataIndex: 'username', key: 'username' },
+  { title: $t('page.securityDashboard.columns.date'), dataIndex: 'gmt_created', key: 'gmt_created', width: 120 },
 ];
 
 const columnsSensitive: TableColumnsType = [
-  { title: '敏感类型', dataIndex: 'rule_name', key: 'rule_name' },
-  { title: '源类型', dataIndex: 'datasource_type', key: 'datasource_type' },
-  { title: '数据库', dataIndex: 'database_name', key: 'database_name' },
-  { title: '数据表', dataIndex: 'table_name', key: 'table_name' },
-  { title: '数据字段', dataIndex: 'column_name', key: 'column_name' },
-  { title: '日期', dataIndex: 'gmt_created', key: 'gmt_created', width: 120 },
+  { title: $t('page.securityDashboard.columns.sensitiveType'), dataIndex: 'rule_name', key: 'rule_name' },
+  { title: $t('page.securityDashboard.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type' },
+  { title: $t('page.securityDashboard.columns.database'), dataIndex: 'database_name', key: 'database_name' },
+  { title: $t('page.securityDashboard.columns.tableName'), dataIndex: 'table_name', key: 'table_name' },
+  { title: $t('page.securityDashboard.columns.columnName'), dataIndex: 'column_name', key: 'column_name' },
+  { title: $t('page.securityDashboard.columns.date'), dataIndex: 'gmt_created', key: 'gmt_created', width: 120 },
 ];
 
 function toNumber(value: number | string | undefined) {
@@ -165,7 +166,7 @@ function resolveDashboardPayload(response: unknown): SafeDashboardData {
 
 function normalizePieData(data?: PieItem[]) {
   if (!data?.length) {
-    return [{ type: '暂无数据', value: 1 }];
+    return [{ type: $t('page.securityDashboard.noData'), value: 1 }];
   }
   return data.map((d) => ({
     type: d.type,
@@ -205,7 +206,7 @@ function renderSimpleLine(
       series: [],
       title: {
         left: 'center',
-        text: '暂无数据',
+        text: $t('page.securityDashboard.noData'),
         textStyle: { color: '#999', fontSize: 14 },
         top: 'center',
       },
@@ -222,7 +223,7 @@ function renderSimpleLine(
       {
         areaStyle: { opacity: 0.08 },
         data: values,
-        name: rows[0]?.category ?? '数值',
+        name: rows[0]?.category ?? $t('page.securityDashboard.value'),
         smooth: true,
         type: 'line',
       },
@@ -243,7 +244,7 @@ function renderGroupedBar(
       series: [],
       title: {
         left: 'center',
-        text: '暂无数据',
+        text: $t('page.securityDashboard.noData'),
         textStyle: { color: '#999', fontSize: 14 },
         top: 'center',
       },
@@ -273,12 +274,12 @@ function renderGroupedBar(
 }
 
 function renderAllCharts() {
-  renderPie(renderStatusPie, 'SQL执行状态', dashboardData.value.queryStatusPieDataList);
-  renderPie(renderTypePie, 'SQL执行类型', dashboardData.value.queryTypePieDataList);
-  renderPie(renderDsPie, '敏感数据源', dashboardData.value.sensitiveDsTypePieDataList);
+  renderPie(renderStatusPie, $t('page.securityDashboard.chart.sqlStatus'), dashboardData.value.queryStatusPieDataList);
+  renderPie(renderTypePie, $t('page.securityDashboard.chart.sqlType'), dashboardData.value.queryTypePieDataList);
+  renderPie(renderDsPie, $t('page.securityDashboard.chart.sensitiveDatasource'), dashboardData.value.sensitiveDsTypePieDataList);
   renderPie(
     renderSensitiveTypePie,
-    '敏感类型',
+    $t('page.securityDashboard.chart.sensitiveType'),
     dashboardData.value.sensitiveTypePieDataList,
   );
   renderSimpleLine(renderQueryLine, dashboardData.value.query15DayLineDataList);
@@ -306,39 +307,39 @@ onMounted(fetchDashboard);
 <template>
   <div class="safe-dashboard p-5">
     <div class="safe-dashboard__stats mb-6">
-      <Title :level="5" class="!mb-4 text-foreground/90"> 核心指标 </Title>
+      <Title :level="5" class="!mb-4 text-foreground/90"> {{ $t('page.securityDashboard.kpiTitle') }} </Title>
       <Spin :spinning="loading">
         <AnalysisOverview :items="overviewItems" />
       </Spin>
     </div>
 
     <div class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
-      <AnalysisChartCard title="SQL执行状态分布">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.sqlStatusDistribution')">
         <EchartsUI ref="statusPieRef" class="h-[330px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="SQL执行类型分布">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.sqlTypeDistribution')">
         <EchartsUI ref="typePieRef" class="h-[330px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="近15日SQL查询趋势">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.queryTrend15d')">
         <EchartsUI ref="queryLineRef" class="h-[320px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="近15日SQL拦截趋势">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.interceptTrend15d')">
         <EchartsUI ref="interceptLineRef" class="h-[320px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard class="md:col-span-2" title="年度SQL查询和风险拦截统计">
+      <AnalysisChartCard class="md:col-span-2" :title="$t('page.securityDashboard.chart.yearlyQueryIntercept')">
         <EchartsUI ref="monthBarRef" class="h-[360px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="敏感数据数据源分布">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.sensitiveDatasourceDistribution')">
         <EchartsUI ref="dsPieRef" class="h-[330px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="敏感数据类型分布">
+      <AnalysisChartCard :title="$t('page.securityDashboard.chart.sensitiveTypeDistribution')">
         <EchartsUI ref="sensitiveTypePieRef" class="h-[330px]" />
       </AnalysisChartCard>
     </div>
 
     <Row :gutter="[16, 16]" class="mt-5">
       <Col :lg="12" :span="24">
-        <Card title="SQL执行最新拦截记录" :loading="loading">
+        <Card :title="$t('page.securityDashboard.latestIntercept')" :loading="loading">
           <Table
             :columns="columnsIntercept"
             :data-source="dashboardData.queryNewInterceptDataList ?? []"
@@ -349,7 +350,7 @@ onMounted(fetchDashboard);
         </Card>
       </Col>
       <Col :lg="12" :span="24">
-        <Card title="敏感信息最新探测记录" :loading="loading">
+        <Card :title="$t('page.securityDashboard.latestSensitive')" :loading="loading">
           <Table
             :columns="columnsSensitive"
             :data-source="dashboardData.queryNewSensitiveDataList ?? []"

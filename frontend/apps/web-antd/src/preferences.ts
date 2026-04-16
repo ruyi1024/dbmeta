@@ -8,7 +8,7 @@ import { defineOverridesPreferences } from '@vben/preferences';
 export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
-    defaultHomePath: '/analytics',
+    defaultHomePath: '/workspace',
     name: import.meta.env.VITE_APP_TITLE,
     /** 全屏水印（与旧版数据查询页一致，可在偏好设置中关闭或自定义文案） */
     watermark: true,

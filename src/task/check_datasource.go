@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,29 +9,24 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package task
 
 import (
 	"context"
-	"dbmcloud/log"
-	"dbmcloud/setting"
-	"dbmcloud/src/database"
-	"dbmcloud/src/libary/clickhouse"
-	"dbmcloud/src/libary/mongodb"
-	"dbmcloud/src/libary/mssql"
-	"dbmcloud/src/libary/mysql"
-	"dbmcloud/src/libary/oracle"
-	"dbmcloud/src/libary/postgres"
-	"dbmcloud/src/libary/redis"
-	"dbmcloud/src/libary/tool"
-	"dbmcloud/src/model"
-	"dbmcloud/src/mq"
-	"dbmcloud/src/utils"
+	"dbmeta-core/log"
+	"dbmeta-core/setting"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/libary/clickhouse"
+	"dbmeta-core/src/libary/mongodb"
+	"dbmeta-core/src/libary/mssql"
+	"dbmeta-core/src/libary/mysql"
+	"dbmeta-core/src/libary/oracle"
+	"dbmeta-core/src/libary/postgres"
+	"dbmeta-core/src/libary/redis"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/utils"
 	"fmt"
 	"time"
 
@@ -244,23 +239,6 @@ func doDatasourceCheckTask(datasourceType, host, port, user, pass, dbid, env str
 		fmt.Println("Insert Event To MySQL Error: " + result.Error.Error())
 		log.Logger.Error(fmt.Sprintf("Can't add events data to mysql: %s", result.Error.Error()))
 		return CheckResult{Status: 0, StatusText: "写入事件到MySQL失败"}
-	}
-
-	//send event to nsq
-	//fmt.Println(events)
-	for range events {
-		mq.Send(map[string]interface{}{
-			"event_uuid":   tool.GetUUID(),
-			"event_time":   time.Now(),
-			"event_type":   datasourceType,
-			"event_group":  env,
-			"event_entity": fmt.Sprintf("%s:%s", host, port),
-			"event_key":    "datasourceCheck",
-			"event_value":  float32(status),
-			"event_tag":    "",
-			"event_unit":   "",
-			"event_detail": statusText,
-		})
 	}
 
 	return CheckResult{Status: status, StatusText: statusText}

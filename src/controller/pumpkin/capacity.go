@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -14,8 +14,8 @@ limitations under the License.
 package pumpkin
 
 import (
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
 	"fmt"
 	"net/http"
 	"strings"
@@ -50,21 +50,30 @@ func formatAvgRowLength(bytes int64) string {
 
 // GetDatabaseCapacityTop10Chart 获取数据库容量TOP10（用于图表）
 func GetDatabaseCapacityTop10Chart(c *gin.Context) {
-	// 获取近1小时的数据
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	// 获取今天起始时间
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	// 查询近1小时的数据库容量数据，按数据库分组汇总（只计算总容量）
+	// 查询今天每个数据库最新一条容量记录，并取TOP10
 	querySQL := `
 		SELECT 
-			database_name,
-			datasource_type,
-			host,
-			port,
-			SUM(data_size + index_size + free_size) as total_data_size
-		FROM pumpkin_table_size
-		WHERE gmt_created >= ?
-		GROUP BY database_name, datasource_type, host, port
-		ORDER BY total_data_size DESC
+			t1.database_name,
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.database_size as total_data_size
+		FROM pumpkin_database_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, MAX(gmt_created) as max_created
+			FROM pumpkin_database_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.gmt_created = t2.max_created
+		ORDER BY t1.database_size DESC
 		LIMIT 10
 	`
 
@@ -76,7 +85,7 @@ func GetDatabaseCapacityTop10Chart(c *gin.Context) {
 		TotalDataSize  int64  `gorm:"column:total_data_size"`
 	}
 
-	result := database.DB.Raw(querySQL, oneHourAgo).Scan(&results)
+	result := database.DB.Raw(querySQL, todayStart).Scan(&results)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -255,15 +264,36 @@ func GetDatabaseCapacityTop10(c *gin.Context) {
 
 // GetTableCapacityTop10 获取数据表容量TOP10（用于图表，从pumpkin_table_size获取）
 func GetTableCapacityTop10(c *gin.Context) {
-	// 获取近1小时的数据
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	// 获取今天起始时间
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	// 查询近1小时的数据表容量数据，按数据大小排序
-	var tableSizes []model.PumpkinTableSize
-	result := database.DB.Where("gmt_created >= ?", oneHourAgo).
-		Order("data_size DESC").
-		Limit(10).
-		Find(&tableSizes)
+	// 查询今天每个表最新一条容量记录，并按容量排序取TOP10
+	var tableSizes []model.PumpkinTableGrowth
+	result := database.DB.Raw(`
+		SELECT 
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.database_name,
+			t1.table_name,
+			t1.table_size,
+			t1.table_rows
+		FROM pumpkin_table_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
+			FROM pumpkin_table_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name, table_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.table_name = t2.table_name
+			AND t1.gmt_created = t2.max_created
+		ORDER BY t1.table_size DESC
+		LIMIT 10
+	`, todayStart).Scan(&tableSizes)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -278,17 +308,17 @@ func GetTableCapacityTop10(c *gin.Context) {
 	for i, item := range tableSizes {
 		dataList = append(dataList, map[string]interface{}{
 			"id":             i + 1,
-			"tableName":      item.TableNameField,
+			"tableName":      item.TableNameX,
 			"databaseName":   item.DatabaseName,
 			"datasourceType": item.DatasourceType,
 			"host":           item.Host,
 			"port":           item.Port,
-			"dataSize":       formatSize(item.DataSize),  // 格式化后的显示值
-			"dataSizeBytes":  item.DataSize,              // 原始字节数，用于排序
-			"indexSize":      formatSize(item.IndexSize), // 格式化后的显示值
-			"indexSizeBytes": item.IndexSize,             // 原始字节数
+			"dataSize":       formatSize(item.TableSize), // 格式化后的显示值
+			"dataSizeBytes":  item.TableSize,             // 原始字节数，用于排序
+			"indexSize":      "-",                        // 图表暂不展示索引大小，保留字段避免前端兼容问题
+			"indexSizeBytes": int64(0),
 			"rowCount":       item.TableRows,
-			"avgRowLength":   formatAvgRowLength(item.AvgRowLength),
+			"avgRowLength":   "-",
 		})
 	}
 
@@ -579,68 +609,58 @@ func GetCapacityStats(c *gin.Context) {
 	})
 }
 
-// GetTableFragmentationTop10 获取表碎片率TOP10
+// GetTableFragmentationTop10 获取表碎片大小TOP10（保留原接口路径）
 func GetTableFragmentationTop10(c *gin.Context) {
-	// 获取近1小时的数据
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	// 获取今天起始时间
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	// 查询近1小时的数据表碎片率数据，计算碎片率并排序
-	querySQL := `
-		SELECT 
-			table_name,
-			database_name,
-			datasource_type,
-			host,
-			port,
-			data_size,
-			index_size,
-			free_size,
-			CASE 
-				WHEN (data_size + index_size + free_size) > 0 
-				THEN (free_size * 100.0 / (data_size + index_size + free_size))
-				ELSE 0 
-			END as fragmentation_rate
-		FROM pumpkin_table_size
-		WHERE gmt_created >= ?
-			AND (data_size + index_size + free_size) > 0
-		GROUP BY table_name, database_name, datasource_type, host, port
-		ORDER BY fragmentation_rate DESC
+	// 查询今天每个表最新一条碎片记录，并按碎片大小取TOP10
+	var tableSizes []model.PumpkinTableSize
+	result := database.DB.Raw(`
+		SELECT
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.database_name,
+			t1.table_name,
+			t1.free_size
+		FROM pumpkin_table_size t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
+			FROM pumpkin_table_size
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name, table_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.table_name = t2.table_name
+			AND t1.gmt_created = t2.max_created
+		WHERE t1.free_size > 0
+		ORDER BY t1.free_size DESC
 		LIMIT 10
-	`
-
-	var results []struct {
-		TableName         string  `gorm:"column:table_name"`
-		DatabaseName      string  `gorm:"column:database_name"`
-		DatasourceType    string  `gorm:"column:datasource_type"`
-		Host              string  `gorm:"column:host"`
-		Port              string  `gorm:"column:port"`
-		DataSize          int64   `gorm:"column:data_size"`
-		IndexSize         int64   `gorm:"column:index_size"`
-		FreeSize          int64   `gorm:"column:free_size"`
-		FragmentationRate float64 `gorm:"column:fragmentation_rate"`
-	}
-
-	result := database.DB.Raw(querySQL, oneHourAgo).Scan(&results)
+	`, todayStart).Scan(&tableSizes)
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"message": "查询表碎片率失败: " + result.Error.Error(),
+			"message": "查询表碎片大小失败: " + result.Error.Error(),
 		})
 		return
 	}
 
 	// 转换为前端需要的格式
 	dataList := make([]map[string]interface{}, 0)
-	for i, item := range results {
+	for i, item := range tableSizes {
 		dataList = append(dataList, map[string]interface{}{
-			"id":                     i + 1,
-			"tableName":              item.TableName,
-			"databaseName":           item.DatabaseName,
-			"datasourceType":         item.DatasourceType,
-			"host":                   item.Host,
-			"port":                   item.Port,
-			"fragmentationRate":      fmt.Sprintf("%.2f%%", item.FragmentationRate), // 格式化后的显示值（百分比）
-			"fragmentationRateValue": item.FragmentationRate,                        // 原始数值，用于排序
+			"id":             i + 1,
+			"tableName":      item.TableNameField,
+			"databaseName":   item.DatabaseName,
+			"datasourceType": item.DatasourceType,
+			"host":           item.Host,
+			"port":           item.Port,
+			"freeSize":       formatSize(item.FreeSize), // 格式化后的显示值
+			"freeSizeBytes":  item.FreeSize,             // 原始字节数，用于排序
 		})
 	}
 
@@ -653,15 +673,35 @@ func GetTableFragmentationTop10(c *gin.Context) {
 
 // GetTableRowsTop10 获取表记录数TOP10
 func GetTableRowsTop10(c *gin.Context) {
-	// 获取近1小时的数据
-	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	// 获取今天起始时间
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-	// 查询近1小时的数据表记录数数据，按记录数排序
+	// 查询今天每个表最新一条记录数数据，并按记录数排序取TOP10
 	var tableSizes []model.PumpkinTableSize
-	result := database.DB.Where("gmt_created >= ?", oneHourAgo).
-		Order("table_rows DESC").
-		Limit(10).
-		Find(&tableSizes)
+	result := database.DB.Raw(`
+		SELECT
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.database_name,
+			t1.table_name,
+			t1.table_rows
+		FROM pumpkin_table_size t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
+			FROM pumpkin_table_size
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name, table_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.table_name = t2.table_name
+			AND t1.gmt_created = t2.max_created
+		ORDER BY t1.table_rows DESC
+		LIMIT 10
+	`, todayStart).Scan(&tableSizes)
 
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

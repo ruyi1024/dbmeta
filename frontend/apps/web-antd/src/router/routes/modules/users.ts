@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'Users',
@@ -8,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:users',
       order: 7,
-      title: '用户',
+      title: $t('menu.users.title'),
     },
     children: [
       {
@@ -17,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/users/manager/index.vue'),
         meta: {
           icon: 'lucide:user-cog',
-          title: '用户管理',
+          title: $t('menu.users.manager'),
         },
       },
     ],

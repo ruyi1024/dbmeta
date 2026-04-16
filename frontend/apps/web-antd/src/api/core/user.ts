@@ -43,7 +43,7 @@ export async function getUserInfoApi() {
   return {
     avatar: legacyUser.avatar || '',
     desc: '',
-    homePath: '/analytics',
+    homePath: '/workspace',
     realName: legacyUser.chineseName || legacyUser.username || '用户',
     roles: legacyUser.admin ? ['admin'] : ['user'],
     userId: String(legacyUser.id ?? ''),

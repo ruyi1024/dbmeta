@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'TaskPlan',
@@ -8,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:list-todo',
       order: 5,
-      title: '计划任务',
+      title: $t('menu.task.title'),
     },
   },
 ];

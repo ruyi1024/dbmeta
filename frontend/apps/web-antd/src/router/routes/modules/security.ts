@@ -1,59 +1,62 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { commercialComponent } from '#/router/utils/commercial-component';
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'DataSecurity',
     path: '/security',
     redirect: '/security/dashboard',
     meta: {
+      commercialOnly: true,
       icon: 'lucide:shield',
       order: 4,
-      title: '数据安全',
+      title: $t('menu.security.title'),
     },
     children: [
       {
         name: 'DataSecurityDashboard',
         path: '/security/dashboard',
-        component: () => import('#/views/security/dashboard/index.vue'),
+        component: commercialComponent(
+          () => import('#/views/security/dashboard/index.vue'),
+        ),
         meta: {
           icon: 'lucide:layout-dashboard',
-          title: '数据安全大盘',
-        },
-      },
-      {
-        name: 'DataSecurityQueryAudit',
-        path: '/security/audit',
-        component: () => import('#/views/security/audit/index.vue'),
-        meta: {
-          icon: 'lucide:clipboard-list',
-          title: '数据查询审计',
+          title: $t('menu.security.dashboard'),
         },
       },
       {
         name: 'DataSecurityQueryPrivilege',
         path: '/security/privilege',
-        component: () => import('#/views/security/privilege/index.vue'),
+        component: commercialComponent(
+          () => import('#/views/security/privilege/index.vue'),
+        ),
         meta: {
           icon: 'lucide:key-round',
-          title: '数据查询授权',
+          title: $t('menu.security.privilege'),
         },
       },
       {
         name: 'DataSecuritySensitiveInventory',
         path: '/security/sensitive-inventory',
-        component: () => import('#/views/security/sensitive-inventory/index.vue'),
+        component: commercialComponent(
+          () => import('#/views/security/sensitive-inventory/index.vue'),
+        ),
         meta: {
           icon: 'lucide:scan-search',
-          title: '敏感信息盘点',
+          title: $t('menu.security.sensitiveInventory'),
         },
       },
       {
         name: 'DataSecuritySensitiveRule',
         path: '/security/sensitive-rule',
-        component: () => import('#/views/security/sensitive-rule/index.vue'),
+        component: commercialComponent(
+          () => import('#/views/security/sensitive-rule/index.vue'),
+        ),
         meta: {
           icon: 'lucide:list-filter',
-          title: '敏感信息探测规则',
+          title: $t('menu.security.sensitiveRule'),
         },
       },
     ],

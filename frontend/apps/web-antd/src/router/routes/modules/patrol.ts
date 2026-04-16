@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'DataPatrol',
@@ -7,8 +9,8 @@ const routes: RouteRecordRaw[] = [
     redirect: '/patrol/config',
     meta: {
       icon: 'lucide:scan-line',
-      order: 4.6,
-      title: '数据巡检',
+      order: 3.2,
+      title: $t('menu.patrol.title'),
     },
     children: [
       {
@@ -17,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/patrol/index.vue'),
         meta: {
           icon: 'lucide:radar',
-          title: '数据巡检',
+          title: $t('menu.patrol.report'),
         },
       },
       {
@@ -26,7 +28,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/patrol/config/index.vue'),
         meta: {
           icon: 'lucide:sliders-horizontal',
-          title: '巡检配置',
+          title: $t('menu.patrol.config'),
         },
       },
     ],

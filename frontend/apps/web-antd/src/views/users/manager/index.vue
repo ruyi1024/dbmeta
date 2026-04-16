@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
@@ -7,6 +7,9 @@ import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
+
+import dayjs from 'dayjs';
 
 defineOptions({ name: 'UsersManagerPage' });
 
@@ -22,8 +25,7 @@ interface UserRow {
 
 function formatTime(v?: string) {
   if (!v) return '-';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('zh-CN', { hour12: false });
+  return dayjs(v).isValid() ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : v;
 }
 
 const loading = ref(false);
@@ -41,7 +43,7 @@ const pagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '20', '50', '100', '200'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.usersManager.paginationTotal', { total }),
   total: 0,
 });
 
@@ -81,7 +83,7 @@ async function fetchList() {
     const response = await baseRequestClient.get('/v1/users/manager/lists', { params });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(String(payload?.msg ?? '加载用户列表失败'));
+      message.error(String(payload?.msg ?? $t('page.usersManager.message.loadFailed')));
       dataSource.value = [];
       pagination.total = 0;
       return;
@@ -92,7 +94,7 @@ async function fetchList() {
   } catch (e: unknown) {
     dataSource.value = [];
     pagination.total = 0;
-    message.error((e as Error)?.message || '加载用户列表失败');
+    message.error((e as Error)?.message || $t('page.usersManager.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -138,15 +140,15 @@ function openEdit(record: UserRow) {
 
 async function submitModal() {
   if (!formModel.username.trim()) {
-    message.warning('请填写用户名');
+    message.warning($t('page.usersManager.message.usernameRequired'));
     return Promise.reject();
   }
   if (!formModel.chineseName.trim()) {
-    message.warning('请填写姓名');
+    message.warning($t('page.usersManager.message.nameRequired'));
     return Promise.reject();
   }
   if (modalMode.value === 'create' && !formModel.password.trim()) {
-    message.warning('新建用户时必须填写密码');
+    message.warning($t('page.usersManager.message.passwordRequiredCreate'));
     return Promise.reject();
   }
   saving.value = true;
@@ -165,15 +167,19 @@ async function submitModal() {
         : await baseRequestClient.put('/v1/users/manager/lists', payload);
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '保存失败'));
+      message.error(String(body?.msg ?? $t('page.usersManager.message.saveFailed')));
       throw new Error('biz');
     }
-    message.success(modalMode.value === 'create' ? '新增成功' : '修改成功');
+    message.success(
+      modalMode.value === 'create'
+        ? $t('page.usersManager.message.createSuccess')
+        : $t('page.usersManager.message.updateSuccess'),
+    );
     modalOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
     if ((e as Error)?.message !== 'biz') {
-      message.error((e as Error)?.message || '保存失败');
+      message.error((e as Error)?.message || $t('page.usersManager.message.saveFailed'));
     }
     throw e;
   } finally {
@@ -189,25 +195,30 @@ async function handleDelete(record: UserRow) {
     } as any);
     const body = (response as any)?.data ?? response;
     if (body?.success === false) {
-      message.error(String(body?.msg ?? '删除失败'));
+      message.error(String(body?.msg ?? $t('page.usersManager.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.usersManager.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.usersManager.message.deleteFailed'));
   }
 }
 
 const columns: TableColumnsType<UserRow> = [
-  { title: '用户名', dataIndex: 'username', key: 'username', sorter: true, width: 160 },
-  { title: '姓名', dataIndex: 'chineseName', key: 'chineseName', sorter: true, width: 140 },
-  { title: '管理员', dataIndex: 'admin', key: 'admin', sorter: true, width: 100 },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', sorter: true, width: 180 },
-  { title: '修改时间', dataIndex: 'updatedAt', key: 'updatedAt', sorter: true, width: 180 },
-  { title: '备注', dataIndex: 'remark', key: 'remark' },
-  { title: '操作', key: 'action', width: 140, fixed: 'right' },
+  { title: $t('page.usersManager.columns.username'), dataIndex: 'username', key: 'username', sorter: true, width: 160 },
+  { title: $t('page.usersManager.columns.chineseName'), dataIndex: 'chineseName', key: 'chineseName', sorter: true, width: 140 },
+  { title: $t('page.usersManager.columns.admin'), dataIndex: 'admin', key: 'admin', sorter: true, width: 100 },
+  { title: $t('page.usersManager.columns.createdAt'), dataIndex: 'createdAt', key: 'createdAt', sorter: true, width: 180 },
+  { title: $t('page.usersManager.columns.updatedAt'), dataIndex: 'updatedAt', key: 'updatedAt', sorter: true, width: 180 },
+  { title: $t('page.usersManager.columns.remark'), dataIndex: 'remark', key: 'remark' },
+  { title: $t('page.usersManager.columns.action'), key: 'action', width: 140, fixed: 'right' },
 ];
+
+const adminOptions = computed(() => [
+  { value: 0, label: $t('page.usersManager.adminTag.no') },
+  { value: 1, label: $t('page.usersManager.adminTag.yes') },
+]);
 
 onMounted(() => {
   void fetchList();
@@ -216,24 +227,24 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="用户管理">
+    <Card :title="$t('page.usersManager.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="关键词" class="query-item">
+          <Form.Item :label="$t('page.usersManager.form.keyword')" class="query-item">
             <Input
               v-model:value="searchForm.keyword"
               allow-clear
               class="query-control"
-              placeholder="支持搜索账号、姓名"
+              :placeholder="$t('page.usersManager.placeholder.keyword')"
               @press-enter="handleSearch"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" ghost @click="openCreate">新增用户</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" ghost @click="openCreate">{{ $t('page.usersManager.action.addUser') }}</Button>
           </Space>
         </div>
       </Form>
@@ -249,7 +260,9 @@ onMounted(() => {
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'admin'">
-            <Tag :color="record.admin ? 'green' : 'default'">{{ record.admin ? '是' : '否' }}</Tag>
+            <Tag :color="record.admin ? 'green' : 'default'">{{
+              record.admin ? $t('page.usersManager.adminTag.yes') : $t('page.usersManager.adminTag.no')
+            }}</Tag>
           </template>
           <template v-else-if="column.key === 'createdAt'">{{ formatTime(record.createdAt) }}</template>
           <template v-else-if="column.key === 'updatedAt'">{{ formatTime(record.updatedAt) }}</template>
@@ -260,9 +273,9 @@ onMounted(() => {
           </template>
           <template v-else-if="column.key === 'action'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">修改</Button>
-              <Popconfirm title="确认删除该用户？删除后不可恢复。" placement="left" @confirm="handleDelete(record)">
-                <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" @click="openEdit(record as UserRow)">{{ $t('page.common.edit') }}</Button>
+              <Popconfirm :title="$t('page.usersManager.confirmDelete')" placement="left" @confirm="handleDelete(record as UserRow)">
+                <Button type="link" size="small" danger>{{ $t('page.common.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -272,33 +285,37 @@ onMounted(() => {
 
     <Modal
       v-model:open="modalOpen"
-      :title="modalMode === 'create' ? '新增用户' : '修改用户'"
+      :title="modalMode === 'create' ? $t('page.usersManager.modal.createTitle') : $t('page.usersManager.modal.editTitle')"
       :confirm-loading="saving"
       width="640px"
       destroy-on-close
       @ok="submitModal"
     >
       <Form layout="vertical" class="mt-2">
-        <Form.Item label="用户名" required>
-          <Input v-model:value="formModel.username" placeholder="请输入用户名" :disabled="modalMode === 'edit'" />
-        </Form.Item>
-        <Form.Item label="姓名" required>
-          <Input v-model:value="formModel.chineseName" placeholder="请输入姓名" />
-        </Form.Item>
-        <Form.Item :label="modalMode === 'create' ? '密码' : '密码（留空不修改）'">
-          <Input.Password v-model:value="formModel.password" placeholder="请输入密码" />
-        </Form.Item>
-        <Form.Item label="管理员">
-          <Select
-            v-model:value="formModel.admin"
-            :options="[
-              { value: 0, label: '否' },
-              { value: 1, label: '是' },
-            ]"
+        <Form.Item :label="$t('page.usersManager.formModal.username')" required>
+          <Input
+            v-model:value="formModel.username"
+            :placeholder="$t('page.usersManager.placeholder.username')"
+            :disabled="modalMode === 'edit'"
           />
         </Form.Item>
-        <Form.Item label="备注">
-          <Input.TextArea v-model:value="formModel.remark" :rows="3" placeholder="请输入备注" />
+        <Form.Item :label="$t('page.usersManager.formModal.chineseName')" required>
+          <Input v-model:value="formModel.chineseName" :placeholder="$t('page.usersManager.placeholder.chineseName')" />
+        </Form.Item>
+        <Form.Item
+          :label="
+            modalMode === 'create'
+              ? $t('page.usersManager.formModal.password')
+              : $t('page.usersManager.formModal.passwordEditHint')
+          "
+        >
+          <Input.Password v-model:value="formModel.password" :placeholder="$t('page.usersManager.placeholder.password')" />
+        </Form.Item>
+        <Form.Item :label="$t('page.usersManager.formModal.admin')">
+          <Select v-model:value="formModel.admin" :options="adminOptions" />
+        </Form.Item>
+        <Form.Item :label="$t('page.usersManager.formModal.remark')">
+          <Input.TextArea v-model:value="formModel.remark" :rows="3" :placeholder="$t('page.usersManager.placeholder.remark')" />
         </Form.Item>
       </Form>
     </Modal>

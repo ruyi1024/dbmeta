@@ -8,6 +8,7 @@ import { Card, Col, Row, Spin, Statistic, Typography } from 'ant-design-vue';
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 const { Title } = Typography;
 
@@ -22,7 +23,7 @@ const IconTrending = createIconifyIcon('lucide:trending-up');
 const CHART_GRID = {
   bottom: 48,
   containLabel: true,
-  left: 48,
+  left: 56,
   right: 24,
   top: 40,
 } as const;
@@ -134,6 +135,29 @@ function shortName(name: string, max = 10): string {
   return name.length > max ? `${name.slice(0, max)}...` : name;
 }
 
+function buildDatabaseKey(item: any): string {
+  return [
+    String(item.datasourceType ?? ''),
+    String(item.host ?? ''),
+    String(item.port ?? ''),
+    String(item.databaseName ?? ''),
+  ].join('|');
+}
+
+function buildTableKey(item: any): string {
+  return [
+    String(item.datasourceType ?? ''),
+    String(item.host ?? ''),
+    String(item.port ?? ''),
+    String(item.databaseName ?? ''),
+    String(item.tableName ?? ''),
+  ].join('|');
+}
+
+function buildFragmentKey(item: any): string {
+  return buildTableKey(item);
+}
+
 const loading = ref(true);
 const stats = reactive<CapacityStats>({
   totalDatabases: 0,
@@ -150,7 +174,15 @@ const fragmentationList = ref<any[]>([]);
 const tableRowsList = ref<any[]>([]);
 
 const databaseChartData = computed(() => {
-  const sorted = [...databaseList.value].sort(
+  const dedupMap = new Map<string, any>();
+  for (const item of databaseList.value) {
+    const key = buildDatabaseKey(item);
+    const current = dedupMap.get(key);
+    if (!current || (item.dataSizeBytes || 0) > (current.dataSizeBytes || 0)) {
+      dedupMap.set(key, item);
+    }
+  }
+  const sorted = [...dedupMap.values()].sort(
     (a, b) => (b.dataSizeBytes || 0) - (a.dataSizeBytes || 0),
   );
   return sorted.slice(0, 10).map((item) => {
@@ -164,7 +196,15 @@ const databaseChartData = computed(() => {
 });
 
 const tableChartData = computed(() => {
-  const sorted = [...tableList.value].sort(
+  const dedupMap = new Map<string, any>();
+  for (const item of tableList.value) {
+    const key = buildTableKey(item);
+    const current = dedupMap.get(key);
+    if (!current || (item.dataSizeBytes || 0) > (current.dataSizeBytes || 0)) {
+      dedupMap.set(key, item);
+    }
+  }
+  const sorted = [...dedupMap.values()].sort(
     (a, b) => (b.dataSizeBytes || 0) - (a.dataSizeBytes || 0),
   );
   return sorted.slice(0, 10).map((item) => {
@@ -178,18 +218,34 @@ const tableChartData = computed(() => {
 });
 
 const fragmentationChartData = computed(() => {
-  const sorted = [...fragmentationList.value].sort(
-    (a, b) => (b.fragmentationRateValue || 0) - (a.fragmentationRateValue || 0),
+  const dedupMap = new Map<string, any>();
+  for (const item of fragmentationList.value) {
+    const key = buildFragmentKey(item);
+    const current = dedupMap.get(key);
+    if (!current || (item.freeSizeBytes || 0) > (current.freeSizeBytes || 0)) {
+      dedupMap.set(key, item);
+    }
+  }
+  const sorted = [...dedupMap.values()].sort(
+    (a, b) => (b.freeSizeBytes || 0) - (a.freeSizeBytes || 0),
   );
   return sorted.slice(0, 10).map((item: any) => ({
     name: shortName(String(item.tableName ?? '')),
-    value: item.fragmentationRateValue || 0,
+    value: item.freeSizeBytes || 0,
     raw: item,
   }));
 });
 
 const tableRowsChartData = computed(() => {
-  const sorted = [...tableRowsList.value].sort(
+  const dedupMap = new Map<string, any>();
+  for (const item of tableRowsList.value) {
+    const key = buildTableKey(item);
+    const current = dedupMap.get(key);
+    if (!current || (item.rowCountValue || 0) > (current.rowCountValue || 0)) {
+      dedupMap.set(key, item);
+    }
+  }
+  const sorted = [...dedupMap.values()].sort(
     (a, b) => (b.rowCountValue || 0) - (a.rowCountValue || 0),
   );
   return sorted.slice(0, 10).map((item: any) => ({
@@ -216,7 +272,7 @@ function emptyChart(
     series: [],
     title: {
       left: 'center',
-      text: '暂无数据',
+      text: $t('page.capacity.dashboard.noData'),
       textStyle: { color: '#999', fontSize: 14 },
       top: 'center',
     },
@@ -258,8 +314,9 @@ function renderGbBar(
           fontWeight: 500,
           formatter: (p: { value?: number }) => {
             const v = p.value ?? 0;
-            if (v === 0 || Number.isNaN(v)) return '0.00 GB';
-            return `${v.toFixed(2)} GB`;
+            const u = $t('page.capacity.dashboard.unit.gb');
+            if (v === 0 || Number.isNaN(v)) return `0.00 ${u}`;
+            return `${v.toFixed(2)} ${u}`;
           },
           position: 'top',
           show: true,
@@ -275,11 +332,11 @@ function renderGbBar(
         const row = list[idx]?.raw;
         if (!row) return '';
         if (row.databaseName !== undefined) {
-          return `${row.databaseName}<br/>类型: ${row.datasourceType || '-'}<br/>主机: ${row.host || '-'}<br/>端口: ${row.port || '-'}<br/>容量: ${row.dataSize || '-'}`;
+          return `${row.databaseName}<br/>${$t('page.capacity.dashboard.tooltip.type')}: ${row.datasourceType || '-'}<br/>${$t('page.capacity.dashboard.tooltip.host')}: ${row.host || '-'}<br/>${$t('page.capacity.dashboard.tooltip.port')}: ${row.port || '-'}<br/>${$t('page.capacity.dashboard.tooltip.capacity')}: ${row.dataSize || '-'}`;
         }
         const bytes = row.dataSizeBytes ?? 0;
         const fmt = formatBytes(bytes);
-        return `${row.tableName || ''}<br/>数据大小: ${fmt}`;
+        return `${row.tableName || ''}<br/>${$t('page.capacity.dashboard.tooltip.dataSize')}: ${fmt}`;
       },
       trigger: 'axis',
     },
@@ -291,14 +348,16 @@ function renderGbBar(
       type: 'category',
     },
     yAxis: {
-      name: '容量 (GB)',
-      nameGap: 12,
+      name: $t('page.capacity.dashboard.axis.capacityGb'),
+      nameGap: 20,
       nameTextStyle: { fontSize: 12, fontWeight: 500 },
       axisLabel: {
+        margin: 12,
         fontSize: 11,
         formatter: (v: string) => {
           const n = Number.parseFloat(v);
-          return Number.isNaN(n) ? '0.00 GB' : `${n.toFixed(2)} GB`;
+          const u = $t('page.capacity.dashboard.unit.gb');
+          return Number.isNaN(n) ? `0.00 ${u}` : `${n.toFixed(2)} ${u}`;
         },
       },
       axisLine: { show: false },
@@ -313,6 +372,8 @@ function renderGbBar(
 
 type EchartsRender = (o: Record<string, unknown>) => Promise<unknown> | unknown;
 
+type SizeUnit = 'B' | 'KB' | 'MB' | 'GB' | 'TB';
+
 function formatBytes(b: number): string {
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(2)} KB`;
@@ -321,12 +382,47 @@ function formatBytes(b: number): string {
   return `${(b / (1024 * 1024 * 1024 * 1024)).toFixed(2)} TB`;
 }
 
+function pickSizeUnit(maxBytes: number): SizeUnit {
+  if (maxBytes >= 1024 * 1024 * 1024 * 1024) return 'TB';
+  if (maxBytes >= 1024 * 1024 * 1024) return 'GB';
+  if (maxBytes >= 1024 * 1024) return 'MB';
+  if (maxBytes >= 1024) return 'KB';
+  return 'B';
+}
+
+function bytesToUnit(bytes: number, unit: SizeUnit): number {
+  if (!bytes) return 0;
+  const base = 1024;
+  switch (unit) {
+    case 'KB':
+      return bytes / base;
+    case 'MB':
+      return bytes / (base * base);
+    case 'GB':
+      return bytes / (base * base * base);
+    case 'TB':
+      return bytes / (base * base * base * base);
+    case 'B':
+    default:
+      return bytes;
+  }
+}
+
+function formatAxisValueByUnit(value: number, unit: SizeUnit): string {
+  if (!value || Number.isNaN(value)) return `0 ${unit}`;
+  if (value >= 100) return `${value.toFixed(0)} ${unit}`;
+  if (value >= 10) return `${value.toFixed(1)} ${unit}`;
+  return `${value.toFixed(2)} ${unit}`;
+}
+
 function renderFragBarChart(render: EchartsRender, list: { name: string; value: number; raw: any }[]) {
   if (!list.length) {
     return emptyChart(render);
   }
+  const maxBytes = Math.max(...list.map((d) => d.value || 0), 0);
+  const sizeUnit = pickSizeUnit(maxBytes);
   const names = list.map((d) => d.name);
-  const values = list.map((d) => d.value);
+  const values = list.map((d) => bytesToUnit(d.value || 0, sizeUnit));
   const pal = BAR_PALETTE.fragmentation;
   return render({
     grid: { ...CHART_GRID },
@@ -350,8 +446,7 @@ function renderFragBarChart(render: EchartsRender, list: { name: string; value: 
           fontWeight: 500,
           formatter: (p: { value?: number }) => {
             const v = p.value ?? 0;
-            if (v === 0 || Number.isNaN(v)) return '0.00%';
-            return `${v.toFixed(2)}%`;
+            return formatAxisValueByUnit(v, sizeUnit);
           },
           position: 'top',
           show: true,
@@ -366,7 +461,7 @@ function renderFragBarChart(render: EchartsRender, list: { name: string; value: 
         const idx = p?.dataIndex ?? 0;
         const row = list[idx]?.raw;
         if (!row) return '';
-        return `${row.tableName || ''}<br/>库: ${row.databaseName || '-'}<br/>类型: ${row.datasourceType || '-'}<br/>主机: ${row.host || '-'} 端口: ${row.port || '-'}<br/>碎片率: ${row.fragmentationRate || '-'}`;
+        return `${row.tableName || ''}<br/>${$t('page.capacity.dashboard.tooltip.database')}: ${row.databaseName || '-'}<br/>${$t('page.capacity.dashboard.tooltip.type')}: ${row.datasourceType || '-'}<br/>${$t('page.capacity.dashboard.tooltip.host')}: ${row.host || '-'} ${$t('page.capacity.dashboard.tooltip.port')}: ${row.port || '-'}<br/>${$t('page.capacity.dashboard.tooltip.fragmentSize')}: ${row.freeSize || '-'}`;
       },
       trigger: 'axis',
     },
@@ -378,14 +473,15 @@ function renderFragBarChart(render: EchartsRender, list: { name: string; value: 
       type: 'category',
     },
     yAxis: {
-      name: '碎片率 (%)',
-      nameGap: 12,
+      name: `${$t('page.capacity.dashboard.axis.fragmentSize')} (${sizeUnit})`,
+      nameGap: 20,
       nameTextStyle: { fontSize: 12, fontWeight: 500 },
       axisLabel: {
+        margin: 12,
         fontSize: 11,
         formatter: (v: string) => {
           const n = Number.parseFloat(v);
-          return Number.isNaN(n) ? '0.00%' : `${n.toFixed(2)}%`;
+          return formatAxisValueByUnit(Number.isNaN(n) ? 0 : n, sizeUnit);
         },
       },
       axisLine: { show: false },
@@ -449,7 +545,7 @@ function renderRowsBarChart(render: EchartsRender, list: { name: string; value: 
         const idx = p?.dataIndex ?? 0;
         const row = list[idx]?.raw;
         if (!row) return '';
-        return `${row.tableName || ''}<br/>库: ${row.databaseName || '-'}<br/>类型: ${row.datasourceType || '-'}<br/>主机: ${row.host || '-'} 端口: ${row.port || '-'}<br/>记录数: ${row.rowCount || '-'}`;
+        return `${row.tableName || ''}<br/>${$t('page.capacity.dashboard.tooltip.database')}: ${row.databaseName || '-'}<br/>${$t('page.capacity.dashboard.tooltip.type')}: ${row.datasourceType || '-'}<br/>${$t('page.capacity.dashboard.tooltip.host')}: ${row.host || '-'} ${$t('page.capacity.dashboard.tooltip.port')}: ${row.port || '-'}<br/>${$t('page.capacity.dashboard.tooltip.rowCount')}: ${row.rowCount || '-'}`;
       },
       trigger: 'axis',
     },
@@ -461,10 +557,11 @@ function renderRowsBarChart(render: EchartsRender, list: { name: string; value: 
       type: 'category',
     },
     yAxis: {
-      name: '记录数',
-      nameGap: 12,
+      name: $t('page.capacity.dashboard.axis.rowCount'),
+      nameGap: 20,
       nameTextStyle: { fontSize: 12, fontWeight: 500 },
       axisLabel: {
+        margin: 12,
         fontSize: 11,
         formatter: (v: string) => formatRowAxis(Number.parseFloat(v) || 0),
       },
@@ -548,12 +645,12 @@ onMounted(fetchDashboard);
 <template>
   <div class="capacity-dashboard p-5">
     <div class="capacity-dashboard__stats mb-6">
-      <Title :level="5" class="!mb-4 text-foreground/90">核心指标</Title>
+      <Title :level="5" class="!mb-4 text-foreground/90">{{ $t('page.capacity.dashboard.sectionTitle') }}</Title>
       <Spin :spinning="loading">
         <Row :gutter="[16, 16]">
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="数据库数量" :value="stats.totalDatabases">
+              <Statistic :title="$t('page.capacity.dashboard.stat.databaseCount')" :value="stats.totalDatabases">
                 <template #prefix>
                   <IconDatabase class="text-[#1890ff]" />
                 </template>
@@ -562,7 +659,7 @@ onMounted(fetchDashboard);
           </Col>
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="数据表数量" :value="stats.totalTables">
+              <Statistic :title="$t('page.capacity.dashboard.stat.tableCount')" :value="stats.totalTables">
                 <template #prefix>
                   <IconTable class="text-[#52c41a]" />
                 </template>
@@ -571,7 +668,7 @@ onMounted(fetchDashboard);
           </Col>
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="总数据容量" :value="stats.totalDataSize">
+              <Statistic :title="$t('page.capacity.dashboard.stat.totalDataSize')" :value="stats.totalDataSize">
                 <template #prefix>
                   <IconHdd class="text-[#faad14]" />
                 </template>
@@ -580,7 +677,7 @@ onMounted(fetchDashboard);
           </Col>
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="总数据记录" :value="stats.totalRows">
+              <Statistic :title="$t('page.capacity.dashboard.stat.totalRows')" :value="stats.totalRows">
                 <template #prefix>
                   <IconTable class="text-[#722ed1]" />
                 </template>
@@ -589,7 +686,7 @@ onMounted(fetchDashboard);
           </Col>
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="天增长数据量" :value="stats.dailyGrowth">
+              <Statistic :title="$t('page.capacity.dashboard.stat.dailyGrowthSize')" :value="stats.dailyGrowth">
                 <template #prefix>
                   <IconTrending class="text-[#f5222d]" />
                 </template>
@@ -598,7 +695,7 @@ onMounted(fetchDashboard);
           </Col>
           <Col :xs="24" :sm="12" :md="4">
             <Card size="small">
-              <Statistic title="天增长记录数" :value="stats.dailyGrowthRows">
+              <Statistic :title="$t('page.capacity.dashboard.stat.dailyGrowthRows')" :value="stats.dailyGrowthRows">
                 <template #prefix>
                   <IconTrending class="text-[#52c41a]" />
                 </template>
@@ -610,16 +707,16 @@ onMounted(fetchDashboard);
     </div>
 
     <div class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
-      <AnalysisChartCard title="数据库容量 TOP 排行">
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.databaseTop')">
         <EchartsUI ref="dbBarRef" class="h-[320px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="数据表容量 TOP 排行">
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.tableTop')">
         <EchartsUI ref="tableBarRef" class="h-[320px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="表碎片率 TOP 排行">
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.fragmentationTop')">
         <EchartsUI ref="fragBarRef" class="h-[320px]" />
       </AnalysisChartCard>
-      <AnalysisChartCard title="表记录数 TOP 排行">
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.rowsTop')">
         <EchartsUI ref="rowsBarRef" class="h-[320px]" />
       </AnalysisChartCard>
     </div>

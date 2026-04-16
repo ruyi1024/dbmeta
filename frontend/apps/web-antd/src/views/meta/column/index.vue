@@ -19,6 +19,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'MetaColumnPage' });
 
@@ -70,38 +71,38 @@ const queryForm = reactive({
 });
 
 const yesNoFilterOptions = [
-  { label: '全部', value: '' },
-  { label: '有', value: '1' },
-  { label: '无', value: '0' },
+  { label: $t('page.metaColumn.option.all'), value: '' },
+  { label: $t('page.metaColumn.option.has'), value: '1' },
+  { label: $t('page.metaColumn.option.none'), value: '0' },
 ];
 
 const aiFixedFilterOptions = [
-  { label: '全部', value: '' },
-  { label: '待审核', value: '0' },
-  { label: '不应用', value: '1' },
-  { label: '待应用', value: '2' },
-  { label: '已应用', value: '3' },
+  { label: $t('page.metaColumn.option.all'), value: '' },
+  { label: $t('page.metaColumn.aiFixed.pendingReview'), value: '0' },
+  { label: $t('page.metaColumn.aiFixed.notApply'), value: '1' },
+  { label: $t('page.metaColumn.aiFixed.pendingApply'), value: '2' },
+  { label: $t('page.metaColumn.aiFixed.applied'), value: '3' },
 ];
 
 const VISIBILITY_STORAGE_KEY = 'meta_column_visible_columns';
 const TIME_COLUMN_KEYS = new Set(['gmt_created', 'gmt_updated']);
 
 const allColumns: TableColumnsType<ColumnItem> = [
-  { title: '字段名', dataIndex: 'column_name', key: 'column_name', sorter: true },
-  { title: '数据类型', dataIndex: 'data_type', key: 'data_type' },
-  { title: '允许为空', dataIndex: 'is_nullable', key: 'is_nullable' },
-  { title: '默认值', dataIndex: 'default_value', key: 'default_value' },
-  { title: '字段备注', dataIndex: 'column_comment', key: 'column_comment' },
-  { title: '注释准确度', dataIndex: 'column_comment_accuracy', key: 'column_comment_accuracy' },
-  { title: 'AI注释生成', dataIndex: 'ai_comment', key: 'ai_comment' },
-  { title: 'AI注释应用', dataIndex: 'ai_fixed', key: 'ai_fixed' },
-  { title: '所属表', dataIndex: 'table_name', key: 'table_name', sorter: true },
-  { title: '所属库', dataIndex: 'database_name', key: 'database_name', sorter: true },
-  { title: '数据库类型', dataIndex: 'datasource_type', key: 'datasource_type', sorter: true },
-  { title: '所属主机', dataIndex: 'host', key: 'host' },
-  { title: '所属端口', dataIndex: 'port', key: 'port' },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
+  { title: $t('page.metaColumn.columns.columnName'), dataIndex: 'column_name', key: 'column_name', sorter: true },
+  { title: $t('page.metaColumn.columns.dataType'), dataIndex: 'data_type', key: 'data_type' },
+  { title: $t('page.metaColumn.columns.nullable'), dataIndex: 'is_nullable', key: 'is_nullable' },
+  { title: $t('page.metaColumn.columns.defaultValue'), dataIndex: 'default_value', key: 'default_value' },
+  { title: $t('page.metaColumn.columns.columnComment'), dataIndex: 'column_comment', key: 'column_comment' },
+  { title: $t('page.metaColumn.columns.commentAccuracy'), dataIndex: 'column_comment_accuracy', key: 'column_comment_accuracy' },
+  { title: $t('page.metaColumn.columns.aiComment'), dataIndex: 'ai_comment', key: 'ai_comment' },
+  { title: $t('page.metaColumn.columns.aiApplyStatus'), dataIndex: 'ai_fixed', key: 'ai_fixed' },
+  { title: $t('page.metaColumn.columns.tableName'), dataIndex: 'table_name', key: 'table_name', sorter: true },
+  { title: $t('page.metaColumn.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', sorter: true },
+  { title: $t('page.metaColumn.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', sorter: true },
+  { title: $t('page.metaColumn.columns.host'), dataIndex: 'host', key: 'host' },
+  { title: $t('page.metaColumn.columns.port'), dataIndex: 'port', key: 'port' },
+  { title: $t('page.metaColumn.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', sorter: true },
+  { title: $t('page.metaColumn.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', sorter: true },
 ];
 
 const columnPickerOptions = computed(() =>
@@ -147,7 +148,7 @@ watch(
   (v) => {
     if (v.length === 0) {
       visibleColumnKeys.value = defaultVisibleColumnKeys();
-      message.warning('至少保留一列');
+      message.warning($t('page.metaColumn.message.keepOneColumn'));
       return;
     }
     try {
@@ -177,7 +178,7 @@ async function fetchColumns(sorter?: Record<string, string>) {
     dataSource.value = list;
     pagination.total = Number(payload?.total ?? list.length) || list.length;
   } catch (error: any) {
-    message.error(error?.message || '数据字段查询失败');
+    message.error(error?.message || $t('page.metaColumn.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -185,7 +186,7 @@ async function fetchColumns(sorter?: Record<string, string>) {
 
 async function handleBatchUpdate(aiFixed: number) {
   if (selectedRowKeys.value.length === 0) {
-    message.warning('请先选择要操作的字段');
+    message.warning($t('page.metaColumn.message.selectRowsFirst'));
     return;
   }
   try {
@@ -195,14 +196,14 @@ async function handleBatchUpdate(aiFixed: number) {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(payload?.msg || '批量操作失败');
+      message.error(payload?.msg || $t('page.metaColumn.message.batchFailed'));
       return;
     }
-    message.success(payload?.msg || '批量操作成功');
+    message.success(payload?.msg || $t('page.metaColumn.message.batchSuccess'));
     selectedRowKeys.value = [];
     fetchColumns();
   } catch (error: any) {
-    message.error(error?.message || '批量操作失败');
+    message.error(error?.message || $t('page.metaColumn.message.batchFailed'));
   }
 }
 
@@ -245,10 +246,10 @@ function formatDate(value?: string) {
 }
 
 function aiFixedStatus(value?: number) {
-  if (value === 1) return { status: 'error' as const, text: '不应用' };
-  if (value === 2) return { status: 'warning' as const, text: '待应用' };
-  if (value === 3) return { status: 'success' as const, text: '已应用' };
-  return { status: 'default' as const, text: '待审核' };
+  if (value === 1) return { status: 'error' as const, text: $t('page.metaColumn.aiFixed.notApply') };
+  if (value === 2) return { status: 'warning' as const, text: $t('page.metaColumn.aiFixed.pendingApply') };
+  if (value === 3) return { status: 'success' as const, text: $t('page.metaColumn.aiFixed.applied') };
+  return { status: 'default' as const, text: $t('page.metaColumn.aiFixed.pendingReview') };
 }
 
 function normalizeAccuracyValue(value?: number | string) {
@@ -266,15 +267,15 @@ function getAccuracyMeta(value?: number | string) {
     return { color: '#d9d9d9', label: '-', percent: 0, scoreText: '-' };
   }
   if (score > 0.95) {
-    return { color: '#52c41a', label: '优', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+    return { color: '#52c41a', label: $t('page.metaColumn.accuracy.excellent'), percent: Math.round(score * 100), scoreText: score.toFixed(1) };
   }
   if (score >= 0.8) {
-    return { color: '#1677ff', label: '良', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+    return { color: '#1677ff', label: $t('page.metaColumn.accuracy.good'), percent: Math.round(score * 100), scoreText: score.toFixed(1) };
   }
   if (score >= 0.6) {
-    return { color: '#faad14', label: '中', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+    return { color: '#faad14', label: $t('page.metaColumn.accuracy.medium'), percent: Math.round(score * 100), scoreText: score.toFixed(1) };
   }
-  return { color: '#ff4d4f', label: '差', percent: Math.round(score * 100), scoreText: score.toFixed(1) };
+  return { color: '#ff4d4f', label: $t('page.metaColumn.accuracy.poor'), percent: Math.round(score * 100), scoreText: score.toFixed(1) };
 }
 
 function startEditAiComment(record: ColumnItem) {
@@ -305,14 +306,14 @@ async function commitAiCommentEdit(record: ColumnItem) {
     });
     const payload = (response as any)?.data ?? response;
     if (payload?.success === false) {
-      message.error(payload?.msg || '保存失败');
+      message.error(payload?.msg || $t('page.metaColumn.message.saveFailed'));
       return;
     }
     record.ai_comment = next;
-    message.success(payload?.msg || '已保存');
+    message.success(payload?.msg || $t('page.metaColumn.message.saved'));
     cancelEditAiComment();
   } catch (error: any) {
-    message.error(error?.message || '保存失败');
+    message.error(error?.message || $t('page.metaColumn.message.saveFailed'));
   }
 }
 
@@ -321,89 +322,89 @@ onMounted(fetchColumns);
 
 <template>
   <div class="p-5">
-    <Card title="数据字段列表">
+    <Card :title="$t('page.metaColumn.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="字段名" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.columnName')" class="query-item">
             <Input
               v-model:value="queryForm.column_name"
-              placeholder="请输入字段名"
+              :placeholder="$t('page.metaColumn.placeholder.columnName')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属表" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.tableName')" class="query-item">
             <Input
               v-model:value="queryForm.table_name"
-              placeholder="请输入所属表"
+              :placeholder="$t('page.metaColumn.placeholder.tableName')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属库" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.databaseName')" class="query-item">
             <Input
               v-model:value="queryForm.database_name"
-              placeholder="请输入所属库"
+              :placeholder="$t('page.metaColumn.placeholder.databaseName')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="数据库类型" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.datasourceType')" class="query-item">
             <Input
               v-model:value="queryForm.datasource_type"
-              placeholder="请输入数据库类型"
+              :placeholder="$t('page.metaColumn.placeholder.datasourceType')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属主机" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.host')" class="query-item">
             <Input
               v-model:value="queryForm.host"
-              placeholder="请输入所属主机"
+              :placeholder="$t('page.metaColumn.placeholder.host')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="所属端口" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.columns.port')" class="query-item">
             <Input
               v-model:value="queryForm.port"
-              placeholder="请输入所属端口"
+              :placeholder="$t('page.metaColumn.placeholder.port')"
               allow-clear
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="有字段注释" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.form.hasColumnComment')" class="query-item">
             <Select
               v-model:value="queryForm.has_column_comment"
               :options="yesNoFilterOptions"
               allow-clear
-              placeholder="全部"
+              :placeholder="$t('page.metaColumn.option.all')"
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="有AI注释" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.form.hasAiComment')" class="query-item">
             <Select
               v-model:value="queryForm.has_ai_comment"
               :options="yesNoFilterOptions"
               allow-clear
-              placeholder="全部"
+              :placeholder="$t('page.metaColumn.option.all')"
               class="query-control"
             />
           </Form.Item>
-          <Form.Item label="AI注释状态" class="query-item">
+          <Form.Item :label="$t('page.metaColumn.form.aiStatus')" class="query-item">
             <Select
               v-model:value="queryForm.ai_fixed"
               :options="aiFixedFilterOptions"
               allow-clear
-              placeholder="全部"
+              :placeholder="$t('page.metaColumn.option.all')"
               class="query-control"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>
@@ -413,16 +414,16 @@ onMounted(fetchColumns);
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <Space>
           <Button type="primary" :disabled="selectedRowKeys.length === 0" @click="handleBatchUpdate(2)">
-            应用AI注释 ({{ selectedRowKeys.length }})
+            {{ $t('page.metaColumn.action.applyAiComment') }} ({{ selectedRowKeys.length }})
           </Button>
           <Button danger :disabled="selectedRowKeys.length === 0" @click="handleBatchUpdate(1)">
-            不应用AI注释 ({{ selectedRowKeys.length }})
+            {{ $t('page.metaColumn.action.notApplyAiComment') }} ({{ selectedRowKeys.length }})
           </Button>
         </Space>
         <Popover trigger="click" placement="bottomRight">
           <template #content>
             <div class="column-picker">
-              <div class="mb-2 text-xs text-gray-500">勾选要显示的列（创建/修改时间默认隐藏）</div>
+              <div class="mb-2 text-xs text-gray-500">{{ $t('page.metaColumn.columnPickerHint') }}</div>
               <Checkbox.Group v-model:value="visibleColumnKeys" class="column-picker-group">
                 <div v-for="opt in columnPickerOptions" :key="opt.value" class="column-picker-item">
                   <Checkbox :value="opt.value">{{ opt.label }}</Checkbox>
@@ -430,7 +431,7 @@ onMounted(fetchColumns);
               </Checkbox.Group>
             </div>
           </template>
-          <Button>列设置</Button>
+          <Button>{{ $t('page.metaColumn.action.columnSettings') }}</Button>
         </Popover>
       </div>
 
@@ -458,7 +459,7 @@ onMounted(fetchColumns);
               size="small"
               :maxlength="100"
               show-count
-              placeholder="请输入 AI 注释"
+              :placeholder="$t('page.metaColumn.placeholder.aiComment')"
               class="w-full min-w-[200px]"
               @blur="commitAiCommentEdit(record as ColumnItem)"
               @keydown.esc.prevent="cancelEditAiComment"
@@ -466,11 +467,11 @@ onMounted(fetchColumns);
             <span
               v-else
               class="ai-comment-cell"
-              title="双击修改"
+              :title="$t('page.metaColumn.action.doubleClickEdit')"
               @dblclick="startEditAiComment(record as ColumnItem)"
             >
               <span v-if="record.ai_comment">{{ record.ai_comment }}</span>
-              <span v-else style="color: #999">暂无AI注释</span>
+              <span v-else style="color: #999">{{ $t('page.metaColumn.emptyAiComment') }}</span>
             </span>
           </template>
           <template v-else-if="column.key === 'ai_fixed'">

@@ -20,6 +20,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface RuleListItem {
   createdAt: string;
@@ -64,27 +65,44 @@ const formModel = reactive<Partial<RuleListItem>>({
 });
 
 const columns: TableColumnsType<RuleListItem> = [
-  { title: '规则名称', dataIndex: 'ruleName', key: 'ruleName', width: 200 },
-  { title: '规则类型', dataIndex: 'ruleType', key: 'ruleType', width: 120 },
-  { title: '规则描述', dataIndex: 'ruleDesc', key: 'ruleDesc' },
+  { title: $t('page.qualityRules.columns.ruleName'), dataIndex: 'ruleName', key: 'ruleName', width: 200 },
+  { title: $t('page.qualityRules.columns.ruleType'), dataIndex: 'ruleType', key: 'ruleType', width: 120 },
+  { title: $t('page.qualityRules.columns.ruleDesc'), dataIndex: 'ruleDesc', key: 'ruleDesc' },
   {
-    title: '阈值',
+    title: $t('page.qualityRules.columns.threshold'),
     dataIndex: 'threshold',
     key: 'threshold',
     width: 100,
     customRender: ({ record }) => `${record.threshold}%`,
   },
-  { title: '严重程度', dataIndex: 'severity', key: 'severity', width: 100 },
-  { title: '是否启用', dataIndex: 'enabled', key: 'enabled', width: 110 },
-  { title: '创建人', dataIndex: 'createdBy', key: 'createdBy', width: 100 },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'option', width: 160, fixed: 'right' },
+  { title: $t('page.qualityRules.columns.severity'), dataIndex: 'severity', key: 'severity', width: 100 },
+  { title: $t('page.qualityRules.columns.enabled'), dataIndex: 'enabled', key: 'enabled', width: 110 },
+  { title: $t('page.qualityRules.columns.createdBy'), dataIndex: 'createdBy', key: 'createdBy', width: 100 },
+  { title: $t('page.qualityRules.columns.createdAt'), dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: $t('page.qualityRules.columns.operation'), key: 'option', width: 160, fixed: 'right' },
 ];
 
 function severityTag(severity: string) {
-  if (severity === 'high') return { color: 'red', text: '高' };
-  if (severity === 'medium') return { color: 'orange', text: '中' };
-  return { color: 'blue', text: '低' };
+  if (severity === 'high') return { color: 'red', text: $t('page.qualityIssues.level.high') };
+  if (severity === 'medium') return { color: 'orange', text: $t('page.qualityIssues.level.medium') };
+  return { color: 'blue', text: $t('page.qualityIssues.level.low') };
+}
+
+function ruleTypeLabel(ruleType: string) {
+  switch (ruleType) {
+    case '完整性':
+      return $t('page.qualityIssues.issueType.completeness');
+    case '准确性':
+      return $t('page.qualityIssues.issueType.accuracy');
+    case '唯一性':
+      return $t('page.qualityIssues.issueType.uniqueness');
+    case '一致性':
+      return $t('page.qualityIssues.issueType.consistency');
+    case '及时性':
+      return $t('page.qualityIssues.issueType.timeliness');
+    default:
+      return ruleType;
+  }
 }
 
 function formatDate(value?: string) {
@@ -108,7 +126,7 @@ async function fetchRules() {
     dataSource.value = Array.isArray(list) ? list : [];
     pagination.total = Number(total) || dataSource.value.length;
   } catch (error: any) {
-    message.error(error?.message || '获取规则失败');
+    message.error(error?.message || $t('page.qualityRules.message.fetchFailed'));
   } finally {
     loading.value = false;
   }
@@ -166,7 +184,7 @@ function openEdit(record: RuleListItem) {
 
 async function submitForm() {
   if (!formModel.ruleName) {
-    message.warning('请输入规则名称');
+    message.warning($t('page.qualityRules.message.ruleNameRequired'));
     return;
   }
   saving.value = true;
@@ -181,14 +199,14 @@ async function submitForm() {
       : await baseRequestClient.post('/v1/dataquality/rules', payload);
     const result = (response as any)?.data ?? response;
     if (result?.code && result.code !== 200) {
-      message.error(result?.msg || '保存失败');
+      message.error(result?.msg || $t('page.qualityRules.message.saveFailed'));
       return;
     }
-    message.success(isEdit.value ? '更新成功' : '创建成功');
+    message.success(isEdit.value ? $t('page.qualityRules.message.updateSuccess') : $t('page.qualityRules.message.createSuccess'));
     modalVisible.value = false;
     fetchRules();
   } catch (error: any) {
-    message.error(error?.message || '保存失败');
+    message.error(error?.message || $t('page.qualityRules.message.saveFailed'));
   } finally {
     saving.value = false;
   }
@@ -199,13 +217,13 @@ async function handleDelete(id: number) {
     const response = await baseRequestClient.delete(`/v1/dataquality/rules/${id}`);
     const result = (response as any)?.data ?? response;
     if (result?.code && result.code !== 200) {
-      message.error(result?.msg || '删除失败');
+      message.error(result?.msg || $t('page.qualityRules.message.deleteFailed'));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.qualityRules.message.deleteSuccess'));
     fetchRules();
   } catch (error: any) {
-    message.error(error?.message || '删除失败');
+    message.error(error?.message || $t('page.qualityRules.message.deleteFailed'));
   }
 }
 
@@ -218,13 +236,13 @@ async function handleToggleEnabled(record: RuleListItem, enabled: boolean) {
     });
     const result = (response as any)?.data ?? response;
     if (result?.code && result.code !== 200) {
-      message.error(result?.msg || '操作失败');
+      message.error(result?.msg || $t('page.qualityRules.message.toggleFailed'));
       return;
     }
-    message.success(enabled ? '已启用' : '已禁用');
+    message.success(enabled ? $t('page.qualityRules.message.enabledOn') : $t('page.qualityRules.message.enabledOff'));
     fetchRules();
   } catch (error: any) {
-    message.error(error?.message || '操作失败');
+    message.error(error?.message || $t('page.qualityRules.message.toggleFailed'));
   }
 }
 
@@ -233,30 +251,30 @@ onMounted(fetchRules);
 
 <template>
   <div class="p-5">
-    <Card title="质量规则配置">
+    <Card :title="$t('page.qualityRules.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="规则类型" class="query-item">
+          <Form.Item :label="$t('page.qualityRules.form.ruleType')" class="query-item">
             <Select v-model:value="queryForm.ruleType" allow-clear class="query-control">
-              <Select.Option value="完整性">完整性</Select.Option>
-              <Select.Option value="准确性">准确性</Select.Option>
-              <Select.Option value="唯一性">唯一性</Select.Option>
-              <Select.Option value="一致性">一致性</Select.Option>
-              <Select.Option value="及时性">及时性</Select.Option>
+              <Select.Option value="完整性">{{ $t('page.qualityIssues.issueType.completeness') }}</Select.Option>
+              <Select.Option value="准确性">{{ $t('page.qualityIssues.issueType.accuracy') }}</Select.Option>
+              <Select.Option value="唯一性">{{ $t('page.qualityIssues.issueType.uniqueness') }}</Select.Option>
+              <Select.Option value="一致性">{{ $t('page.qualityIssues.issueType.consistency') }}</Select.Option>
+              <Select.Option value="及时性">{{ $t('page.qualityIssues.issueType.timeliness') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="是否启用" class="query-item">
+          <Form.Item :label="$t('page.qualityRules.form.enabled')" class="query-item">
             <Select v-model:value="queryForm.enabled" allow-clear class="query-control">
-              <Select.Option :value="1">启用</Select.Option>
-              <Select.Option :value="0">禁用</Select.Option>
+              <Select.Option :value="1">{{ $t('page.qualityRules.enabled.on') }}</Select.Option>
+              <Select.Option :value="0">{{ $t('page.qualityRules.enabled.off') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="openCreate">新建规则</Button>
-            <Button type="primary" ghost @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="openCreate">{{ $t('page.qualityRules.action.newRule') }}</Button>
+            <Button type="primary" ghost @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>
@@ -270,7 +288,10 @@ onMounted(fetchRules);
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'severity'">
+          <template v-if="column.key === 'ruleType'">
+            {{ ruleTypeLabel(record.ruleType) }}
+          </template>
+          <template v-else-if="column.key === 'severity'">
             <Tag :color="severityTag(record.severity).color">{{ severityTag(record.severity).text }}</Tag>
           </template>
           <template v-else-if="column.key === 'enabled'">
@@ -284,9 +305,9 @@ onMounted(fetchRules);
           </template>
           <template v-else-if="column.key === 'option'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">编辑</Button>
-              <Popconfirm title="确定要删除这条规则吗？" @confirm="handleDelete(record.id)">
-                <Button type="link" danger size="small">删除</Button>
+              <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.common.edit') }}</Button>
+              <Popconfirm :title="$t('page.qualityRules.confirmDelete')" @confirm="handleDelete(record.id)">
+                <Button type="link" danger size="small">{{ $t('page.common.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -296,49 +317,49 @@ onMounted(fetchRules);
 
     <Modal
       v-model:open="modalVisible"
-      :title="isEdit ? '编辑规则' : '新建规则'"
+      :title="isEdit ? $t('page.qualityRules.modal.editTitle') : $t('page.qualityRules.modal.createTitle')"
       :confirm-loading="saving"
       width="720px"
       @ok="submitForm"
     >
       <Form layout="vertical">
-        <Form.Item label="规则名称" required>
-          <Input v-model:value="formModel.ruleName" placeholder="请输入规则名称" />
+        <Form.Item :label="$t('page.qualityRules.form.ruleName')" required>
+          <Input v-model:value="formModel.ruleName" :placeholder="$t('page.qualityRules.placeholder.ruleName')" />
         </Form.Item>
-        <Form.Item label="规则类型" required>
+        <Form.Item :label="$t('page.qualityRules.form.ruleType')" required>
           <Select v-model:value="formModel.ruleType">
-            <Select.Option value="完整性">完整性</Select.Option>
-            <Select.Option value="准确性">准确性</Select.Option>
-            <Select.Option value="唯一性">唯一性</Select.Option>
-            <Select.Option value="一致性">一致性</Select.Option>
-            <Select.Option value="及时性">及时性</Select.Option>
+            <Select.Option value="完整性">{{ $t('page.qualityIssues.issueType.completeness') }}</Select.Option>
+            <Select.Option value="准确性">{{ $t('page.qualityIssues.issueType.accuracy') }}</Select.Option>
+            <Select.Option value="唯一性">{{ $t('page.qualityIssues.issueType.uniqueness') }}</Select.Option>
+            <Select.Option value="一致性">{{ $t('page.qualityIssues.issueType.consistency') }}</Select.Option>
+            <Select.Option value="及时性">{{ $t('page.qualityIssues.issueType.timeliness') }}</Select.Option>
           </Select>
         </Form.Item>
-        <Form.Item label="规则描述">
+        <Form.Item :label="$t('page.qualityRules.form.ruleDesc')">
           <Input.TextArea v-model:value="formModel.ruleDesc" :rows="3" />
         </Form.Item>
-        <Form.Item label="规则配置">
+        <Form.Item :label="$t('page.qualityRules.form.ruleConfig')">
           <Input.TextArea
             v-model:value="formModel.ruleConfig"
             :rows="4"
-            placeholder='JSON格式，如: {"field":"email","pattern":"email"}'
+            :placeholder="$t('page.qualityRules.placeholder.ruleConfig')"
           />
         </Form.Item>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Form.Item label="阈值(%)">
+          <Form.Item :label="$t('page.qualityRules.form.threshold')">
             <InputNumber v-model:value="formModel.threshold" :max="100" :min="0" class="w-full" />
           </Form.Item>
-          <Form.Item label="严重程度">
+          <Form.Item :label="$t('page.qualityRules.form.severity')">
             <Select v-model:value="formModel.severity">
-              <Select.Option value="high">高</Select.Option>
-              <Select.Option value="medium">中</Select.Option>
-              <Select.Option value="low">低</Select.Option>
+              <Select.Option value="high">{{ $t('page.qualityIssues.level.high') }}</Select.Option>
+              <Select.Option value="medium">{{ $t('page.qualityIssues.level.medium') }}</Select.Option>
+              <Select.Option value="low">{{ $t('page.qualityIssues.level.low') }}</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item label="是否启用">
+          <Form.Item :label="$t('page.qualityRules.form.enabled')">
             <Select v-model:value="formModel.enabled">
-              <Select.Option :value="1">启用</Select.Option>
-              <Select.Option :value="0">禁用</Select.Option>
+              <Select.Option :value="1">{{ $t('page.qualityRules.enabled.on') }}</Select.Option>
+              <Select.Option :value="0">{{ $t('page.qualityRules.enabled.off') }}</Select.Option>
             </Select>
           </Form.Item>
         </div>

@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'Quality',
@@ -8,7 +10,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:shield-check',
       order: 3,
-      title: '数据质量',
+      title: $t('menu.quality.title'),
     },
     children: [
       {
@@ -17,7 +19,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/quality/dashboard/index.vue'),
         meta: {
           icon: 'lucide:layout-dashboard',
-          title: '数据质量概览',
+          title: $t('menu.quality.overview'),
         },
       },
       {
@@ -26,7 +28,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/quality/issues/index.vue'),
         meta: {
           icon: 'lucide:triangle-alert',
-          title: '数据质量问题',
+          title: $t('menu.quality.issues'),
         },
       },
       {
@@ -35,7 +37,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/quality/rules/index.vue'),
         meta: {
           icon: 'lucide:settings-2',
-          title: '数据规则配置',
+          title: $t('menu.quality.rules'),
         },
       },
       {
@@ -44,7 +46,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/quality/tasks/index.vue'),
         meta: {
           icon: 'lucide:list-checks',
-          title: '质量评估任务',
+          title: $t('menu.quality.tasks'),
         },
       },
     ],

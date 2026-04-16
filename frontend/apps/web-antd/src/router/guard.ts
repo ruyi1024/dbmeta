@@ -1,4 +1,5 @@
 import type { Router } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
 import { preferences } from '@vben/preferences';
@@ -6,9 +7,40 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
-import { useAuthStore } from '#/store';
+import { useAuthStore, useEditionStore } from '#/store';
 
 import { generateAccess } from './access';
+
+function cloneRoutesWithCommercialMenuVisibility(
+  routes: RouteRecordRaw[],
+  showCommercialMenus: boolean,
+): RouteRecordRaw[] {
+  return routes.map((route) => {
+    const cloned: RouteRecordRaw = {
+      ...route,
+      meta: route.meta ? { ...route.meta } : undefined,
+    };
+
+    if (route.children?.length) {
+      cloned.children = cloneRoutesWithCommercialMenuVisibility(
+        route.children as RouteRecordRaw[],
+        showCommercialMenus,
+      );
+    }
+
+    if (!showCommercialMenus && cloned.meta?.commercialOnly) {
+      cloned.meta = { ...cloned.meta, hideInMenu: true };
+      if (cloned.children?.length) {
+        cloned.children = cloned.children.map((child) => ({
+          ...child,
+          meta: { ...(child.meta ?? {}), hideInMenu: true },
+        }));
+      }
+    }
+
+    return cloned;
+  });
+}
 
 /**
  * 通用守卫配置
@@ -64,6 +96,7 @@ function setupAccessGuard(router: Router) {
 
     // accessToken 检查
     if (!accessStore.accessToken) {
+      useEditionStore().reset();
       // 明确声明忽略权限访问权限，则可以访问
       if (to.meta.ignoreAccess) {
         return true;
@@ -85,6 +118,21 @@ function setupAccessGuard(router: Router) {
       return to;
     }
 
+    const editionStore = useEditionStore();
+    await editionStore.ensureLoaded();
+
+    // 数据洞察、审计中心、数据安全等商业功能：菜单始终展示；未加载企业模块时进入路由则跳转升级提示页
+    if (
+      (to.path.startsWith('/Insight') ||
+        to.path === '/audit' ||
+        to.path.startsWith('/audit/') ||
+        to.path === '/security' ||
+        to.path.startsWith('/security/')) &&
+      !editionStore.isCommercial
+    ) {
+      return { name: 'CommercialUpgrade', replace: true };
+    }
+
     // 是否已经生成过动态路由
     if (accessStore.isAccessChecked) {
       return true;
@@ -95,12 +143,18 @@ function setupAccessGuard(router: Router) {
     const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
     const userRoles = userInfo.roles ?? [];
 
+    // 默认隐藏企业版菜单；仅在 /v1/edition 返回 commercial=true 时展示
+    const accessRoutesByEdition = cloneRoutesWithCommercialMenuVisibility(
+      accessRoutes,
+      editionStore.isCommercial,
+    );
+
     // 生成菜单和路由
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
       roles: userRoles,
       router,
       // 则会在菜单中显示，但是访问会被重定向到403
-      routes: accessRoutes,
+      routes: accessRoutesByEdition,
     });
 
     // 保存菜单信息和路由信息

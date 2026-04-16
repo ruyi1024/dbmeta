@@ -1,0 +1,77 @@
+{
+  "dictionary": {
+    "title": "Data Dictionary",
+    "overview": "Metadata Overview",
+    "quality": "Metadata Quality",
+    "instance": "Instances",
+    "database": "Databases",
+    "businessInfo": "Business Info",
+    "databaseBusiness": "Database Business",
+    "table": "Tables",
+    "column": "Columns"
+  },
+  "query": {
+    "title": "Data Query"
+  },
+  "capacity": {
+    "title": "Capacity",
+    "overview": "Capacity Overview",
+    "database": "Database Capacity",
+    "table": "Table Capacity"
+  },
+  "quality": {
+    "title": "Data Quality",
+    "overview": "Quality Overview",
+    "issues": "Quality Issues",
+    "rules": "Rule Configuration",
+    "tasks": "Assessment Tasks"
+  },
+  "patrol": {
+    "title": "Data Patrol",
+    "report": "Patrol Reports",
+    "config": "Patrol Configuration"
+  },
+  "grading": {
+    "title": "Data Grading",
+    "gradeDict": "Grading Dictionary",
+    "asset": "Asset Grading",
+    "log": "Change Log"
+  },
+  "categorization": {
+    "title": "Data Categorization"
+  },
+  "insight": {
+    "title": "Data Insight",
+    "report": "Insight Reports",
+    "management": "Insight Management"
+  },
+  "audit": {
+    "title": "Audit Center",
+    "queryAudit": "Query Audit"
+  },
+  "security": {
+    "title": "Data Security",
+    "dashboard": "Security Dashboard",
+    "privilege": "Query Privilege",
+    "sensitiveInventory": "Sensitive Data Inventory",
+    "sensitiveRule": "Sensitive Detection Rules"
+  },
+  "task": {
+    "title": "Scheduled Tasks"
+  },
+  "setting": {
+    "title": "Settings",
+    "idc": "IDC",
+    "env": "Environment",
+    "datasource": "Data Sources",
+    "models": "Models",
+    "notice": "Messaging"
+  },
+  "users": {
+    "title": "Users",
+    "manager": "User Management"
+  },
+  "vben": {
+    "github": "Github"
+  }
+}

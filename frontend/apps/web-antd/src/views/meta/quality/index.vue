@@ -7,6 +7,7 @@ import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 import { Card, Col, Progress, Row, Statistic } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface PieItem {
   type: string;
@@ -51,7 +52,7 @@ function toNumber(value: number | string | undefined) {
 }
 
 function normalizePieData(data?: PieItem[]) {
-  if (!data || data.length === 0) return [{ type: '暂无数据', value: 1 }];
+  if (!data || data.length === 0) return [{ type: $t('page.metaQuality.noData'), value: 1 }];
   return data.map((item) => ({
     type: item.type,
     value: toNumber(item.value),
@@ -99,23 +100,23 @@ function renderPie(
 function renderAllCharts() {
   renderPie(
     renderDbQuality,
-    '数据库业务关联情况',
+    $t('page.metaQuality.chart.databaseBusiness'),
     qualityData.value.databaseQualityDataList,
   );
-  renderPie(renderTableQuality, '数据表注释完备情况', qualityData.value.tableQualityDataList);
+  renderPie(renderTableQuality, $t('page.metaQuality.chart.tableCommentCompleteness'), qualityData.value.tableQualityDataList);
   renderPie(
     renderColumnQuality,
-    '数据字段注释完备情况',
+    $t('page.metaQuality.chart.columnCommentCompleteness'),
     qualityData.value.columnQualityDataList,
   );
   renderPie(
     renderTableAcc,
-    '表注释准确度分布',
+    $t('page.metaQuality.chart.tableCommentAccuracy'),
     qualityData.value.tableCommentAccuracyDataList,
   );
   renderPie(
     renderColumnAcc,
-    '字段注释准确度分布',
+    $t('page.metaQuality.chart.columnCommentAccuracy'),
     qualityData.value.columnCommentAccuracyDataList,
   );
 }
@@ -147,24 +148,24 @@ onMounted(fetchQualityData);
     <Row :gutter="[16, 16]">
       <Col :md="8" :xs="24">
         <Card :loading="loading">
-          <Statistic title="数据库总数" :value="toNumber(qualityData.databaseCount)" />
+          <Statistic :title="$t('page.metaQuality.kpi.databaseCount')" :value="toNumber(qualityData.databaseCount)" />
         </Card>
       </Col>
       <Col :md="8" :xs="24">
         <Card :loading="loading">
-          <Statistic title="数据表总数" :value="toNumber(qualityData.tableCount)" />
+          <Statistic :title="$t('page.metaQuality.kpi.tableCount')" :value="toNumber(qualityData.tableCount)" />
         </Card>
       </Col>
       <Col :md="8" :xs="24">
         <Card :loading="loading">
-          <Statistic title="数据字段总数" :value="toNumber(qualityData.columnCount)" />
+          <Statistic :title="$t('page.metaQuality.kpi.columnCount')" :value="toNumber(qualityData.columnCount)" />
         </Card>
       </Col>
     </Row>
 
     <Row :gutter="[16, 16]" class="mt-4">
       <Col :md="8" :xs="24">
-        <Card title="数据库业务关联率" :loading="loading">
+        <Card :title="$t('page.metaQuality.rate.databaseBusiness')" :loading="loading">
           <div class="circle-wrap">
             <Progress
               type="circle"
@@ -175,7 +176,7 @@ onMounted(fetchQualityData);
         </Card>
       </Col>
       <Col :md="8" :xs="24">
-        <Card title="数据表注释完备率" :loading="loading">
+        <Card :title="$t('page.metaQuality.rate.tableCommentCompleteness')" :loading="loading">
           <div class="circle-wrap">
             <Progress
               type="circle"
@@ -186,7 +187,7 @@ onMounted(fetchQualityData);
         </Card>
       </Col>
       <Col :md="8" :xs="24">
-        <Card title="数据字段注释完备率" :loading="loading">
+        <Card :title="$t('page.metaQuality.rate.columnCommentCompleteness')" :loading="loading">
           <div class="circle-wrap">
             <Progress
               type="circle"
@@ -200,7 +201,7 @@ onMounted(fetchQualityData);
 
     <Row :gutter="[16, 16]" class="mt-4">
       <Col :md="12" :xs="24">
-        <Card title="数据表备注准确度" :loading="loading">
+        <Card :title="$t('page.metaQuality.rate.tableCommentAccuracy')" :loading="loading">
           <div class="circle-wrap">
             <Progress
               type="circle"
@@ -211,7 +212,7 @@ onMounted(fetchQualityData);
         </Card>
       </Col>
       <Col :md="12" :xs="24">
-        <Card title="数据字段备注准确度" :loading="loading">
+        <Card :title="$t('page.metaQuality.rate.columnCommentAccuracy')" :loading="loading">
           <div class="circle-wrap">
             <Progress
               type="circle"
@@ -225,12 +226,12 @@ onMounted(fetchQualityData);
 
     <Row :gutter="[16, 16]" class="mt-4">
       <Col :md="12" :xs="24">
-        <Card title="数据库业务关联情况" :loading="loading">
+        <Card :title="$t('page.metaQuality.chart.databaseBusiness')" :loading="loading">
           <EchartsUI ref="dbQualityChartRef" class="h-[330px]" />
         </Card>
       </Col>
       <Col :md="12" :xs="24">
-        <Card title="数据表注释完备情况" :loading="loading">
+        <Card :title="$t('page.metaQuality.chart.tableCommentCompleteness')" :loading="loading">
           <EchartsUI ref="tableQualityChartRef" class="h-[330px]" />
         </Card>
       </Col>
@@ -238,12 +239,12 @@ onMounted(fetchQualityData);
 
     <Row :gutter="[16, 16]" class="mt-4">
       <Col :md="12" :xs="24">
-        <Card title="数据字段注释完备情况" :loading="loading">
+        <Card :title="$t('page.metaQuality.chart.columnCommentCompleteness')" :loading="loading">
           <EchartsUI ref="columnQualityChartRef" class="h-[330px]" />
         </Card>
       </Col>
       <Col :md="12" :xs="24">
-        <Card title="表注释准确度分布" :loading="loading">
+        <Card :title="$t('page.metaQuality.chart.tableCommentAccuracy')" :loading="loading">
           <EchartsUI ref="tableAccChartRef" class="h-[330px]" />
         </Card>
       </Col>
@@ -251,7 +252,7 @@ onMounted(fetchQualityData);
 
     <Row :gutter="[16, 16]" class="mt-4">
       <Col :md="12" :xs="24">
-        <Card title="字段注释准确度分布" :loading="loading">
+        <Card :title="$t('page.metaQuality.chart.columnCommentAccuracy')" :loading="loading">
           <EchartsUI ref="columnAccChartRef" class="h-[330px]" />
         </Card>
       </Col>

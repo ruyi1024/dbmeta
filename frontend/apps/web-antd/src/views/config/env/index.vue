@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import dayjs from 'dayjs';
+
+import { $t } from '#/locales';
+
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
@@ -30,8 +34,8 @@ function extractApiBody(response: unknown): Record<string, unknown> {
 
 function formatTime(v?: string) {
   if (!v) return '-';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('zh-CN', { hour12: false });
+  const d = dayjs(v);
+  return d.isValid() ? d.format('YYYY-MM-DD HH:mm:ss') : v;
 }
 
 const loading = ref(false);
@@ -48,7 +52,7 @@ const pagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '15', '30', '50'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.settingCommon.paginationTotal', { total }),
   total: 0,
 });
 
@@ -94,7 +98,7 @@ async function fetchList() {
   } catch (e: unknown) {
     allRows.value = [];
     pagination.total = 0;
-    message.error((e as Error)?.message || '加载环境列表失败');
+    message.error((e as Error)?.message || $t('page.settingEnv.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -134,11 +138,11 @@ function openEdit(record: EnvRow) {
 
 async function submitModal() {
   if (!formModel.env_key?.trim()) {
-    message.warning('请填写环境标识');
+    message.warning($t('page.settingEnv.message.envKeyRequired'));
     return Promise.reject();
   }
   if (!formModel.env_name?.trim()) {
-    message.warning('请填写环境名称');
+    message.warning($t('page.settingEnv.message.envNameRequired'));
     return Promise.reject();
   }
   saving.value = true;
@@ -152,24 +156,24 @@ async function submitModal() {
       const response = await baseRequestClient.post('/v1/datasource_env/list', payload);
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '新增失败'));
+        message.error(String(body.msg ?? $t('page.settingEnv.message.addFailed')));
         throw new Error('biz');
       }
-      message.success('新增成功');
+      message.success($t('page.settingEnv.message.createSuccess'));
     } else {
       const response = await baseRequestClient.put('/v1/datasource_env/list', { ...payload, id: formModel.id });
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.msg ?? '修改失败'));
+        message.error(String(body.msg ?? $t('page.settingEnv.message.updateFailed')));
         throw new Error('biz');
       }
-      message.success('修改成功');
+      message.success($t('page.settingEnv.message.updateSuccess'));
     }
     modalOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
     if ((e as Error)?.message !== 'biz') {
-      message.error((e as Error)?.message || '保存失败');
+      message.error((e as Error)?.message || $t('page.settingEnv.message.saveFailed'));
     }
     throw e;
   } finally {
@@ -185,24 +189,24 @@ async function handleDelete(record: EnvRow) {
     } as any);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.msg ?? '删除失败'));
+      message.error(String(body.msg ?? $t('page.settingEnv.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.settingEnv.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.settingEnv.message.deleteFailed'));
   }
 }
 
-const columns: TableColumnsType<EnvRow> = [
-  { title: '环境标识', dataIndex: 'env_key', key: 'env_key', width: 180 },
-  { title: '环境名称', dataIndex: 'env_name', key: 'env_name', width: 180 },
-  { title: '环境描述', dataIndex: 'description', key: 'description' },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', width: 180 },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', width: 180 },
-  { title: '操作', key: 'action', width: 140, fixed: 'right' },
-];
+const columns = computed<TableColumnsType<EnvRow>>(() => [
+  { title: $t('page.settingEnv.columns.env_key'), dataIndex: 'env_key', key: 'env_key', width: 180 },
+  { title: $t('page.settingEnv.columns.env_name'), dataIndex: 'env_name', key: 'env_name', width: 180 },
+  { title: $t('page.settingEnv.columns.description'), dataIndex: 'description', key: 'description' },
+  { title: $t('page.settingEnv.columns.gmt_created'), dataIndex: 'gmt_created', key: 'gmt_created', width: 180 },
+  { title: $t('page.settingEnv.columns.gmt_updated'), dataIndex: 'gmt_updated', key: 'gmt_updated', width: 180 },
+  { title: $t('page.settingEnv.columns.action'), key: 'action', width: 140, fixed: 'right' },
+]);
 
 onMounted(() => {
   void fetchList();
@@ -211,21 +215,21 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="环境设置">
+    <Card :title="$t('page.settingEnv.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="环境标识" class="query-item">
-            <Input v-model:value="searchForm.env_key" allow-clear class="query-control" placeholder="请输入环境标识" @press-enter="handleSearch" />
+          <Form.Item :label="$t('page.settingEnv.form.env_key')" class="query-item">
+            <Input v-model:value="searchForm.env_key" allow-clear class="query-control" :placeholder="$t('page.settingEnv.placeholder.env_key')" @press-enter="handleSearch" />
           </Form.Item>
-          <Form.Item label="环境名称" class="query-item">
-            <Input v-model:value="searchForm.env_name" allow-clear class="query-control" placeholder="请输入环境名称" @press-enter="handleSearch" />
+          <Form.Item :label="$t('page.settingEnv.form.env_name')" class="query-item">
+            <Input v-model:value="searchForm.env_name" allow-clear class="query-control" :placeholder="$t('page.settingEnv.placeholder.env_name')" @press-enter="handleSearch" />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" ghost @click="openCreate">新建</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" ghost @click="openCreate">{{ $t('page.common.create') }}</Button>
           </Space>
         </div>
       </Form>
@@ -244,9 +248,9 @@ onMounted(() => {
           <template v-else-if="column.key === 'gmt_updated'">{{ formatTime(record.gmt_updated) }}</template>
           <template v-else-if="column.key === 'action'">
             <Space>
-              <Button type="link" size="small" @click="openEdit(record)">修改</Button>
-              <Popconfirm title="确认删除该环境？删除后不可恢复。" placement="left" @confirm="handleDelete(record)">
-                <Button type="link" size="small" danger>删除</Button>
+              <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.common.edit') }}</Button>
+              <Popconfirm :title="$t('page.settingEnv.confirmDelete')" placement="left" @confirm="handleDelete(record)">
+                <Button type="link" size="small" danger>{{ $t('page.common.delete') }}</Button>
               </Popconfirm>
             </Space>
           </template>
@@ -254,16 +258,16 @@ onMounted(() => {
       </Table>
     </Card>
 
-    <Modal v-model:open="modalOpen" :title="modalMode === 'create' ? '新建环境' : '修改环境'" :confirm-loading="saving" width="640px" destroy-on-close @ok="submitModal">
+    <Modal v-model:open="modalOpen" :title="modalMode === 'create' ? $t('page.settingEnv.modal.createTitle') : $t('page.settingEnv.modal.editTitle')" :confirm-loading="saving" width="640px" destroy-on-close @ok="submitModal">
       <Form layout="vertical" class="mt-2">
-        <Form.Item label="环境标识" required>
-          <Input v-model:value="formModel.env_key" placeholder="如 prod / test" :disabled="modalMode === 'edit'" />
+        <Form.Item :label="$t('page.settingEnv.form.env_key')" required>
+          <Input v-model:value="formModel.env_key" :placeholder="$t('page.settingEnv.placeholder.env_key_example')" :disabled="modalMode === 'edit'" />
         </Form.Item>
-        <Form.Item label="环境名称" required>
-          <Input v-model:value="formModel.env_name" placeholder="请输入环境名称" />
+        <Form.Item :label="$t('page.settingEnv.form.env_name')" required>
+          <Input v-model:value="formModel.env_name" :placeholder="$t('page.settingEnv.placeholder.env_name')" />
         </Form.Item>
-        <Form.Item label="环境描述">
-          <Input.TextArea v-model:value="formModel.description" :rows="4" placeholder="请输入环境描述" />
+        <Form.Item :label="$t('page.settingEnv.form.description')">
+          <Input.TextArea v-model:value="formModel.description" :rows="4" :placeholder="$t('page.settingEnv.placeholder.description')" />
         </Form.Item>
       </Form>
     </Modal>

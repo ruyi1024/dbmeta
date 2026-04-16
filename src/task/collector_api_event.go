@@ -2,13 +2,12 @@ package task
 
 import (
 	"bytes"
-	"dbmcloud/log"
-	"dbmcloud/src/database"
+	"dbmeta-core/log"
+	"dbmeta-core/src/database"
 
-	"dbmcloud/src/libary/tool"
-	"dbmcloud/src/model"
-	"dbmcloud/src/mq"
-	"dbmcloud/src/utils"
+	"dbmeta-core/src/libary/tool"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/utils"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -263,11 +262,6 @@ func startCollectApiEvent(apiConfig model.ApiConfig) error {
 		fmt.Println("Insert API Event To Clickhouse Error: " + result.Error.Error())
 		log.Logger.Error(errorMsg)
 		return fmt.Errorf(errorMsg)
-	}
-
-	// 发送到NSQ
-	for _, event := range events {
-		mq.Send(event)
 	}
 
 	if err != nil {

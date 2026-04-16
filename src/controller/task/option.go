@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,17 +9,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package task
 
 import (
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
-	taskRunner "dbmcloud/src/task"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/module"
+	taskRunner "dbmeta-core/src/task"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -33,6 +31,11 @@ func OptionList(c *gin.Context) {
 	var db = database.DB
 	method := c.Request.Method
 	if method == "GET" {
+		if c.Query("commercial_only") != "" {
+			db = db.Where("commercial_only=?", c.Query("commercial_only"))
+		} else if !module.HasCommercialEdition() {
+			db = db.Where("commercial_only = ?", 0)
+		}
 		if c.Query("enable") != "" {
 			db = db.Where("enable=?", c.Query("enable"))
 		}
@@ -136,6 +139,14 @@ func ExecuteTask(c *gin.Context) {
 		// 继续执行任务
 	}
 
+	if taskOption.CommercialOnly == 1 && !module.HasCommercialEdition() {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"msg":     "该任务仅在企业版可用",
+		})
+		return
+	}
+
 	// 根据 task_key 调用对应的任务函数
 	go func() {
 		// 更新心跳时间
@@ -153,9 +164,6 @@ func ExecuteTask(c *gin.Context) {
 			taskRunner.ExecuteDbMetaTask()
 		case "check_datasource":
 			taskRunner.ExecuteDatasourceCheck()
-		case "gather_sensitive":
-			// 如果有 gather_sensitive 任务，在这里调用
-			// taskRunner.ExecuteSensitiveTask()
 		case "data_quality_ai_analysis":
 			taskRunner.ExecuteDataQualityAiAnalysis()
 		case "ai_grading_batch":
@@ -173,7 +181,7 @@ func ExecuteTask(c *gin.Context) {
 		case "ai_column_comment_accuracy":
 			taskRunner.ExecuteAiColumnCommentAccuracyTask()
 		default:
-			// 其他任务可以在这里添加
+			module.RunCommercialTask(req.TaskKey)
 		}
 
 		// 更新心跳结束时间

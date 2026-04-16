@@ -16,6 +16,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'MetaBusinessInfoPage' });
 
@@ -58,16 +59,16 @@ const formModel = reactive({
 });
 
 const columns: TableColumnsType<BusinessInfoRow> = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 72 },
-  { title: '应用名称', dataIndex: 'app_name', key: 'app_name', sorter: true },
-  { title: '应用描述', dataIndex: 'app_description', key: 'app_description', ellipsis: true },
-  { title: '应用负责人', dataIndex: 'app_owner', key: 'app_owner' },
-  { title: '负责人邮箱', dataIndex: 'app_owner_email', key: 'app_owner_email' },
-  { title: '负责人电话', dataIndex: 'app_owner_phone', key: 'app_owner_phone' },
-  { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true, width: 170 },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
-  { title: '操作', dataIndex: 'option', key: 'option', fixed: 'right', width: 140 },
+  { title: $t('page.metaBusinessInfo.columns.id'), dataIndex: 'id', key: 'id', width: 72 },
+  { title: $t('page.metaBusinessInfo.columns.appName'), dataIndex: 'app_name', key: 'app_name', sorter: true },
+  { title: $t('page.metaBusinessInfo.columns.appDescription'), dataIndex: 'app_description', key: 'app_description', ellipsis: true },
+  { title: $t('page.metaBusinessInfo.columns.appOwner'), dataIndex: 'app_owner', key: 'app_owner' },
+  { title: $t('page.metaBusinessInfo.columns.ownerEmail'), dataIndex: 'app_owner_email', key: 'app_owner_email' },
+  { title: $t('page.metaBusinessInfo.columns.ownerPhone'), dataIndex: 'app_owner_phone', key: 'app_owner_phone' },
+  { title: $t('page.metaBusinessInfo.columns.remark'), dataIndex: 'remark', key: 'remark', ellipsis: true },
+  { title: $t('page.metaBusinessInfo.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', sorter: true, width: 170 },
+  { title: $t('page.metaBusinessInfo.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
+  { title: $t('page.metaBusinessInfo.columns.operation'), dataIndex: 'option', key: 'option', fixed: 'right', width: 140 },
 ];
 
 async function fetchList(sorter?: Record<string, string>) {
@@ -88,7 +89,7 @@ async function fetchList(sorter?: Record<string, string>) {
     dataSource.value = list;
     pagination.total = Number(payload?.total ?? list.length) || list.length;
   } catch (error: any) {
-    message.error(error?.message || '加载失败');
+    message.error(error?.message || $t('page.metaBusinessInfo.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -151,7 +152,7 @@ function openEdit(record: BusinessInfoRow) {
 
 async function handleModalOk() {
   if (!formModel.app_name.trim()) {
-    message.warning('请填写应用名称');
+    message.warning($t('page.metaBusinessInfo.message.appNameRequired'));
     return;
   }
   modalLoading.value = true;
@@ -172,14 +173,18 @@ async function handleModalOk() {
         : await baseRequestClient.put('/v1/meta/business-info/list', payload);
     const resData = (response as any)?.data ?? response;
     if (resData?.success === false) {
-      message.error(resData?.msg || '保存失败');
+      message.error(resData?.msg || $t('page.metaBusinessInfo.message.saveFailed'));
       return;
     }
-    message.success(modalMode.value === 'create' ? '新增成功' : '保存成功');
+    message.success(
+      modalMode.value === 'create'
+        ? $t('page.metaBusinessInfo.message.createSuccess')
+        : $t('page.metaBusinessInfo.message.saveSuccess'),
+    );
     modalOpen.value = false;
     fetchList();
   } catch (error: any) {
-    message.error(error?.message || '保存失败');
+    message.error(error?.message || $t('page.metaBusinessInfo.message.saveFailed'));
   } finally {
     modalLoading.value = false;
   }
@@ -190,13 +195,13 @@ async function handleDelete(record: BusinessInfoRow) {
     const response = await baseRequestClient.delete(`/v1/meta/business-info/${record.id}`);
     const resData = (response as any)?.data ?? response;
     if (resData?.success === false) {
-      message.error(resData?.msg || '删除失败');
+      message.error(resData?.msg || $t('page.metaBusinessInfo.message.deleteFailed'));
       return;
     }
-    message.success('已删除');
+    message.success($t('page.metaBusinessInfo.message.deleted'));
     fetchList();
   } catch (error: any) {
-    message.error(error?.message || '删除失败');
+    message.error(error?.message || $t('page.metaBusinessInfo.message.deleteFailed'));
   }
 }
 
@@ -205,32 +210,32 @@ onMounted(fetchList);
 
 <template>
   <div class="p-5">
-    <Card title="业务信息">
+    <Card :title="$t('page.metaBusinessInfo.title')">
       <p class="mb-4 text-sm text-gray-500">
-        维护数据库相关的业务说明信息（应用名称、描述、负责人等），与技术元数据独立存储。
+        {{ $t('page.metaBusinessInfo.intro') }}
       </p>
       <Form class="query-form">
         <div class="query-bar">
-          <Form.Item label="应用名称" class="query-item query-field">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.appName')" class="query-item query-field">
             <Input
               v-model:value="queryForm.app_name"
-              placeholder="支持模糊查询"
+              :placeholder="$t('page.metaBusinessInfo.placeholder.fuzzyQuery')"
               allow-clear
               class="query-input"
             />
           </Form.Item>
-          <Form.Item label="负责人" class="query-item query-field">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.appOwner')" class="query-item query-field">
             <Input
               v-model:value="queryForm.app_owner"
-              placeholder="支持模糊查询"
+              :placeholder="$t('page.metaBusinessInfo.placeholder.fuzzyQuery')"
               allow-clear
               class="query-input"
             />
           </Form.Item>
           <Space class="query-bar-actions" :size="8">
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" @click="openCreate">新增</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" @click="openCreate">{{ $t('page.common.create') }}</Button>
           </Space>
         </div>
       </Form>
@@ -253,9 +258,9 @@ onMounted(fetchList);
           </template>
           <template v-else-if="column.key === 'option'">
             <Space>
-              <a @click="openEdit(record)">编辑</a>
-              <Popconfirm title="确定删除该条业务信息？" @confirm="handleDelete(record)">
-                <a class="text-red-500">删除</a>
+              <a @click="openEdit(record)">{{ $t('page.common.edit') }}</a>
+              <Popconfirm :title="$t('page.metaBusinessInfo.confirmDelete')" @confirm="handleDelete(record)">
+                <a class="text-red-500">{{ $t('page.common.delete') }}</a>
               </Popconfirm>
             </Space>
           </template>
@@ -264,33 +269,33 @@ onMounted(fetchList);
 
       <Modal
         v-model:open="modalOpen"
-        :title="modalMode === 'create' ? '新增业务信息' : '编辑业务信息'"
+        :title="modalMode === 'create' ? $t('page.metaBusinessInfo.modal.createTitle') : $t('page.metaBusinessInfo.modal.editTitle')"
         :confirm-loading="modalLoading"
         width="560px"
         destroy-on-close
         @ok="handleModalOk"
       >
         <Form layout="vertical">
-          <Form.Item label="应用名称" required>
-            <Input v-model:value="formModel.app_name" placeholder="唯一，如订单服务" />
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.appName')" required>
+            <Input v-model:value="formModel.app_name" :placeholder="$t('page.metaBusinessInfo.modal.appNamePlaceholder')" />
           </Form.Item>
-          <Form.Item label="应用描述">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.appDescription')">
             <Input.TextArea
               v-model:value="formModel.app_description"
               :rows="4"
-              placeholder="业务背景、范围说明等"
+              :placeholder="$t('page.metaBusinessInfo.modal.appDescriptionPlaceholder')"
             />
           </Form.Item>
-          <Form.Item label="应用负责人">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.appOwner')">
             <Input v-model:value="formModel.app_owner" />
           </Form.Item>
-          <Form.Item label="负责人邮箱">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.ownerEmail')">
             <Input v-model:value="formModel.app_owner_email" />
           </Form.Item>
-          <Form.Item label="负责人电话">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.ownerPhone')">
             <Input v-model:value="formModel.app_owner_phone" />
           </Form.Item>
-          <Form.Item label="备注">
+          <Form.Item :label="$t('page.metaBusinessInfo.columns.remark')">
             <Input v-model:value="formModel.remark" />
           </Form.Item>
         </Form>

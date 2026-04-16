@@ -1,0 +1,36 @@
+# Docker Compose 默认配置（与 compose 内服务名一致）
+# 生产环境请修改密码、密钥，并视情况将 license.devSkip 设为 false
+
+log:
+  path: "/tmp/dbmeta.log"
+  level: "info"
+  debug: false
+
+server:
+  addr: ":8086"
+
+# 容器内快速试用可设为 true；生产务必 false 并配置 LICENSE.ENC
+license:
+  devSkip: true
+
+token:
+  storage: "mysql"
+  key: "S9p2+dsfM1CzLF=="
+  name: "dbmeta"
+  expired: "3d"
+
+decrypt:
+  signKey: "1234567890abcdef"
+  dbPassKey: "L1e2p3u4s5Abc321"
+
+dataSource:
+  host: mysql
+  port: "3306"
+  user: dbmeta
+  password: dbmeta
+  database: dbmeta
+  redisHost: redis
+  redisPort: "6379"
+  redisPassword: ""
+
+# 通信类配置（邮件/短信/微信等）存于数据库 settings 表（category=notice），不在此 YAML 中配置。

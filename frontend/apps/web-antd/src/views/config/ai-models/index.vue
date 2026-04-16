@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import { $t } from '#/locales';
+
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
@@ -67,15 +69,25 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   );
 }
 
-const providerOptions = [
-  { label: 'Ollama', value: 'ollama' },
-  { label: 'LM Studio', value: 'lm_studio' },
-  { label: 'vLLM', value: 'vllm' },
-  { label: 'Dify本地', value: 'dify_local' },
-  { label: 'OpenAI', value: 'openai' },
-  { label: 'DeepSeek', value: 'deepseek' },
-  { label: 'Qwen', value: 'qwen' },
-];
+const providerOptions = computed(() => [
+  { label: $t('page.settingAiModels.provider.ollama'), value: 'ollama' },
+  { label: $t('page.settingAiModels.provider.lm_studio'), value: 'lm_studio' },
+  { label: $t('page.settingAiModels.provider.vllm'), value: 'vllm' },
+  { label: $t('page.settingAiModels.provider.dify_local'), value: 'dify_local' },
+  { label: $t('page.settingAiModels.provider.openai'), value: 'openai' },
+  { label: $t('page.settingAiModels.provider.deepseek'), value: 'deepseek' },
+  { label: $t('page.settingAiModels.provider.qwen'), value: 'qwen' },
+]);
+
+const enabledModalOptions = computed(() => [
+  { value: 0, label: $t('page.settingAiModels.enabledOption.off') },
+  { value: 1, label: $t('page.settingAiModels.enabledOption.on') },
+]);
+
+const streamBoolOptions = computed(() => [
+  { value: 0, label: $t('page.settingCommon.boolNo') },
+  { value: 1, label: $t('page.settingCommon.boolYes') },
+]);
 
 const activeTab = ref<'settings' | 'defaults'>('settings');
 
@@ -104,7 +116,7 @@ const pagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '15', '30', '50'],
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.settingCommon.paginationTotal', { total }),
   total: 0,
 });
 
@@ -170,10 +182,10 @@ function buildPayload() {
 }
 
 function validateForm() {
-  if (!formModel.name?.trim()) return '请填写模型名称';
-  if (!formModel.provider?.trim()) return '请选择提供商';
-  if (!formModel.api_url?.trim()) return '请填写API地址';
-  if (!formModel.model_name?.trim()) return '请填写模型标识';
+  if (!formModel.name?.trim()) return $t('page.settingAiModels.validation.nameRequired');
+  if (!formModel.provider?.trim()) return $t('page.settingAiModels.validation.providerRequired');
+  if (!formModel.api_url?.trim()) return $t('page.settingAiModels.validation.apiUrlRequired');
+  if (!formModel.model_name?.trim()) return $t('page.settingAiModels.validation.modelIdRequired');
   return '';
 }
 
@@ -196,7 +208,7 @@ async function fetchList() {
   } catch (e: unknown) {
     allRows.value = [];
     pagination.total = 0;
-    message.error((e as Error)?.message || '加载模型列表失败');
+    message.error((e as Error)?.message || $t('page.settingAiModels.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -250,12 +262,12 @@ async function handleTestConnectionById(id?: number) {
     const response = await baseRequestClient.post(`/v1/ai/models/${id}/test`);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.error ?? body.message ?? '连接测试失败'));
+      message.error(String(body.error ?? body.message ?? $t('page.settingAiModels.message.testFailed')));
       return;
     }
-    message.success('连接测试成功');
+    message.success($t('page.settingAiModels.message.testSuccess'));
   } catch (e: unknown) {
-    message.error(extractErrorMessage(e, '连接测试失败'));
+    message.error(extractErrorMessage(e, $t('page.settingAiModels.message.testFailed')));
   }
 }
 
@@ -270,12 +282,12 @@ async function handleTestConnectionBeforeSave() {
     const response = await baseRequestClient.post('/v1/ai/model/test-config', buildPayload());
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.error ?? body.message ?? '连接测试失败'));
+      message.error(String(body.error ?? body.message ?? $t('page.settingAiModels.message.testFailed')));
       return;
     }
-    message.success('连接测试成功');
+    message.success($t('page.settingAiModels.message.testSuccess'));
   } catch (e: unknown) {
-    message.error(extractErrorMessage(e, '连接测试失败'));
+    message.error(extractErrorMessage(e, $t('page.settingAiModels.message.testFailed')));
   } finally {
     testing.value = false;
   }
@@ -294,24 +306,24 @@ async function submitModal() {
       const response = await baseRequestClient.post('/v1/ai/models', payload);
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.message ?? body.error ?? '新增失败'));
+        message.error(String(body.message ?? body.error ?? $t('page.settingAiModels.message.addFailed')));
         throw new Error('biz');
       }
-      message.success('新增成功');
+      message.success($t('page.settingAiModels.message.createSuccess'));
     } else {
       const response = await baseRequestClient.put(`/v1/ai/models/${formModel.id}`, payload);
       const body = extractApiBody(response);
       if (body.success !== true) {
-        message.error(String(body.message ?? body.error ?? '修改失败'));
+        message.error(String(body.message ?? body.error ?? $t('page.settingAiModels.message.updateFailed')));
         throw new Error('biz');
       }
-      message.success('修改成功');
+      message.success($t('page.settingAiModels.message.updateSuccess'));
     }
     modalOpen.value = false;
     void fetchList();
   } catch (e: unknown) {
     if ((e as Error)?.message !== 'biz') {
-      message.error((e as Error)?.message || '保存失败');
+      message.error((e as Error)?.message || $t('page.settingAiModels.message.saveFailed'));
     }
     throw e;
   } finally {
@@ -325,13 +337,13 @@ async function handleDelete(record: AIModelRow) {
     const response = await baseRequestClient.delete(`/v1/ai/models/${record.id}`);
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.message ?? body.error ?? '删除失败'));
+      message.error(String(body.message ?? body.error ?? $t('page.settingAiModels.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.settingAiModels.message.deleteSuccess'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '删除失败');
+    message.error((e as Error)?.message || $t('page.settingAiModels.message.deleteFailed'));
   }
 }
 
@@ -343,27 +355,27 @@ async function handleToggle(record: AIModelRow, checked: boolean) {
     });
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.message ?? body.error ?? '操作失败'));
+      message.error(String(body.message ?? body.error ?? $t('page.settingAiModels.message.toggleFailed')));
       return;
     }
-    message.success(checked ? '已启用' : '已禁用');
+    message.success(checked ? $t('page.settingAiModels.message.enabled') : $t('page.settingAiModels.message.disabled'));
     void fetchList();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '操作失败');
+    message.error((e as Error)?.message || $t('page.settingAiModels.message.toggleFailed'));
   }
 }
 
-const columns: TableColumnsType<AIModelRow> = [
-  { title: '模型名称', dataIndex: 'name', key: 'name', width: 160 },
-  { title: '提供商', dataIndex: 'provider', key: 'provider', width: 120 },
-  { title: '模型标识', dataIndex: 'model_name', key: 'model_name', width: 160 },
-  { title: 'API地址', dataIndex: 'api_url', key: 'api_url', width: 220 },
-  { title: '优先级', dataIndex: 'priority', key: 'priority', width: 80 },
-  { title: '启用', dataIndex: 'enabled', key: 'enabled', width: 80 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 80 },
-  { title: '描述', dataIndex: 'description', key: 'description', width: 180 },
-  { title: '操作', key: 'action', width: 180, fixed: 'right' },
-];
+const columns = computed<TableColumnsType<AIModelRow>>(() => [
+  { title: $t('page.settingAiModels.columns.name'), dataIndex: 'name', key: 'name', width: 160 },
+  { title: $t('page.settingAiModels.columns.provider'), dataIndex: 'provider', key: 'provider', width: 120 },
+  { title: $t('page.settingAiModels.columns.model_name'), dataIndex: 'model_name', key: 'model_name', width: 160 },
+  { title: $t('page.settingAiModels.columns.api_url'), dataIndex: 'api_url', key: 'api_url', width: 220 },
+  { title: $t('page.settingAiModels.columns.priority'), dataIndex: 'priority', key: 'priority', width: 80 },
+  { title: $t('page.settingAiModels.columns.enabled'), dataIndex: 'enabled', key: 'enabled', width: 80 },
+  { title: $t('page.settingAiModels.columns.status'), dataIndex: 'status', key: 'status', width: 80 },
+  { title: $t('page.settingAiModels.columns.description'), dataIndex: 'description', key: 'description', width: 180 },
+  { title: $t('page.settingAiModels.columns.action'), key: 'action', width: 180, fixed: 'right' },
+]);
 
 async function fetchDefaults() {
   defaultLoading.value = true;
@@ -404,7 +416,7 @@ async function fetchDefaults() {
         value: Number(m.id),
       }));
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '加载默认模型失败');
+    message.error((e as Error)?.message || $t('page.settingAiModels.message.defaultsLoadFailed'));
   } finally {
     defaultLoading.value = false;
   }
@@ -420,13 +432,13 @@ async function saveDefaults() {
     });
     const body = extractApiBody(response);
     if (body.success !== true) {
-      message.error(String(body.message ?? '保存失败'));
+      message.error(String(body.message ?? $t('page.settingAiModels.message.saveFailed')));
       return;
     }
-    message.success('默认模型已保存');
+    message.success($t('page.settingAiModels.message.defaultsSaved'));
     await fetchDefaults();
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '保存失败');
+    message.error((e as Error)?.message || $t('page.settingAiModels.message.saveFailed'));
   } finally {
     defaultSaving.value = false;
   }
@@ -441,25 +453,25 @@ onMounted(() => {
 <template>
   <div class="p-5">
     <Tabs v-model:activeKey="activeTab" class="ai-models-tabs" type="card">
-      <Tabs.TabPane key="settings" tab="模型设置">
+      <Tabs.TabPane key="settings" :tab="$t('page.settingAiModels.tab.settings')">
         <Card :bordered="false">
           <Form class="mb-4">
             <div class="query-grid">
-              <Form.Item label="模型名称" class="query-item">
-                <Input v-model:value="searchForm.name" allow-clear class="query-control" placeholder="请输入模型名称" @press-enter="handleSearch" />
+              <Form.Item :label="$t('page.settingAiModels.columns.name')" class="query-item">
+                <Input v-model:value="searchForm.name" allow-clear class="query-control" :placeholder="$t('page.settingAiModels.placeholder.name')" @press-enter="handleSearch" />
               </Form.Item>
-              <Form.Item label="提供商" class="query-item">
-                <Select v-model:value="searchForm.provider" allow-clear class="query-control" placeholder="请选择提供商" :options="providerOptions" />
+              <Form.Item :label="$t('page.settingAiModels.columns.provider')" class="query-item">
+                <Select v-model:value="searchForm.provider" allow-clear class="query-control" :placeholder="$t('page.settingAiModels.placeholder.provider')" :options="providerOptions" />
               </Form.Item>
-              <Form.Item label="模型标识" class="query-item">
-                <Input v-model:value="searchForm.model_name" allow-clear class="query-control" placeholder="请输入模型标识" @press-enter="handleSearch" />
+              <Form.Item :label="$t('page.settingAiModels.columns.model_name')" class="query-item">
+                <Input v-model:value="searchForm.model_name" allow-clear class="query-control" :placeholder="$t('page.settingAiModels.placeholder.model_name')" @press-enter="handleSearch" />
               </Form.Item>
             </div>
             <div class="query-actions">
               <Space>
-                <Button type="primary" @click="handleSearch">查询</Button>
-                <Button @click="handleReset">重置</Button>
-                <Button type="primary" ghost @click="openCreate">新建</Button>
+                <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+                <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+                <Button type="primary" ghost @click="openCreate">{{ $t('page.common.create') }}</Button>
               </Space>
             </div>
           </Form>
@@ -492,10 +504,10 @@ onMounted(() => {
               </template>
               <template v-else-if="column.key === 'action'">
                 <Space>
-                  <Button type="link" size="small" @click="handleTestConnectionById(record.id)">测试</Button>
-                  <Button type="link" size="small" @click="openEdit(record)">修改</Button>
-                  <Popconfirm title="确定删除此模型吗？" placement="left" @confirm="handleDelete(record)">
-                    <Button type="link" size="small" danger>删除</Button>
+                  <Button type="link" size="small" @click="handleTestConnectionById(record.id)">{{ $t('page.settingCommon.test') }}</Button>
+                  <Button type="link" size="small" @click="openEdit(record)">{{ $t('page.common.edit') }}</Button>
+                  <Popconfirm :title="$t('page.settingAiModels.confirmDelete')" placement="left" @confirm="handleDelete(record)">
+                    <Button type="link" size="small" danger>{{ $t('page.common.delete') }}</Button>
                   </Popconfirm>
                 </Space>
               </template>
@@ -504,50 +516,49 @@ onMounted(() => {
         </Card>
       </Tabs.TabPane>
 
-      <Tabs.TabPane key="defaults" tab="默认模型">
+      <Tabs.TabPane key="defaults" :tab="$t('page.settingAiModels.tab.defaults')">
         <Card :bordered="false" :loading="defaultLoading">
           <p class="mb-3 text-muted-foreground text-sm">
-            为业务场景指定默认 AI 模型（从已启用的模型中选择）。未指定时将按各任务原有回退逻辑（例如 Dify
-            智能体）。
+            {{ $t('page.settingAiModels.defaultsIntro') }}
           </p>
           <Form layout="vertical" class="max-w-xl">
-            <Form.Item label="数据分级默认模型">
+            <Form.Item :label="$t('page.settingAiModels.defaults.grading')">
               <Select
                 v-model:value="gradingDefaultModelId"
                 allow-clear
                 show-search
                 option-filter-prop="label"
-                placeholder="不指定则使用系统内置策略"
+                :placeholder="$t('page.settingAiModels.defaults.gradingPlaceholder')"
                 :options="enabledModelOptions"
                 class="w-full"
               />
             </Form.Item>
-            <Form.Item label="表字段备注生成默认模型">
+            <Form.Item :label="$t('page.settingAiModels.defaults.tableComment')">
               <Select
                 v-model:value="tableColumnCommentDefaultModelId"
                 allow-clear
                 show-search
                 option-filter-prop="label"
-                placeholder="用于 AI 生成表注释、字段注释任务；不指定则回退 Dify"
+                :placeholder="$t('page.settingAiModels.defaults.tableCommentPlaceholder')"
                 :options="enabledModelOptions"
                 class="w-full"
               />
             </Form.Item>
-            <Form.Item label="表字段准确度评估默认模型">
+            <Form.Item :label="$t('page.settingAiModels.defaults.accuracy')">
               <Select
                 v-model:value="tableColumnAccuracyDefaultModelId"
                 allow-clear
                 show-search
                 option-filter-prop="label"
-                placeholder="用于表字段与注释准确度评估任务；不指定则回退系统默认逻辑"
+                :placeholder="$t('page.settingAiModels.defaults.accuracyPlaceholder')"
                 :options="enabledModelOptions"
                 class="w-full"
               />
             </Form.Item>
             <Form.Item>
               <Space>
-                <Button type="primary" :loading="defaultSaving" @click="saveDefaults">保存</Button>
-                <Button @click="fetchDefaults">刷新</Button>
+                <Button type="primary" :loading="defaultSaving" @click="saveDefaults">{{ $t('page.settingCommon.save') }}</Button>
+                <Button @click="fetchDefaults">{{ $t('page.settingCommon.refresh') }}</Button>
               </Space>
             </Form.Item>
           </Form>
@@ -557,7 +568,7 @@ onMounted(() => {
 
     <Modal
       v-model:open="modalOpen"
-      :title="modalMode === 'create' ? '新建模型' : '修改模型'"
+      :title="modalMode === 'create' ? $t('page.settingAiModels.modal.createTitle') : $t('page.settingAiModels.modal.editTitle')"
       :confirm-loading="saving"
       width="760px"
       destroy-on-close
@@ -565,49 +576,49 @@ onMounted(() => {
     >
       <Form layout="vertical" class="mt-2">
         <div class="form-grid">
-          <Form.Item label="模型名称" required>
-            <Input v-model:value="formModel.name" placeholder="如：GPT-4、Qwen-7B" />
+          <Form.Item :label="$t('page.settingAiModels.form.name')" required>
+            <Input v-model:value="formModel.name" :placeholder="$t('page.settingAiModels.placeholder.name_example')" />
           </Form.Item>
-          <Form.Item label="提供商" required>
-            <Select v-model:value="formModel.provider" placeholder="请选择提供商" :options="providerOptions" />
+          <Form.Item :label="$t('page.settingAiModels.form.provider')" required>
+            <Select v-model:value="formModel.provider" :placeholder="$t('page.settingAiModels.placeholder.provider')" :options="providerOptions" />
           </Form.Item>
-          <Form.Item label="API地址" required>
-            <Input v-model:value="formModel.api_url" placeholder="如：https://api.openai.com/v1/chat/completions" />
+          <Form.Item :label="$t('page.settingAiModels.form.api_url')" required>
+            <Input v-model:value="formModel.api_url" :placeholder="$t('page.settingAiModels.placeholder.api_url_example')" />
           </Form.Item>
-          <Form.Item :label="modalMode === 'create' ? 'API密钥' : 'API密钥（留空不更新）'">
-            <Input.Password v-model:value="formModel.api_key" placeholder="请输入API密钥" />
+          <Form.Item :label="modalMode === 'create' ? $t('page.settingAiModels.form.api_key') : $t('page.settingAiModels.form.api_key_edit_hint')">
+            <Input.Password v-model:value="formModel.api_key" :placeholder="$t('page.settingAiModels.placeholder.api_key')" />
           </Form.Item>
-          <Form.Item label="模型标识" required>
-            <Input v-model:value="formModel.model_name" placeholder="如：gpt-4、qwen-max" />
+          <Form.Item :label="$t('page.settingAiModels.form.model_name')" required>
+            <Input v-model:value="formModel.model_name" :placeholder="$t('page.settingAiModels.placeholder.model_id_example')" />
           </Form.Item>
-          <Form.Item label="优先级">
+          <Form.Item :label="$t('page.settingAiModels.form.priority')">
             <InputNumber v-model:value="formModel.priority" :min="0" :max="100" class="w-full" />
           </Form.Item>
-          <Form.Item label="启用">
-            <Select v-model:value="formModel.enabled" :options="[{ value: 0, label: '禁用' }, { value: 1, label: '启用' }]" />
+          <Form.Item :label="$t('page.settingAiModels.form.enabled')">
+            <Select v-model:value="formModel.enabled" :options="enabledModalOptions" />
           </Form.Item>
-          <Form.Item label="超时(秒)">
+          <Form.Item :label="$t('page.settingAiModels.form.timeout')">
             <InputNumber v-model:value="formModel.timeout" :min="1" :max="300" class="w-full" />
           </Form.Item>
-          <Form.Item label="最大Token">
+          <Form.Item :label="$t('page.settingAiModels.form.max_tokens')">
             <InputNumber v-model:value="formModel.max_tokens" :min="1" :max="100000" class="w-full" />
           </Form.Item>
-          <Form.Item label="温度参数">
+          <Form.Item :label="$t('page.settingAiModels.form.temperature')">
             <InputNumber v-model:value="formModel.temperature" :min="0" :max="2" :step="0.1" class="w-full" />
           </Form.Item>
-          <Form.Item label="流式响应">
-            <Select v-model:value="formModel.stream_enabled" :options="[{ value: 0, label: '否' }, { value: 1, label: '是' }]" />
+          <Form.Item :label="$t('page.settingAiModels.form.stream_enabled')">
+            <Select v-model:value="formModel.stream_enabled" :options="streamBoolOptions" />
           </Form.Item>
-          <Form.Item label="描述" class="col-span-2">
-            <Input.TextArea v-model:value="formModel.description" :rows="4" placeholder="请输入模型描述" />
+          <Form.Item :label="$t('page.settingAiModels.form.description')" class="col-span-2">
+            <Input.TextArea v-model:value="formModel.description" :rows="4" :placeholder="$t('page.settingAiModels.placeholder.description')" />
           </Form.Item>
         </div>
       </Form>
       <template #footer>
         <Space>
-          <Button @click="modalOpen = false">取消</Button>
-          <Button :loading="testing" @click="handleTestConnectionBeforeSave">测试连接</Button>
-          <Button type="primary" :loading="saving" @click="submitModal">保存</Button>
+          <Button @click="modalOpen = false">{{ $t('page.settingCommon.cancel') }}</Button>
+          <Button :loading="testing" @click="handleTestConnectionBeforeSave">{{ $t('page.settingCommon.testConnection') }}</Button>
+          <Button type="primary" :loading="saving" @click="submitModal">{{ $t('page.settingCommon.save') }}</Button>
         </Space>
       </template>
     </Modal>

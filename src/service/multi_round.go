@@ -14,7 +14,7 @@ limitations under the License.
 package service
 
 import (
-	"dbmcloud/src/model"
+	"dbmeta-core/src/model"
 	"encoding/json"
 	"fmt"
 	"regexp"

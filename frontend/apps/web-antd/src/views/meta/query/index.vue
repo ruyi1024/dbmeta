@@ -25,6 +25,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 interface OptionItem {
   id?: number;
@@ -65,7 +66,7 @@ interface QueryTab {
 const tabs = ref<QueryTab[]>([
   {
     key: '1',
-    title: '查询 1',
+    title: `${$t('page.dataQuery.tab')} 1`,
     selectedSql: '',
     sqlContent: '',
     loading: false,
@@ -179,7 +180,7 @@ function addTab() {
   const key = `${tabCounter.value}`;
   tabs.value.push({
     key,
-    title: `查询 ${tabCounter.value}`,
+    title: `${$t('page.dataQuery.tab')} ${tabCounter.value}`,
     selectedSql: '',
     sqlContent: '',
     loading: false,
@@ -197,7 +198,7 @@ function addTab() {
 
 function removeTab(key: string) {
   if (tabs.value.length <= 1) {
-    message.warning('至少保留一个标签页');
+    message.warning($t('page.dataQuery.message.keepOneTab'));
     return;
   }
   const idx = tabs.value.findIndex((tab) => tab.key === key);
@@ -319,15 +320,15 @@ async function executeQuery(queryType = 'execute') {
     queryType === 'showCreate' ||
     queryType === 'showTableSize';
   if (needsTableForMeta && !selectedTable.value) {
-    message.warning('请先点击左侧表名称选择表');
+    message.warning($t('page.dataQuery.message.selectTableFirst'));
     return;
   }
   if (!globalFormState.type || !globalFormState.datasource) {
-    message.warning('请先选择数据源');
+    message.warning($t('page.dataQuery.message.selectDatasourceFirst'));
     return;
   }
   if ((queryType === 'execute' || queryType === 'doExplain') && !sqlToExecute?.trim()) {
-    message.warning('请先选择数据源并输入SQL');
+    message.warning($t('page.dataQuery.message.selectDatasourceAndInputSql'));
     return;
   }
   updateTab(activeTabKey.value, { loading: true });
@@ -364,14 +365,14 @@ async function executeQuery(queryType = 'execute') {
     updateTab(activeTabKey.value, {
       loading: false,
       tableDataSuccess: false,
-      tableDataMsg: error?.message || '执行失败',
+      tableDataMsg: error?.message || $t('page.dataQuery.message.executeFailed'),
     });
   }
 }
 
 async function favoriteSql() {
   if (!globalFormState.type || !globalFormState.datasource || !currentTab.value?.sqlContent) {
-    message.warning('数据源/SQL不完整，无法收藏');
+    message.warning($t('page.dataQuery.message.favoriteIncomplete'));
     return;
   }
   const response = await baseRequestClient.post('/v1/favorite/list', {
@@ -381,12 +382,16 @@ async function favoriteSql() {
     datasource_type: globalFormState.type,
   });
   const payload = (response as any)?.data ?? response;
-  message.success(payload?.success ? '加入收藏夹成功' : '加入收藏夹失败');
+  message.success(
+    payload?.success
+      ? $t('page.dataQuery.message.favoriteSuccess')
+      : $t('page.dataQuery.message.favoriteFailed'),
+  );
 }
 
 async function openFavoriteDrawer() {
   if (!globalFormState.type || !globalFormState.datasource) {
-    message.warning('请选择数据源后再打开收藏夹');
+    message.warning($t('page.dataQuery.message.selectDatasourceBeforeFavorite'));
     return;
   }
   const response = await baseRequestClient.get('/v1/favorite/list', {
@@ -405,16 +410,16 @@ async function deleteFavorite(id: number) {
   const response = await baseRequestClient.delete('/v1/favorite/list', { data: { id } } as any);
   const payload = (response as any)?.data ?? response;
   if (payload?.success) {
-    message.success('删除成功');
+    message.success($t('page.dataQuery.message.deleteSuccess'));
     openFavoriteDrawer();
   } else {
-    message.error('删除失败');
+    message.error($t('page.dataQuery.message.deleteFailed'));
   }
 }
 
 async function doAiGenerate() {
   if (!aiQuestion.value.trim()) {
-    message.warning('请输入要生成的SQL描述');
+    message.warning($t('page.dataQuery.message.enterAiQuestion'));
     return;
   }
   aiGenerating.value = true;
@@ -433,14 +438,14 @@ async function doAiGenerate() {
     const sql = payload?.data?.sql_query;
     if (payload?.success && sql) {
       updateTab(activeTabKey.value, { sqlContent: sql, selectedSql: '' });
-      message.success('SQL生成成功');
+      message.success($t('page.dataQuery.message.aiGenerateSuccess'));
       openAiGenerate.value = false;
       aiQuestion.value = '';
     } else {
-      message.error(payload?.message || 'SQL生成失败');
+      message.error(payload?.message || $t('page.dataQuery.message.aiGenerateFailed'));
     }
   } catch (error: any) {
-    message.error(error?.message || 'SQL生成失败');
+    message.error(error?.message || $t('page.dataQuery.message.aiGenerateFailed'));
   } finally {
     aiGenerating.value = false;
   }
@@ -448,11 +453,11 @@ async function doAiGenerate() {
 
 async function exportExcel() {
   if (!currentTab.value?.tableDataList?.length || !currentTab.value?.tableDataColumn?.length) {
-    message.warning('暂无可导出数据');
+    message.warning($t('page.dataQuery.message.noExportData'));
     return;
   }
   const workbook = new Exceljs.Workbook();
-  const worksheet = workbook.addWorksheet('数据结果');
+  const worksheet = workbook.addWorksheet($t('page.dataQuery.export.sheetName'));
   worksheet.properties.defaultRowHeight = 20;
   worksheet.columns = currentTab.value.tableDataColumn.map((col: any) => ({
     header: col.title,
@@ -474,7 +479,7 @@ async function exportExcel() {
 }
 
 function onCopyResult() {
-  message.warning('数据复制已被记录，请注意数据安全');
+  message.warning($t('page.dataQuery.message.copyLogged'));
   void writeLog('copyData');
 }
 
@@ -493,11 +498,11 @@ loadDatasourceTypes();
         <Card>
           <Form class="filter-form mb-0">
             <div class="query-grid">
-              <Form.Item label="数据源类型" class="query-item">
+              <Form.Item :label="$t('page.dataQuery.form.datasourceType')" class="query-item">
                 <Select
                   v-model:value="globalFormState.type"
                   class="query-control"
-                  placeholder="请选择数据源类型"
+                  :placeholder="$t('page.dataQuery.placeholder.datasourceType')"
                   @change="onTypeChange"
                 >
                   <Select.Option v-for="item in typeList" :key="item.name" :value="item.name">
@@ -505,11 +510,11 @@ loadDatasourceTypes();
                   </Select.Option>
                 </Select>
               </Form.Item>
-              <Form.Item label="数据源" class="query-item">
+              <Form.Item :label="$t('page.dataQuery.form.datasource')" class="query-item">
                 <Select
                   v-model:value="globalFormState.datasource"
                   class="query-control"
-                  placeholder="请选择数据源"
+                  :placeholder="$t('page.dataQuery.placeholder.datasource')"
                   show-search
                   @change="onDatasourceChange"
                 >
@@ -527,18 +532,18 @@ loadDatasourceTypes();
                           class="datasource-status-icon datasource-status-icon--ok"
                         />
                         <CloseCircleOutlined v-else class="datasource-status-icon datasource-status-icon--bad" />
-                        {{ isDatasourceStatusOk(item) ? '可用' : '不可用' }}
+                        {{ isDatasourceStatusOk(item) ? $t('page.dataQuery.datasource.available') : $t('page.dataQuery.datasource.unavailable') }}
                         ]
                       </span>
                     </span>
                   </Select.Option>
                 </Select>
               </Form.Item>
-              <Form.Item v-if="globalFormState.type !== 'Redis'" label="数据库" class="query-item">
+              <Form.Item v-if="globalFormState.type !== 'Redis'" :label="$t('page.dataQuery.form.database')" class="query-item">
                 <Select
                   v-model:value="globalFormState.database"
                   class="query-control"
-                  placeholder="请选择数据库"
+                  :placeholder="$t('page.dataQuery.placeholder.database')"
                   show-search
                   @change="onDatabaseChange"
                 >
@@ -559,11 +564,11 @@ loadDatasourceTypes();
         :class="['workspace-left', { 'workspace-left-collapsed': tablePanelCollapsed }]"
       >
         <div class="workspace-left-header">
-          <span v-if="!tablePanelCollapsed">数据表列表</span>
+          <span v-if="!tablePanelCollapsed">{{ $t('page.dataQuery.tableListTitle') }}</span>
           <Button
             size="small"
             type="text"
-            :title="tablePanelCollapsed ? '展开数据表列表' : '折叠数据表列表'"
+            :title="tablePanelCollapsed ? $t('page.dataQuery.expandTableList') : $t('page.dataQuery.collapseTableList')"
             @click="tablePanelCollapsed = !tablePanelCollapsed"
           >
             {{ tablePanelCollapsed ? '>>' : '<<' }}
@@ -575,7 +580,7 @@ loadDatasourceTypes();
             allow-clear
             size="small"
             class="table-search mb-2"
-            placeholder="搜索数据表"
+            :placeholder="$t('page.dataQuery.placeholder.searchTable')"
           />
           <List :data-source="filteredTableList" size="small">
             <template #renderItem="{ item }">
@@ -597,7 +602,7 @@ loadDatasourceTypes();
             v-if="globalFormState.database"
             type="info"
             show-icon
-            :message="`当前查询引擎：${globalFormState.type}，数据库: ${globalFormState.database}`"
+            :message="`${$t('page.dataQuery.currentEngine')}${globalFormState.type}，${$t('page.dataQuery.currentDatabase')}${globalFormState.database}`"
             class="mb-2"
           />
           <Tabs
@@ -611,28 +616,28 @@ loadDatasourceTypes();
                 :id="`sql-editor-${tab.key}`"
                 v-model:value="activeSqlContent"
                 :rows="6"
-                placeholder="请输入SQL查询命令（支持选中片段执行）"
+                :placeholder="$t('page.dataQuery.placeholder.sqlInput')"
                 @select="handleSqlSelection"
               />
             </Tabs.TabPane>
           </Tabs>
           <div class="mt-2">
             <Space>
-              <Button size="small" @click="openAiGenerate = true">智能生成SQL</Button>
-              <Button size="small" @click="favoriteSql">加入收藏夹</Button>
-              <Button size="small" @click="openFavoriteDrawer">打开收藏夹</Button>
-              <Tag v-if="currentTab?.selectedSql" color="processing">已选中片段，将仅执行片段</Tag>
+              <Button size="small" @click="openAiGenerate = true">{{ $t('page.dataQuery.action.aiGenerate') }}</Button>
+              <Button size="small" @click="favoriteSql">{{ $t('page.dataQuery.action.addFavorite') }}</Button>
+              <Button size="small" @click="openFavoriteDrawer">{{ $t('page.dataQuery.action.openFavorite') }}</Button>
+              <Tag v-if="currentTab?.selectedSql" color="processing">{{ $t('page.dataQuery.selectedFragmentTip') }}</Tag>
             </Space>
           </div>
           <div class="mt-3">
             <Space wrap>
-              <Tag v-if="selectedTable" color="blue">当前表：{{ selectedTable }}</Tag>
-              <Button type="primary" @click="executeQuery('execute')">执行语句</Button>
-              <Button @click="executeQuery('doExplain')">查看执行计划</Button>
-              <Button @click="executeQuery('showIndex')">查看表索引</Button>
-              <Button @click="executeQuery('showColumn')">查看表结构</Button>
-              <Button @click="executeQuery('showCreate')">查看建表语句</Button>
-              <Button @click="executeQuery('showTableSize')">查看表容量</Button>
+              <Tag v-if="selectedTable" color="blue">{{ $t('page.dataQuery.currentTable') }}{{ selectedTable }}</Tag>
+              <Button type="primary" @click="executeQuery('execute')">{{ $t('page.dataQuery.action.executeSql') }}</Button>
+              <Button @click="executeQuery('doExplain')">{{ $t('page.dataQuery.action.explain') }}</Button>
+              <Button @click="executeQuery('showIndex')">{{ $t('page.dataQuery.action.showIndex') }}</Button>
+              <Button @click="executeQuery('showColumn')">{{ $t('page.dataQuery.action.showColumns') }}</Button>
+              <Button @click="executeQuery('showCreate')">{{ $t('page.dataQuery.action.showCreate') }}</Button>
+              <Button @click="executeQuery('showTableSize')">{{ $t('page.dataQuery.action.showTableSize') }}</Button>
             </Space>
           </div>
         </Card>
@@ -641,17 +646,17 @@ loadDatasourceTypes();
           <Alert
             v-if="currentTab?.tableDataMsg"
             :type="currentTab?.tableDataSuccess ? 'success' : 'error'"
-            :message="currentTab?.tableDataSuccess ? `执行成功，耗时：${currentTab?.queryTimes}毫秒，${currentTab?.tableDataMsg}` : `执行失败：${currentTab?.tableDataMsg}`"
+            :message="currentTab?.tableDataSuccess ? `${$t('page.dataQuery.message.executeSuccessPrefix')}${currentTab?.queryTimes}${$t('page.dataQuery.message.ms')}${currentTab?.tableDataMsg}` : `${$t('page.dataQuery.message.executeFailedPrefix')}${currentTab?.tableDataMsg}`"
             banner
             class="mb-3"
           />
           <div v-if="currentTab?.tableDataSuccess">
             <div class="mb-2 flex justify-end">
               <Space>
-                <span>查询到 {{ currentTab?.tableDataTotal }} 条数据</span>
+                <span>{{ $t('page.dataQuery.foundDataPrefix') }} {{ currentTab?.tableDataTotal }} {{ $t('page.dataQuery.foundDataSuffix') }}</span>
                 <Button class="export-excel-btn" type="primary" @click="exportExcel">
                   <template #icon><DownloadOutlined /></template>
-                  查询结果导出Excel
+                  {{ $t('page.dataQuery.action.exportExcel') }}
                 </Button>
               </Space>
             </div>
@@ -671,7 +676,7 @@ loadDatasourceTypes();
 
     <Drawer
       v-model:open="openFavorite"
-      title="SQL收藏夹"
+      :title="$t('page.dataQuery.favorite.title')"
       placement="right"
       :width="1000"
     >
@@ -679,9 +684,9 @@ loadDatasourceTypes();
         row-key="id"
         :data-source="favoriteList"
         :columns="[
-          { title: '收藏时间', dataIndex: 'gmt_created', key: 'gmt_created', width: 300 },
-          { title: '收藏内容', dataIndex: 'content', key: 'content' },
-          { title: '操作', key: 'option', width: 100 }
+          { title: $t('page.dataQuery.favorite.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', width: 300 },
+          { title: $t('page.dataQuery.favorite.columns.content'), dataIndex: 'content', key: 'content' },
+          { title: $t('page.dataQuery.favorite.columns.action'), key: 'option', width: 100 }
         ]"
       >
         <template #bodyCell="{ column, record }">
@@ -695,7 +700,7 @@ loadDatasourceTypes();
             </TypographyParagraph>
           </template>
           <template v-else-if="column.key === 'option'">
-            <Button type="link" danger size="small" @click="deleteFavorite(record.id)">删除</Button>
+            <Button type="link" danger size="small" @click="deleteFavorite(record.id)">{{ $t('page.dataQuery.action.delete') }}</Button>
           </template>
         </template>
       </Table>
@@ -703,7 +708,7 @@ loadDatasourceTypes();
 
     <Modal
       v-model:open="openAiGenerate"
-      title="智能生成SQL"
+      :title="$t('page.dataQuery.ai.title')"
       :confirm-loading="aiGenerating"
       @ok="doAiGenerate"
       @cancel="aiQuestion = ''"
@@ -711,13 +716,13 @@ loadDatasourceTypes();
       <Alert
         type="info"
         show-icon
-        message="请输入您想要生成的SQL描述，例如：查询用户表中年龄大于18的所有记录"
+        :message="$t('page.dataQuery.ai.hint')"
         class="mb-3"
       />
       <Input.TextArea
         v-model:value="aiQuestion"
         :rows="6"
-        placeholder="请输入SQL描述"
+        :placeholder="$t('page.dataQuery.ai.placeholder')"
       />
     </Modal>
   </div>

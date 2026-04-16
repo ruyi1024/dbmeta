@@ -20,6 +20,7 @@ import {
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'DataSecurityQueryPrivilege' });
 
@@ -59,19 +60,19 @@ const listQuery = reactive({
 });
 
 const checkBoxOptionsDatabase = [
-  { label: '查询数据', value: 'select' },
-  { label: '写入数据', value: 'insert' },
-  { label: '更新数据', value: 'update' },
-  { label: '删除数据', value: 'delete' },
-  { label: '创建结构', value: 'create' },
-  { label: '修改结构', value: 'alter' },
+  { label: $t('page.securityPrivilege.permission.select'), value: 'select' },
+  { label: $t('page.securityPrivilege.permission.insert'), value: 'insert' },
+  { label: $t('page.securityPrivilege.permission.update'), value: 'update' },
+  { label: $t('page.securityPrivilege.permission.delete'), value: 'delete' },
+  { label: $t('page.securityPrivilege.permission.create'), value: 'create' },
+  { label: $t('page.securityPrivilege.permission.alter'), value: 'alter' },
 ];
 
 const checkBoxOptionsTable = [
-  { label: '查询数据', value: 'select' },
-  { label: '写入数据', value: 'insert' },
-  { label: '更新数据', value: 'update' },
-  { label: '删除数据', value: 'delete' },
+  { label: $t('page.securityPrivilege.permission.select'), value: 'select' },
+  { label: $t('page.securityPrivilege.permission.insert'), value: 'insert' },
+  { label: $t('page.securityPrivilege.permission.update'), value: 'update' },
+  { label: $t('page.securityPrivilege.permission.delete'), value: 'delete' },
 ];
 
 const maxQueryNumberOptions = [
@@ -84,11 +85,11 @@ const maxQueryNumberOptions = [
 ];
 
 const expireDayOptions = [
-  { value: '7', label: '7天' },
-  { value: '31', label: '1月' },
-  { value: '92', label: '3月' },
-  { value: '183', label: '6月' },
-  { value: '365', label: '1年' },
+  { value: '7', label: $t('page.securityPrivilege.expire.7d') },
+  { value: '31', label: $t('page.securityPrivilege.expire.1m') },
+  { value: '92', label: $t('page.securityPrivilege.expire.3m') },
+  { value: '183', label: $t('page.securityPrivilege.expire.6m') },
+  { value: '365', label: $t('page.securityPrivilege.expire.1y') },
 ];
 
 const GRANT_TYPES_WITH_DETAIL = [
@@ -283,43 +284,43 @@ async function onDatabaseChange() {
 
 async function handleSubmit() {
   if (!formState.username) {
-    message.warning('请选择授权用户');
+    message.warning($t('page.securityPrivilege.message.selectUser'));
     return;
   }
   if (!formState.type) {
-    message.warning('请选择授权数据源类型');
+    message.warning($t('page.securityPrivilege.message.selectDatasourceType'));
     return;
   }
   if (!formState.datasource) {
-    message.warning('请选择数据源');
+    message.warning($t('page.securityPrivilege.message.selectDatasource'));
     return;
   }
 
   if (showGrantDetail.value) {
     if (!formState.grant_type) {
-      message.warning('请选择授权范围');
+      message.warning($t('page.securityPrivilege.message.selectGrantType'));
       return;
     }
     if (!formState.database) {
-      message.warning('请选择授权数据库');
+      message.warning($t('page.securityPrivilege.message.selectDatabase'));
       return;
     }
     if (!formState.privileges?.length) {
-      message.warning('请选择授权权限');
+      message.warning($t('page.securityPrivilege.message.selectPermission'));
       return;
     }
     if (formState.grant_type === 'table' && transferTargetKeys.value.length === 0) {
-      message.warning('请选择授权数据表');
+      message.warning($t('page.securityPrivilege.message.selectTable'));
       return;
     }
   }
 
   if (!formState.expire_day) {
-    message.warning('请选择有效期限');
+    message.warning($t('page.securityPrivilege.message.selectExpireDay'));
     return;
   }
   if (!formState.reason?.trim()) {
-    message.warning('请填写授权原因');
+    message.warning($t('page.securityPrivilege.message.fillReason'));
     return;
   }
 
@@ -347,12 +348,12 @@ async function handleSubmit() {
     });
     const body = extractApiBody(response);
     if (body.success === true) {
-      message.success('授权成功');
+      message.success($t('page.securityPrivilege.message.grantSuccess'));
     } else {
-      message.error(`执行授权失败：${String(body.msg ?? '')}`);
+      message.error(`${$t('page.securityPrivilege.message.grantFailed')}${String(body.msg ?? '')}`);
     }
   } catch (e: unknown) {
-    message.error((e as Error)?.message || '执行授权失败');
+    message.error((e as Error)?.message || $t('page.securityPrivilege.message.grantFailed'));
   } finally {
     loading.value = false;
   }
@@ -369,8 +370,8 @@ function formatDateOnly(v?: string) {
 }
 
 function grantTypeLabel(v?: string) {
-  if (v === 'database') return '整库';
-  if (v === 'table') return '按表';
+  if (v === 'database') return $t('page.securityPrivilege.grantType.database');
+  if (v === 'table') return $t('page.securityPrivilege.grantType.table');
   return v || '-';
 }
 
@@ -399,7 +400,7 @@ async function fetchPrivilegeList() {
     privilegeList.value = Array.isArray(raw) ? (raw as PrivilegeRow[]) : [];
   } catch {
     privilegeList.value = [];
-    message.error('加载授权列表失败');
+    message.error($t('page.securityPrivilege.message.loadListFailed'));
   } finally {
     listLoading.value = false;
   }
@@ -421,35 +422,35 @@ function onPrivilegeTabChange(key: string | number) {
 }
 
 const listColumns: TableColumnsType<PrivilegeRow> = [
-  { title: '申请账号', dataIndex: 'username', key: 'username', width: 110, ellipsis: true },
-  { title: '数据源类型', dataIndex: 'datasource_type', key: 'datasource_type', width: 100 },
-  { title: '数据源', dataIndex: 'datasource', key: 'datasource', width: 180, ellipsis: true },
+  { title: $t('page.securityPrivilege.columns.username'), dataIndex: 'username', key: 'username', width: 110, ellipsis: true },
+  { title: $t('page.securityPrivilege.columns.datasourceType'), dataIndex: 'datasource_type', key: 'datasource_type', width: 100 },
+  { title: $t('page.securityPrivilege.columns.datasource'), dataIndex: 'datasource', key: 'datasource', width: 180, ellipsis: true },
   {
-    title: '授权方式',
+    title: $t('page.securityPrivilege.columns.grantType'),
     dataIndex: 'grant_type',
     key: 'grant_type',
     width: 88,
   },
-  { title: '数据库', dataIndex: 'database_name', key: 'database_name', width: 120, ellipsis: true },
-  { title: '数据表', dataIndex: 'table_name', key: 'table_name', width: 120, ellipsis: true },
-  { title: '查询', dataIndex: 'do_select', key: 'do_select', width: 56, align: 'center' },
-  { title: '插入', dataIndex: 'do_insert', key: 'do_insert', width: 56, align: 'center' },
-  { title: '更新', dataIndex: 'do_update', key: 'do_update', width: 56, align: 'center' },
-  { title: '删除', dataIndex: 'do_delete', key: 'do_delete', width: 56, align: 'center' },
-  { title: '结构创建', dataIndex: 'do_create', key: 'do_create', width: 72, align: 'center' },
-  { title: '结构变更', dataIndex: 'do_alter', key: 'do_alter', width: 72, align: 'center' },
-  { title: '查询上限', dataIndex: 'max_select', key: 'max_select', width: 80 },
-  { title: '更新上限', dataIndex: 'max_update', key: 'max_update', width: 80 },
-  { title: '删除上限', dataIndex: 'max_delete', key: 'max_delete', width: 80 },
+  { title: $t('page.securityPrivilege.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', width: 120, ellipsis: true },
+  { title: $t('page.securityPrivilege.columns.tableName'), dataIndex: 'table_name', key: 'table_name', width: 120, ellipsis: true },
+  { title: $t('page.securityPrivilege.columns.select'), dataIndex: 'do_select', key: 'do_select', width: 56, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.insert'), dataIndex: 'do_insert', key: 'do_insert', width: 56, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.update'), dataIndex: 'do_update', key: 'do_update', width: 56, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.delete'), dataIndex: 'do_delete', key: 'do_delete', width: 56, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.create'), dataIndex: 'do_create', key: 'do_create', width: 72, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.alter'), dataIndex: 'do_alter', key: 'do_alter', width: 72, align: 'center' },
+  { title: $t('page.securityPrivilege.columns.maxSelect'), dataIndex: 'max_select', key: 'max_select', width: 80 },
+  { title: $t('page.securityPrivilege.columns.maxUpdate'), dataIndex: 'max_update', key: 'max_update', width: 80 },
+  { title: $t('page.securityPrivilege.columns.maxDelete'), dataIndex: 'max_delete', key: 'max_delete', width: 80 },
   {
-    title: '状态',
+    title: $t('page.securityPrivilege.columns.enable'),
     dataIndex: 'enable',
     key: 'enable',
     width: 72,
   },
-  { title: '到期日期', dataIndex: 'expire_date', key: 'expire_date', width: 110 },
-  { title: '授权日期', dataIndex: 'gmt_created', key: 'gmt_created', width: 170 },
-  { title: '授权原因', dataIndex: 'reason', key: 'reason', ellipsis: true, width: 160 },
+  { title: $t('page.securityPrivilege.columns.expireDate'), dataIndex: 'expire_date', key: 'expire_date', width: 110 },
+  { title: $t('page.securityPrivilege.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', width: 170 },
+  { title: $t('page.securityPrivilege.columns.reason'), dataIndex: 'reason', key: 'reason', ellipsis: true, width: 160 },
 ];
 
 onMounted(() => {
@@ -462,7 +463,7 @@ onMounted(() => {
   <div class="p-5">
     <Card size="small">
       <Tabs v-model:active-key="privilegeTab" @change="onPrivilegeTabChange">
-        <Tabs.TabPane key="grant" tab="数据查询授权">
+        <Tabs.TabPane key="grant" :tab="$t('page.securityPrivilege.tabs.grant')">
           <Form
             :label-col="{ span: 4 }"
             :wrapper-col="{ span: 18 }"
@@ -470,11 +471,11 @@ onMounted(() => {
             :model="formState"
             @submit.prevent
           >
-        <Form.Item label="授权用户" required>
+        <Form.Item :label="$t('page.securityPrivilege.form.username')" required>
           <Select
             v-model:value="formState.username"
             show-search
-            placeholder="请选择用户"
+            :placeholder="$t('page.securityPrivilege.placeholder.selectUser')"
             class="w-full max-w-md"
             :options="
               userList.map((u) => ({
@@ -491,22 +492,22 @@ onMounted(() => {
           />
         </Form.Item>
 
-        <Form.Item label="授权数据源类型" required>
+        <Form.Item :label="$t('page.securityPrivilege.form.type')" required>
           <Select
             v-model:value="formState.type"
             show-search
-            placeholder="请选择"
+            :placeholder="$t('page.securityPrivilege.placeholder.select')"
             class="w-full max-w-md"
             :options="typeList.map((t) => ({ value: t.name, label: t.name }))"
             @change="onTypeChange"
           />
         </Form.Item>
 
-        <Form.Item label="选择数据源" required>
+        <Form.Item :label="$t('page.securityPrivilege.form.datasource')" required>
           <Select
             v-model:value="formState.datasource"
             show-search
-            placeholder="请选择数据源"
+            :placeholder="$t('page.securityPrivilege.placeholder.selectDatasource')"
             class="w-full max-w-md"
             :options="
               datasourceList.map((item) => ({
@@ -519,23 +520,23 @@ onMounted(() => {
         </Form.Item>
 
         <template v-if="showGrantDetail">
-          <Form.Item label="授权范围" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.grantType')" required>
             <Select
               v-model:value="formState.grant_type"
-              placeholder="请选择"
+              :placeholder="$t('page.securityPrivilege.placeholder.select')"
               class="w-52"
               :options="[
-                { value: 'database', label: '整库授权' },
-                { value: 'table', label: '按表授权' },
+                { value: 'database', label: $t('page.securityPrivilege.grantType.databaseFull') },
+                { value: 'table', label: $t('page.securityPrivilege.grantType.tableFull') },
               ]"
             />
           </Form.Item>
 
-          <Form.Item label="授权数据库" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.database')" required>
             <Select
               v-model:value="formState.database"
               show-search
-              placeholder="请选择"
+              :placeholder="$t('page.securityPrivilege.placeholder.select')"
               class="w-full max-w-md"
               :options="
                 databaseList.map((item) => ({
@@ -547,118 +548,118 @@ onMounted(() => {
             />
           </Form.Item>
 
-          <Form.Item v-if="formState.grant_type === 'table'" label="授权数据表" required>
+          <Form.Item v-if="formState.grant_type === 'table'" :label="$t('page.securityPrivilege.form.tables')" required>
             <Transfer
               v-model:target-keys="transferTargetKeys"
               :data-source="transferDataSource"
               show-search
-              :titles="['数据表', '授权表']"
+              :titles="[$t('page.securityPrivilege.transfer.source'), $t('page.securityPrivilege.transfer.target')]"
               :list-style="{ width: '320px', height: '300px' }"
               :render="(item: any) => item.title"
             />
           </Form.Item>
 
-          <Form.Item label="授权权限" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.privileges')" required>
             <Checkbox.Group v-model:value="formState.privileges" :options="privilegeOptions" />
           </Form.Item>
 
-          <Form.Item label="查询上限" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.maxSelect')" required>
             <Select v-model:value="formState.max_select" class="w-32" :options="maxQueryNumberOptions" />
           </Form.Item>
 
-          <Form.Item label="更新上限" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.maxUpdate')" required>
             <Select v-model:value="formState.max_update" class="w-32" :options="maxQueryNumberOptions" />
           </Form.Item>
 
-          <Form.Item label="删除上限" required>
+          <Form.Item :label="$t('page.securityPrivilege.form.maxDelete')" required>
             <Select v-model:value="formState.max_delete" class="w-32" :options="maxQueryNumberOptions" />
           </Form.Item>
         </template>
 
-        <Form.Item label="有效期限" required>
+        <Form.Item :label="$t('page.securityPrivilege.form.expireDay')" required>
           <Select v-model:value="formState.expire_day" class="w-32" :options="expireDayOptions" />
         </Form.Item>
 
-        <Form.Item label="授权原因" required>
+        <Form.Item :label="$t('page.securityPrivilege.form.reason')" required>
           <Input.TextArea
             v-model:value="formState.reason"
             :rows="4"
             :maxlength="100"
             show-count
-            placeholder="请填写授权原因"
+            :placeholder="$t('page.securityPrivilege.placeholder.reason')"
             class="max-w-xl"
           />
         </Form.Item>
 
         <Form.Item :wrapper-col="{ offset: 4, span: 18 }">
           <Button type="primary" html-type="button" :loading="loading" @click="handleSubmit">
-            执行授权
+            {{ $t('page.securityPrivilege.action.submitGrant') }}
           </Button>
         </Form.Item>
       </Form>
         </Tabs.TabPane>
 
-        <Tabs.TabPane key="list" tab="已授权限查询">
+        <Tabs.TabPane key="list" :tab="$t('page.securityPrivilege.tabs.list')">
           <Card
-            title="查询条件"
+            :title="$t('page.securityPrivilege.queryCardTitle')"
             class="list-query-toolbar mb-5"
             size="small"
             :bordered="true"
             :body-style="{ padding: '16px 20px' }"
           >
             <Form layout="inline" class="list-query-form flex flex-wrap items-end gap-x-4 gap-y-3">
-              <Form.Item label="申请账号" class="mb-0">
+              <Form.Item :label="$t('page.securityPrivilege.query.username')" class="mb-0">
                 <Input
                   v-model:value="listQuery.username"
                   allow-clear
-                  placeholder="用户名"
+                  :placeholder="$t('page.securityPrivilege.placeholder.username')"
                   style="width: 140px"
                   @press-enter="fetchPrivilegeList"
                 />
               </Form.Item>
-              <Form.Item label="数据源类型" class="mb-0">
+              <Form.Item :label="$t('page.securityPrivilege.query.datasourceType')" class="mb-0">
                 <Input
                   v-model:value="listQuery.datasource_type"
                   allow-clear
-                  placeholder="如 MySQL"
+                  :placeholder="$t('page.securityPrivilege.placeholder.datasourceType')"
                   style="width: 120px"
                   @press-enter="fetchPrivilegeList"
                 />
               </Form.Item>
-              <Form.Item label="授权方式" class="mb-0">
+              <Form.Item :label="$t('page.securityPrivilege.query.grantType')" class="mb-0">
                 <Select
                   v-model:value="listQuery.grant_type"
                   allow-clear
-                  placeholder="全部"
+                  :placeholder="$t('page.securityPrivilege.placeholder.all')"
                   style="width: 110px"
                   :options="[
-                    { value: 'database', label: '整库' },
-                    { value: 'table', label: '按表' },
+                    { value: 'database', label: $t('page.securityPrivilege.grantType.database') },
+                    { value: 'table', label: $t('page.securityPrivilege.grantType.table') },
                   ]"
                 />
               </Form.Item>
-              <Form.Item label="数据库" class="mb-0">
+              <Form.Item :label="$t('page.securityPrivilege.query.databaseName')" class="mb-0">
                 <Input
                   v-model:value="listQuery.database_name"
                   allow-clear
-                  placeholder="模糊匹配"
+                  :placeholder="$t('page.securityPrivilege.placeholder.fuzzy')"
                   style="width: 140px"
                   @press-enter="fetchPrivilegeList"
                 />
               </Form.Item>
-              <Form.Item label="数据表" class="mb-0">
+              <Form.Item :label="$t('page.securityPrivilege.query.tableName')" class="mb-0">
                 <Input
                   v-model:value="listQuery.table_name"
                   allow-clear
-                  placeholder="模糊匹配"
+                  :placeholder="$t('page.securityPrivilege.placeholder.fuzzy')"
                   style="width: 140px"
                   @press-enter="fetchPrivilegeList"
                 />
               </Form.Item>
               <Form.Item class="mb-0">
                 <Space>
-                  <Button type="primary" @click="fetchPrivilegeList">查询</Button>
-                  <Button @click="resetListQuery">重置</Button>
+                  <Button type="primary" @click="fetchPrivilegeList">{{ $t('page.common.search') }}</Button>
+                  <Button @click="resetListQuery">{{ $t('page.common.reset') }}</Button>
                 </Space>
               </Form.Item>
             </Form>
@@ -670,7 +671,7 @@ onMounted(() => {
             :loading="listLoading"
             :columns="listColumns"
             :data-source="privilegeList"
-            :pagination="{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }"
+            :pagination="{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `${$t('page.common.total')} ${t} ${$t('page.common.records')}` }"
             :scroll="{ x: 2200 }"
           >
             <template #bodyCell="{ column, text, record }">
@@ -685,12 +686,12 @@ onMounted(() => {
                 "
               >
                 <Tag :color="Number(text) === 1 ? 'success' : 'default'">
-                  {{ Number(text) === 1 ? '是' : '' }}
+                  {{ Number(text) === 1 ? $t('page.securityPrivilege.yes') : '' }}
                 </Tag>
               </template>
               <template v-else-if="column.key === 'enable'">
                 <Tag :color="Number(text) === 1 ? 'success' : 'default'">
-                  {{ Number(text) === 1 ? '正常' : '禁止' }}
+                  {{ Number(text) === 1 ? $t('page.securityPrivilege.enable.normal') : $t('page.securityPrivilege.enable.forbidden') }}
                 </Tag>
               </template>
               <template v-else-if="column.key === 'expire_date'">

@@ -1,5 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { $t } from '#/locales';
+
 const routes: RouteRecordRaw[] = [
   {
     name: 'DataGrading',
@@ -7,8 +9,10 @@ const routes: RouteRecordRaw[] = [
     redirect: '/grading/grade-dict',
     meta: {
       icon: 'lucide:gauge',
+      /** 暂时隐藏，恢复时去掉 */
+      hideInMenu: true,
       order: 3.4,
-      title: '数据分级',
+      title: $t('menu.grading.title'),
     },
     children: [
       {
@@ -17,7 +21,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/grading/grade-dict/index.vue'),
         meta: {
           icon: 'lucide:book-marked',
-          title: '分级字典',
+          title: $t('menu.grading.gradeDict'),
         },
       },
       {
@@ -26,7 +30,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/grading/asset-grade/index.vue'),
         meta: {
           icon: 'lucide:table-properties',
-          title: '资产分级',
+          title: $t('menu.grading.asset'),
         },
       },
       {
@@ -35,7 +39,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/grading/grade-log/index.vue'),
         meta: {
           icon: 'lucide:history',
-          title: '变更记录',
+          title: $t('menu.grading.log'),
         },
       },
     ],

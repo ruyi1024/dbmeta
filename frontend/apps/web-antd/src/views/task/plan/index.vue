@@ -21,6 +21,7 @@ import { message } from 'ant-design-vue';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 import { useUserStore } from '@vben/stores';
 
 defineOptions({ name: 'TaskPlanPage' });
@@ -119,7 +120,7 @@ const pagination = reactive({
   pageSize: 10,
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.taskPlan.paginationTotal', { total }),
   total: 0,
 });
 
@@ -250,7 +251,7 @@ async function fetchTaskList() {
     dataSource.value = list;
     pagination.total = list.length;
   } catch (error: any) {
-    message.error(error?.message || '任务列表加载失败');
+    message.error(error?.message || $t('page.taskPlan.message.listLoadFailed'));
     dataSource.value = [];
     pagination.total = 0;
   } finally {
@@ -339,11 +340,11 @@ function openEdit(record: TaskOptionRow) {
 
 async function submitCreate() {
   if (!canAdmin.value) {
-    message.error('操作权限受限，请联系平台管理员');
+    message.error($t('page.taskPlan.message.permissionDenied'));
     return;
   }
   if (!formCreate.task_key?.trim() || !formCreate.task_name?.trim()) {
-    message.warning('请填写任务标识与任务名');
+    message.warning($t('page.taskPlan.message.keyNameRequired'));
     return;
   }
   try {
@@ -356,20 +357,20 @@ async function submitCreate() {
     });
     const raw = unwrapAxiosData(res) as Record<string, unknown>;
     if (raw?.success === false) {
-      message.error(String(raw?.msg || '添加失败'));
+      message.error(String(raw?.msg || $t('page.taskPlan.message.addFailed')));
       return;
     }
-    message.success('添加成功');
+    message.success($t('page.taskPlan.message.addSuccess'));
     createOpen.value = false;
     await fetchTaskList();
   } catch (error: any) {
-    message.error(error?.message || '添加失败');
+    message.error(error?.message || $t('page.taskPlan.message.addFailed'));
   }
 }
 
 async function submitEdit() {
   if (!canAdmin.value) {
-    message.error('操作权限受限，请联系平台管理员');
+    message.error($t('page.taskPlan.message.permissionDenied'));
     return;
   }
   const key = editRecord.value?.task_key;
@@ -386,20 +387,20 @@ async function submitEdit() {
     });
     const raw = unwrapAxiosData(res) as Record<string, unknown>;
     if (raw?.success === false) {
-      message.error(String(raw?.msg || '修改失败'));
+      message.error(String(raw?.msg || $t('page.taskPlan.message.updateFailed')));
       return;
     }
-    message.success('修改成功');
+    message.success($t('page.taskPlan.message.updateSuccess'));
     editOpen.value = false;
     await fetchTaskList();
   } catch (error: any) {
-    message.error(error?.message || '修改失败');
+    message.error(error?.message || $t('page.taskPlan.message.updateFailed'));
   }
 }
 
 async function removeTask(taskKey: string) {
   if (!canAdmin.value) {
-    message.error('操作权限受限，请联系平台管理员');
+    message.error($t('page.taskPlan.message.permissionDenied'));
     return;
   }
   try {
@@ -408,22 +409,25 @@ async function removeTask(taskKey: string) {
     });
     const raw = unwrapAxiosData(res) as Record<string, unknown>;
     if (raw?.success === false) {
-      message.error(String(raw?.msg || '删除失败'));
+      message.error(String(raw?.msg || $t('page.taskPlan.message.deleteFailed')));
       return;
     }
-    message.success('删除成功');
+    message.success($t('page.taskPlan.message.deleteSuccess'));
     await fetchTaskList();
   } catch (error: any) {
-    message.error(error?.message || '删除失败');
+    message.error(error?.message || $t('page.taskPlan.message.deleteFailed'));
   }
 }
 
 function confirmExecute(record: TaskOptionRow) {
-  const title = record.enable === 1 ? '确认执行任务' : '任务未启用';
+  const title =
+    record.enable === 1
+      ? $t('page.taskPlan.execute.titleEnabled')
+      : $t('page.taskPlan.execute.titleDisabled');
   const content =
     record.enable === 1
-      ? `确认要手工执行任务【${record.task_name}】吗？`
-      : `任务【${record.task_name}】当前未启用，是否仍要手工执行？`;
+      ? $t('page.taskPlan.execute.contentEnabled', { name: record.task_name })
+      : $t('page.taskPlan.execute.contentDisabled', { name: record.task_name });
   Modal.confirm({
     content,
     onOk: () => executeTask(record.task_key, record.task_name),
@@ -432,7 +436,7 @@ function confirmExecute(record: TaskOptionRow) {
 }
 
 async function executeTask(taskKey: string, taskName: string) {
-  const hide = message.loading('正在执行任务...', 0);
+  const hide = message.loading($t('page.taskPlan.message.executing'), 0);
   try {
     const res = await baseRequestClient.post('/v1/task/option/execute', {
       task_key: taskKey,
@@ -440,13 +444,13 @@ async function executeTask(taskKey: string, taskName: string) {
     const raw = unwrapAxiosData(res) as Record<string, unknown>;
     hide();
     if (raw?.success === true) {
-      message.success(`任务【${taskName}】已开始执行`);
+      message.success($t('page.taskPlan.message.executeStarted', { name: taskName }));
     } else {
-      message.error(String(raw?.msg || '执行失败'));
+      message.error(String(raw?.msg || $t('page.taskPlan.message.executeFailed')));
     }
   } catch (error: any) {
     hide();
-    message.error(error?.message || '执行失败');
+    message.error(error?.message || $t('page.taskPlan.message.executeFailed'));
   }
 }
 
@@ -460,13 +464,13 @@ const logPagination = reactive({
   pageSize: 10,
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => $t('page.taskPlan.paginationTotal', { total }),
   total: 0,
 });
 
 function openLogs(taskKey: string, taskName: string) {
   logTaskKey.value = taskKey;
-  logTitle.value = `${taskName} - 运行日志`;
+  logTitle.value = `${taskName} - ${$t('page.taskPlan.log.titleSuffix')}`;
   logPagination.current = 1;
   logOpen.value = true;
   fetchLogs();
@@ -490,7 +494,7 @@ async function fetchLogs() {
     logDataSource.value = Array.isArray(list) ? (list as TaskLogRow[]) : [];
     logPagination.total = Number(raw?.total ?? 0) || 0;
   } catch (error: any) {
-    message.error(error?.message || '日志加载失败');
+    message.error(error?.message || $t('page.taskPlan.message.logLoadFailed'));
     logDataSource.value = [];
     logPagination.total = 0;
   } finally {
@@ -511,33 +515,33 @@ watch(logOpen, (open) => {
 });
 
 const columns = [
-  { dataIndex: 'task_key', key: 'task_key', sorter: true, title: '任务标识', width: 160 },
-  { dataIndex: 'task_name', key: 'task_name', sorter: true, title: '任务名', width: 140 },
+  { dataIndex: 'task_key', key: 'task_key', sorter: true, title: $t('page.taskPlan.columns.taskKey'), width: 160 },
+  { dataIndex: 'task_name', key: 'task_name', sorter: true, title: $t('page.taskPlan.columns.taskName'), width: 140 },
   {
     dataIndex: 'task_description',
     ellipsis: true,
     key: 'task_description',
-    title: '任务描述',
+    title: $t('page.taskPlan.columns.taskDescription'),
     width: 220,
   },
-  { dataIndex: 'crontab', key: 'crontab', title: '计划任务', width: 120 },
+  { dataIndex: 'crontab', key: 'crontab', title: $t('page.taskPlan.columns.crontab'), width: 120 },
   {
     key: 'enable',
-    title: '启用',
+    title: $t('page.taskPlan.columns.enable'),
     width: 90,
   },
-  { dataIndex: 'last_run_time', key: 'last_run_time', sorter: true, title: '上次运行时间', width: 170 },
-  { dataIndex: 'next_run_time', key: 'next_run_time', sorter: true, title: '下次运行时间', width: 170 },
-  { key: 'actions', title: '操作', width: 320, fixed: 'right' as const },
+  { dataIndex: 'last_run_time', key: 'last_run_time', sorter: true, title: $t('page.taskPlan.columns.lastRunTime'), width: 170 },
+  { dataIndex: 'next_run_time', key: 'next_run_time', sorter: true, title: $t('page.taskPlan.columns.nextRunTime'), width: 170 },
+  { key: 'actions', title: $t('page.taskPlan.columns.actions'), width: 320, fixed: 'right' as const },
 ];
 
 const logColumns = [
-  { dataIndex: 'id', key: 'id', title: 'ID', width: 80 },
-  { dataIndex: 'start_time', key: 'start_time', title: '开始时间', width: 180 },
-  { dataIndex: 'complete_time', key: 'complete_time', title: '完成时间', width: 180 },
-  { dataIndex: 'status', key: 'status', title: '状态', width: 100 },
-  { dataIndex: 'result', ellipsis: true, key: 'result', title: '执行结果', width: 300 },
-  { dataIndex: 'gmt_created', key: 'gmt_created', title: '创建时间', width: 180 },
+  { dataIndex: 'id', key: 'id', title: $t('page.taskPlan.log.columns.id'), width: 80 },
+  { dataIndex: 'start_time', key: 'start_time', title: $t('page.taskPlan.log.columns.startTime'), width: 180 },
+  { dataIndex: 'complete_time', key: 'complete_time', title: $t('page.taskPlan.log.columns.completeTime'), width: 180 },
+  { dataIndex: 'status', key: 'status', title: $t('page.taskPlan.log.columns.status'), width: 100 },
+  { dataIndex: 'result', ellipsis: true, key: 'result', title: $t('page.taskPlan.log.columns.result'), width: 300 },
+  { dataIndex: 'gmt_created', key: 'gmt_created', title: $t('page.taskPlan.log.columns.createdAt'), width: 180 },
 ];
 
 function formatTime(v?: string) {
@@ -546,13 +550,13 @@ function formatTime(v?: string) {
 
 function statusBadge(status: string) {
   if (status === 'running') {
-    return { color: 'processing', text: '执行中' };
+    return { color: 'processing', text: $t('page.taskPlan.logStatus.running') };
   }
   if (status === 'success') {
-    return { color: 'success', text: '成功' };
+    return { color: 'success', text: $t('page.taskPlan.logStatus.success') };
   }
   if (status === 'failed') {
-    return { color: 'error', text: '失败' };
+    return { color: 'error', text: $t('page.taskPlan.logStatus.failed') };
   }
   return { color: 'default', text: status || '-' };
 }
@@ -574,21 +578,21 @@ onUnmounted(() => {
 
 <template>
   <div class="task-plan p-5">
-    <div class="mb-4 text-base font-medium text-foreground/90">计划任务管理平台</div>
+    <div class="mb-4 text-base font-medium text-foreground/90">{{ $t('page.taskPlan.pageTitle') }}</div>
 
-    <Card class="mb-4" :bordered="false" title="任务运行分析概览">
+    <Card class="mb-4" :bordered="false" :title="$t('page.taskPlan.statsCardTitle')">
       <Row :gutter="[16, 16]">
         <Col :lg="6" :md="12" :span="24" :xl="6" :xs="24">
           <Card size="small" class="stat-card">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <Text type="secondary" class="text-xs">今日任务执行次数</Text>
-                <Tooltip title="今日任务执行总次数和每小时趋势">
+                <Text type="secondary" class="text-xs">{{ $t('page.taskPlan.stat.todayExecute') }}</Text>
+                <Tooltip :title="$t('page.taskPlan.stat.todayExecuteTip')">
                   <span class="ml-1 cursor-help text-[#8c8c8c]">ⓘ</span>
                 </Tooltip>
                 <div class="mt-1 text-2xl font-semibold">{{ stats.todayExecuteCount }}</div>
                 <div v-if="stats.lastExecuteTime" class="mt-1 text-xs text-[#8c8c8c]">
-                  最新执行时间：{{ stats.lastExecuteTime }}
+                  {{ $t('page.taskPlan.stat.lastExecute') }}{{ stats.lastExecuteTime }}
                 </div>
               </div>
             </div>
@@ -598,13 +602,13 @@ onUnmounted(() => {
         <Col :lg="6" :md="12" :span="24" :xl="6" :xs="24">
           <Card size="small" class="stat-card">
             <div>
-              <Text type="secondary" class="text-xs">今日失败次数</Text>
-              <Tooltip title="今日任务失败次数和每小时趋势">
+              <Text type="secondary" class="text-xs">{{ $t('page.taskPlan.stat.todayFailed') }}</Text>
+              <Tooltip :title="$t('page.taskPlan.stat.todayFailedTip')">
                 <span class="ml-1 cursor-help text-[#8c8c8c]">ⓘ</span>
               </Tooltip>
               <div class="mt-1 text-2xl font-semibold">{{ stats.todayFailedCount }}</div>
               <div v-if="stats.lastExecuteTime" class="mt-1 text-xs text-[#8c8c8c]">
-                最新执行时间：{{ stats.lastExecuteTime }}
+                {{ $t('page.taskPlan.stat.lastExecute') }}{{ stats.lastExecuteTime }}
               </div>
             </div>
             <EchartsUI ref="chartFailedRef" class="mt-2 w-full" height="78px" width="100%" />
@@ -613,13 +617,13 @@ onUnmounted(() => {
         <Col :lg="6" :md="12" :span="24" :xl="6" :xs="24">
           <Card size="small" class="stat-card">
             <div>
-              <Text type="secondary" class="text-xs">24 小时执行次数</Text>
-              <Tooltip title="近 24 小时任务执行总次数和每小时趋势">
+              <Text type="secondary" class="text-xs">{{ $t('page.taskPlan.stat.hour24') }}</Text>
+              <Tooltip :title="$t('page.taskPlan.stat.hour24Tip')">
                 <span class="ml-1 cursor-help text-[#8c8c8c]">ⓘ</span>
               </Tooltip>
               <div class="mt-1 text-2xl font-semibold">{{ stats.hour24ExecuteCount }}</div>
               <div v-if="stats.lastExecuteTime" class="mt-1 text-xs text-[#8c8c8c]">
-                最新执行时间：{{ stats.lastExecuteTime }}
+                {{ $t('page.taskPlan.stat.lastExecute') }}{{ stats.lastExecuteTime }}
               </div>
             </div>
             <EchartsUI ref="chartH24Ref" class="mt-2 w-full" height="78px" width="100%" />
@@ -628,13 +632,13 @@ onUnmounted(() => {
         <Col :lg="6" :md="12" :span="24" :xl="6" :xs="24">
           <Card size="small" class="stat-card">
             <div>
-              <Text type="secondary" class="text-xs">任务执行成功率</Text>
-              <Tooltip title="今日任务执行成功率趋势">
+              <Text type="secondary" class="text-xs">{{ $t('page.taskPlan.stat.successRate') }}</Text>
+              <Tooltip :title="$t('page.taskPlan.stat.successRateTip')">
                 <span class="ml-1 cursor-help text-[#8c8c8c]">ⓘ</span>
               </Tooltip>
               <div class="mt-1 text-2xl font-semibold">{{ stats.successRateStr }}</div>
               <div v-if="stats.lastExecuteTime" class="mt-1 text-xs text-[#8c8c8c]">
-                最新执行时间：{{ stats.lastExecuteTime }}
+                {{ $t('page.taskPlan.stat.lastExecute') }}{{ stats.lastExecuteTime }}
               </div>
             </div>
             <EchartsUI ref="chartRateRef" class="mt-2 w-full" height="78px" width="100%" />
@@ -643,40 +647,40 @@ onUnmounted(() => {
       </Row>
     </Card>
 
-    <Card title="数据列表">
+    <Card :title="$t('page.taskPlan.dataList')">
       <Form class="task-query-form" layout="inline">
-        <Form.Item label="任务标识">
+        <Form.Item :label="$t('page.taskPlan.form.taskKey')">
           <Input
             v-model:value="queryForm.task_key"
             allow-clear
             class="task-query-input"
-            placeholder="任务标识"
+            :placeholder="$t('page.taskPlan.placeholder.taskKey')"
           />
         </Form.Item>
-        <Form.Item label="任务名">
+        <Form.Item :label="$t('page.taskPlan.form.taskName')">
           <Input
             v-model:value="queryForm.task_name"
             allow-clear
             class="task-query-input"
-            placeholder="任务名"
+            :placeholder="$t('page.taskPlan.placeholder.taskName')"
           />
         </Form.Item>
-        <Form.Item class="task-query-enable-item" label="启用">
+        <Form.Item class="task-query-enable-item" :label="$t('page.taskPlan.form.enable')">
           <Select
             v-model:value="queryForm.enable"
             allow-clear
             class="task-query-enable-select"
-            placeholder="全部"
+            :placeholder="$t('page.taskPlan.placeholder.all')"
           >
-            <Select.Option :value="1">启用</Select.Option>
-            <Select.Option :value="0">禁用</Select.Option>
+            <Select.Option :value="1">{{ $t('page.taskPlan.enabled.on') }}</Select.Option>
+            <Select.Option :value="0">{{ $t('page.taskPlan.enabled.off') }}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item class="task-query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" @click="openCreate">新建</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" @click="openCreate">{{ $t('page.taskPlan.action.new') }}</Button>
           </Space>
         </Form.Item>
       </Form>
@@ -694,7 +698,7 @@ onUnmounted(() => {
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'enable'">
             <span :style="{ color: record.enable === 1 ? '#52c41a' : '#8c8c8c' }">
-              {{ record.enable === 1 ? '启用' : '禁用' }}
+              {{ record.enable === 1 ? $t('page.taskPlan.enabled.on') : $t('page.taskPlan.enabled.off') }}
             </span>
           </template>
           <template v-else-if="column.key === 'last_run_time'">
@@ -705,17 +709,17 @@ onUnmounted(() => {
           </template>
           <template v-else-if="column.key === 'actions'">
             <Space>
-              <Button size="small" type="link" @click="openEdit(record)">修改</Button>
+              <Button size="small" type="link" @click="openEdit(record as TaskOptionRow)">{{ $t('page.taskPlan.action.edit') }}</Button>
               <Popconfirm
                 placement="left"
-                title="确认删除该任务？删除后不可恢复。"
+                :title="$t('page.taskPlan.confirmDelete')"
                 @confirm="removeTask(record.task_key)"
               >
-                <Button danger size="small" type="link">删除</Button>
+                <Button danger size="small" type="link">{{ $t('page.taskPlan.action.delete') }}</Button>
               </Popconfirm>
-              <Button size="small" type="link" @click="confirmExecute(record)">手工运行</Button>
-              <Button size="small" type="link" @click="openLogs(record.task_key, record.task_name)">
-                查看运行日志
+              <Button size="small" type="link" @click="confirmExecute(record as TaskOptionRow)">{{ $t('page.taskPlan.action.runManual') }}</Button>
+              <Button size="small" type="link" @click="openLogs((record as TaskOptionRow).task_key, (record as TaskOptionRow).task_name)">
+                {{ $t('page.taskPlan.action.viewLogs') }}
               </Button>
             </Space>
           </template>
@@ -726,31 +730,31 @@ onUnmounted(() => {
     <Modal
       v-model:open="createOpen"
       destroy-on-close
-      title="新建"
+      :title="$t('page.taskPlan.modal.createTitle')"
       :footer="null"
       @cancel="createOpen = false"
     >
       <Form layout="vertical" class="mt-2">
-        <Form.Item label="任务标识" required>
-          <Input v-model:value="formCreate.task_key" placeholder="唯一标识" />
+        <Form.Item :label="$t('page.taskPlan.form.taskKey')" required>
+          <Input v-model:value="formCreate.task_key" :placeholder="$t('page.taskPlan.placeholder.taskKeyUnique')" />
         </Form.Item>
-        <Form.Item label="任务名" required>
+        <Form.Item :label="$t('page.taskPlan.form.taskName')" required>
           <Input v-model:value="formCreate.task_name" />
         </Form.Item>
-        <Form.Item label="任务描述" required>
+        <Form.Item :label="$t('page.taskPlan.form.taskDescription')" required>
           <Input.TextArea v-model:value="formCreate.task_description" :rows="3" />
         </Form.Item>
-        <Form.Item label="计划任务 (crontab)">
-          <Input v-model:value="formCreate.crontab" placeholder="cron 表达式" />
+        <Form.Item :label="$t('page.taskPlan.form.scheduleCrontab')">
+          <Input v-model:value="formCreate.crontab" :placeholder="$t('page.taskPlan.placeholder.cron')" />
         </Form.Item>
-        <Form.Item label="启用">
+        <Form.Item :label="$t('page.taskPlan.form.enable')">
           <Select v-model:value="formCreate.enable" style="width: 100%">
-            <Select.Option :value="1">是</Select.Option>
-            <Select.Option :value="0">否</Select.Option>
+            <Select.Option :value="1">{{ $t('page.taskPlan.enabled.yes') }}</Select.Option>
+            <Select.Option :value="0">{{ $t('page.taskPlan.enabled.no') }}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" block @click="submitCreate">提交</Button>
+          <Button type="primary" block @click="submitCreate">{{ $t('page.taskPlan.action.submit') }}</Button>
         </Form.Item>
       </Form>
     </Modal>
@@ -758,31 +762,31 @@ onUnmounted(() => {
     <Modal
       v-model:open="editOpen"
       destroy-on-close
-      title="修改"
+      :title="$t('page.taskPlan.modal.editTitle')"
       :footer="null"
       @cancel="editOpen = false"
     >
       <Form layout="vertical" class="mt-2">
-        <Form.Item label="任务标识">
+        <Form.Item :label="$t('page.taskPlan.form.taskKey')">
           <Input :value="editRecord?.task_key" disabled />
         </Form.Item>
-        <Form.Item label="任务名" required>
+        <Form.Item :label="$t('page.taskPlan.form.taskName')" required>
           <Input v-model:value="formEdit.task_name" />
         </Form.Item>
-        <Form.Item label="任务描述" required>
+        <Form.Item :label="$t('page.taskPlan.form.taskDescription')" required>
           <Input.TextArea v-model:value="formEdit.task_description" :rows="3" />
         </Form.Item>
-        <Form.Item label="计划任务">
+        <Form.Item :label="$t('page.taskPlan.form.schedule')">
           <Input v-model:value="formEdit.crontab" />
         </Form.Item>
-        <Form.Item label="启用">
+        <Form.Item :label="$t('page.taskPlan.form.enable')">
           <Select v-model:value="formEdit.enable" style="width: 100%">
-            <Select.Option :value="1">是</Select.Option>
-            <Select.Option :value="0">否</Select.Option>
+            <Select.Option :value="1">{{ $t('page.taskPlan.enabled.yes') }}</Select.Option>
+            <Select.Option :value="0">{{ $t('page.taskPlan.enabled.no') }}</Select.Option>
           </Select>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" block @click="submitEdit">保存</Button>
+          <Button type="primary" block @click="submitEdit">{{ $t('page.taskPlan.action.save') }}</Button>
         </Form.Item>
       </Form>
     </Modal>
@@ -807,7 +811,7 @@ onUnmounted(() => {
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'complete_time'">
-            {{ record.complete_time || '未完成' }}
+            {{ record.complete_time || $t('page.taskPlan.log.incomplete') }}
           </template>
           <template v-else-if="column.key === 'status'">
             <span>

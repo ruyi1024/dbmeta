@@ -3,221 +3,229 @@ import type {
   WorkbenchProjectItem,
   WorkbenchQuickNavItem,
   WorkbenchTodoItem,
-  WorkbenchTrendItem,
 } from '@vben/common-ui';
+import type { EchartsUIType } from '@vben/plugins/echarts';
 
-import { ref } from 'vue';
+import { computed, onActivated, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import dayjs from 'dayjs';
 import {
   AnalysisChartCard,
   WorkbenchHeader,
   WorkbenchProject,
   WorkbenchQuickNav,
   WorkbenchTodo,
-  WorkbenchTrends,
 } from '@vben/common-ui';
+import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 import { preferences } from '@vben/preferences';
 import { useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
-import AnalyticsVisitsSource from '../analytics/analytics-visits-source.vue';
+import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 const userStore = useUserStore();
+const now = dayjs();
+const CACHE_TTL_MS = 60 * 1000;
+const SUMMARY_CACHE_KEY = 'workspace-summary-cache';
 
-// 这是一个示例数据，实际项目中需要根据实际情况进行调整
-// url 也可以是内部路由，在 navTo 方法中识别处理，进行内部跳转
-// 例如：url: /dashboard/workspace
+interface WorkspaceSummary {
+  totalDatabases: number;
+  totalDataSize: string;
+  totalRows: number;
+  totalTables: number;
+}
+
+interface TrendPoint {
+  x?: string;
+  y?: number;
+}
+
+interface CacheWrapper<T> {
+  data: T;
+  expiresAt: number;
+}
+
+function extractApiBody(response: unknown): Record<string, unknown> {
+  if (!response || typeof response !== 'object') return {};
+  const r = response as Record<string, unknown>;
+  if ('data' in r && r.data !== undefined && typeof r.data === 'object' && 'status' in r) {
+    return (r.data ?? {}) as Record<string, unknown>;
+  }
+  return r;
+}
+
+const summary = reactive<WorkspaceSummary>({
+  totalDatabases: 0,
+  totalDataSize: '0 B',
+  totalRows: 0,
+  totalTables: 0,
+});
+const task24hTotal = ref(0);
+const task24hTrend = ref<TrendPoint[]>([]);
+const taskChartLoading = ref(true);
+let summaryDelayTimer: ReturnType<typeof setTimeout> | undefined;
+let taskChartDelayTimer: ReturnType<typeof setTimeout> | undefined;
+
+const task24hChartRef = ref<EchartsUIType>();
+const { renderEcharts: renderTask24hChart } = useEcharts(task24hChartRef);
+
+const headerStats = computed(() => [
+  {
+    label: $t('page.capacity.dashboard.stat.databaseCount'),
+    value: summary.totalDatabases.toLocaleString(),
+  },
+  {
+    label: $t('page.capacity.dashboard.stat.tableCount'),
+    value: summary.totalTables.toLocaleString(),
+  },
+  {
+    label: $t('page.capacity.dashboard.stat.totalDataSize'),
+    value: summary.totalDataSize || '0 B',
+  },
+  {
+    label: $t('page.capacity.dashboard.stat.totalRows'),
+    value: summary.totalRows.toLocaleString(),
+  },
+]);
+
+const greeting = computed(() => {
+  const hour = dayjs().hour();
+  if (hour < 12) return $t('page.workspace.greeting.morning');
+  if (hour < 18) return $t('page.workspace.greeting.afternoon');
+  return $t('page.workspace.greeting.evening');
+});
+
+const headerDescription = computed(() => {
+  return `${now.format('YYYY-MM-DD')} · ${$t('page.workspace.description.focus')}`;
+});
+
 const projectItems: WorkbenchProjectItem[] = [
   {
-    color: '',
-    content: '不要等待机会，而要创造机会。',
-    date: '2021-04-01',
-    group: '开源组',
-    icon: 'carbon:logo-github',
-    title: 'Github',
-    url: 'https://github.com',
+    color: '#6366f1',
+    content: $t('page.workspace.cards.metaDashboard.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.core'),
+    icon: 'lucide:database',
+    title: $t('page.workspace.cards.metaDashboard.title'),
+    url: '/meta/dashboard',
   },
   {
-    color: '#3fb27f',
-    content: '现在的你决定将来的你。',
-    date: '2021-04-01',
-    group: '算法组',
-    icon: 'ion:logo-vue',
-    title: 'Vue',
-    url: 'https://vuejs.org',
+    color: '#10b981',
+    content: $t('page.workspace.cards.qualityRules.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.quality'),
+    icon: 'lucide:shield-check',
+    title: $t('page.workspace.cards.qualityRules.title'),
+    url: '/quality/rules',
   },
   {
-    color: '#e18525',
-    content: '没有什么才能比努力更重要。',
-    date: '2021-04-01',
-    group: '上班摸鱼',
-    icon: 'ion:logo-html5',
-    title: 'Html5',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/HTML',
+    color: '#f59e0b',
+    content: $t('page.workspace.cards.taskPlan.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.ops'),
+    icon: 'lucide:list-checks',
+    title: $t('page.workspace.cards.taskPlan.title'),
+    url: '/task',
   },
   {
-    color: '#bf0c2c',
-    content: '热情和欲望可以突破一切难关。',
-    date: '2021-04-01',
-    group: 'UI',
-    icon: 'ion:logo-angular',
-    title: 'Angular',
-    url: 'https://angular.io',
+    color: '#ef4444',
+    content: $t('page.workspace.cards.notice.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.config'),
+    icon: 'lucide:messages-square',
+    title: $t('page.workspace.cards.notice.title'),
+    url: '/setting/notice',
   },
   {
-    color: '#00d8ff',
-    content: '健康的身体是实现目标的基石。',
-    date: '2021-04-01',
-    group: '技术牛',
-    icon: 'bx:bxl-react',
-    title: 'React',
-    url: 'https://reactjs.org',
+    color: '#14b8a6',
+    content: $t('page.workspace.cards.datasource.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.config'),
+    icon: 'lucide:server-cog',
+    title: $t('page.workspace.cards.datasource.title'),
+    url: '/setting/datasource',
   },
   {
-    color: '#EBD94E',
-    content: '路是走出来的，而不是空想出来的。',
-    date: '2021-04-01',
-    group: '架构组',
-    icon: 'ion:logo-javascript',
-    title: 'Js',
-    url: 'https://developer.mozilla.org/zh-CN/docs/Web/JavaScript',
+    color: '#3b82f6',
+    content: $t('page.workspace.cards.aiModels.desc'),
+    date: now.format('YYYY-MM-DD'),
+    group: $t('page.workspace.cards.group.ai'),
+    icon: 'lucide:bot',
+    title: $t('page.workspace.cards.aiModels.title'),
+    url: '/setting/ai_models',
   },
 ];
 
-// 同样，这里的 url 也可以使用以 http 开头的外部链接
 const quickNavItems: WorkbenchQuickNavItem[] = [
   {
     color: '#1fdaca',
-    icon: 'ion:home-outline',
-    title: '首页',
-    url: '/',
+    icon: 'lucide:layout-dashboard',
+    title: $t('page.workspace.quickNav.databaseQuery'),
+    url: '/capacity/database-query',
   },
   {
     color: '#bf0c2c',
-    icon: 'ion:grid-outline',
-    title: '仪表盘',
-    url: '/dashboard',
+    icon: 'lucide:scale',
+    title: $t('page.workspace.quickNav.capacity'),
+    url: '/capacity/dashboard',
   },
   {
     color: '#e18525',
-    icon: 'ion:layers-outline',
-    title: '组件',
-    url: '/demos/features/icons',
+    icon: 'lucide:badge-check',
+    title: $t('page.workspace.quickNav.quality'),
+    url: '/quality/dashboard',
   },
   {
     color: '#3fb27f',
-    icon: 'ion:settings-outline',
-    title: '系统管理',
-    url: '/demos/features/login-expired', // 这里的 URL 是示例，实际项目中需要根据实际情况进行调整
+    icon: 'lucide:search-check',
+    title: $t('page.workspace.quickNav.query'),
+    url: '/query',
   },
   {
     color: '#4daf1bc9',
-    icon: 'ion:key-outline',
-    title: '权限管理',
-    url: '/demos/access/page-control',
+    icon: 'lucide:users',
+    title: $t('page.workspace.quickNav.users'),
+    url: '/users/manager',
   },
   {
     color: '#00d8ff',
-    icon: 'ion:bar-chart-outline',
-    title: '图表',
-    url: '/analytics',
+    icon: 'lucide:settings',
+    title: $t('page.workspace.quickNav.env'),
+    url: '/setting/env',
   },
 ];
 
 const todoItems = ref<WorkbenchTodoItem[]>([
   {
     completed: false,
-    content: `审查最近提交到Git仓库的前端代码，确保代码质量和规范。`,
-    date: '2024-07-30 11:00:00',
-    title: '审查前端代码提交',
-  },
-  {
-    completed: true,
-    content: `检查并优化系统性能，降低CPU使用率。`,
-    date: '2024-07-30 11:00:00',
-    title: '系统性能优化',
+    content: $t('page.workspace.todo.datasourceCheck.content'),
+    date: now.format('YYYY-MM-DD HH:mm:ss'),
+    title: $t('page.workspace.todo.datasourceCheck.title'),
   },
   {
     completed: false,
-    content: `进行系统安全检查，确保没有安全漏洞或未授权的访问。 `,
-    date: '2024-07-30 11:00:00',
-    title: '安全检查',
+    content: $t('page.workspace.todo.qualityTask.content'),
+    date: now.format('YYYY-MM-DD HH:mm:ss'),
+    title: $t('page.workspace.todo.qualityTask.title'),
   },
   {
     completed: false,
-    content: `更新项目中的所有npm依赖包，确保使用最新版本。`,
-    date: '2024-07-30 11:00:00',
-    title: '更新项目依赖',
+    content: $t('page.workspace.todo.aiModel.content'),
+    date: now.format('YYYY-MM-DD HH:mm:ss'),
+    title: $t('page.workspace.todo.aiModel.title'),
   },
   {
     completed: false,
-    content: `修复用户报告的页面UI显示问题，确保在不同浏览器中显示一致。 `,
-    date: '2024-07-30 11:00:00',
-    title: '修复UI显示问题',
+    content: $t('page.workspace.todo.notice.content'),
+    date: now.format('YYYY-MM-DD HH:mm:ss'),
+    title: $t('page.workspace.todo.notice.title'),
   },
 ]);
-const trendItems: WorkbenchTrendItem[] = [
-  {
-    avatar: 'svg:avatar-1',
-    content: `在 <a>开源组</a> 创建了项目 <a>Vue</a>`,
-    date: '刚刚',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-2',
-    content: `关注了 <a>威廉</a> `,
-    date: '1个小时前',
-    title: '艾文',
-  },
-  {
-    avatar: 'svg:avatar-3',
-    content: `发布了 <a>个人动态</a> `,
-    date: '1天前',
-    title: '克里斯',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `发表文章 <a>如何编写一个Vite插件</a> `,
-    date: '2天前',
-    title: 'Vben',
-  },
-  {
-    avatar: 'svg:avatar-1',
-    content: `回复了 <a>杰克</a> 的问题 <a>如何进行项目优化？</a>`,
-    date: '3天前',
-    title: '皮特',
-  },
-  {
-    avatar: 'svg:avatar-2',
-    content: `关闭了问题 <a>如何运行项目</a> `,
-    date: '1周前',
-    title: '杰克',
-  },
-  {
-    avatar: 'svg:avatar-3',
-    content: `发布了 <a>个人动态</a> `,
-    date: '1周前',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `推送了代码到 <a>Github</a>`,
-    date: '2021-04-01 20:00',
-    title: '威廉',
-  },
-  {
-    avatar: 'svg:avatar-4',
-    content: `发表文章 <a>如何编写使用 Admin Vben</a> `,
-    date: '2021-03-01 20:00',
-    title: 'Vben',
-  },
-];
 
 const router = useRouter();
 
-// 这是一个示例方法，实际项目中需要根据实际情况进行调整
-// This is a sample method, adjust according to the actual project requirements
 function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
   if (nav.url?.startsWith('http')) {
     openWindow(nav.url);
@@ -231,6 +239,153 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
     console.warn(`Unknown URL for navigation item: ${nav.title} -> ${nav.url}`);
   }
 }
+
+function loadCache<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const wrapped = JSON.parse(raw) as CacheWrapper<T>;
+    if (!wrapped?.expiresAt || Date.now() > wrapped.expiresAt) return null;
+    return wrapped.data;
+  } catch {
+    return null;
+  }
+}
+
+function saveCache<T>(key: string, data: T) {
+  try {
+    const wrapped: CacheWrapper<T> = {
+      data,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    };
+    localStorage.setItem(key, JSON.stringify(wrapped));
+  } catch {
+    // ignore cache failure
+  }
+}
+
+async function hydrateFromCache() {
+  const summaryCached = loadCache<WorkspaceSummary>(SUMMARY_CACHE_KEY);
+  if (summaryCached) {
+    Object.assign(summary, summaryCached);
+  }
+}
+
+async function fetchSummaryStats() {
+  try {
+    const response = await baseRequestClient.get('/v1/pumpkin/capacity/stats');
+    const body = extractApiBody(response);
+    const data = (body.data ?? body) as Record<string, unknown>;
+    summary.totalDatabases = Number(data.totalDatabases) || 0;
+    summary.totalTables = Number(data.totalTables) || 0;
+    summary.totalDataSize = String(data.totalDataSize ?? '0 B');
+    summary.totalRows = Number(data.totalRows) || 0;
+    saveCache(SUMMARY_CACHE_KEY, {
+      totalDatabases: summary.totalDatabases,
+      totalTables: summary.totalTables,
+      totalDataSize: summary.totalDataSize,
+      totalRows: summary.totalRows,
+    });
+  } catch {
+    summary.totalDatabases = 0;
+    summary.totalTables = 0;
+    summary.totalDataSize = '0 B';
+    summary.totalRows = 0;
+  }
+}
+
+function renderTask24hOverview() {
+  const xs = task24hTrend.value.map((i) => String(i.x ?? ''));
+  const ys = task24hTrend.value.map((i) => Number(i.y) || 0);
+
+  renderTask24hChart({
+    grid: { bottom: 32, left: 36, right: 16, top: 18 },
+    series: [
+      {
+        areaStyle: { color: 'rgba(22,119,255,0.12)' },
+        data: ys,
+        lineStyle: { color: '#1677ff', width: 2 },
+        smooth: true,
+        symbol: 'none',
+        type: 'line',
+      },
+    ],
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      axisLabel: {
+        color: '#8c8c8c',
+        fontSize: 10,
+        formatter: (v: string) => (v.includes(' ') ? (v.split(' ')[1] ?? v) : v),
+      },
+      axisTick: { show: false },
+      data: xs,
+      type: 'category',
+    },
+    yAxis: {
+      minInterval: 1,
+      splitLine: { lineStyle: { color: '#f0f0f0' } },
+      type: 'value',
+    },
+  });
+}
+
+async function fetchTask24hStats() {
+  try {
+    const response = await baseRequestClient.get('/v1/task/today/stats');
+    const body = extractApiBody(response);
+    task24hTotal.value = Number(body.hour24Total) || 0;
+    task24hTrend.value = Array.isArray(body.hour24Trend) ? (body.hour24Trend as TrendPoint[]) : [];
+  } catch {
+    task24hTotal.value = 0;
+    task24hTrend.value = [];
+  } finally {
+    taskChartLoading.value = false;
+    renderTask24hOverview();
+  }
+}
+
+function scheduleSummaryStats() {
+  summaryDelayTimer = setTimeout(() => {
+    void fetchSummaryStats();
+  }, 120);
+}
+
+function scheduleTask24hChart() {
+  taskChartLoading.value = true;
+  taskChartDelayTimer = setTimeout(() => {
+    void fetchTask24hStats();
+  }, 250);
+}
+
+function clearAllTimers() {
+  if (summaryDelayTimer) {
+    clearTimeout(summaryDelayTimer);
+    summaryDelayTimer = undefined;
+  }
+  if (taskChartDelayTimer) {
+    clearTimeout(taskChartDelayTimer);
+    taskChartDelayTimer = undefined;
+  }
+}
+
+function triggerBackgroundRefresh() {
+  clearAllTimers();
+  scheduleSummaryStats();
+  scheduleTask24hChart();
+}
+
+onMounted(() => {
+  void hydrateFromCache();
+  triggerBackgroundRefresh();
+});
+
+onActivated(() => {
+  triggerBackgroundRefresh();
+});
+
+onUnmounted(() => {
+  clearAllTimers();
+});
 </script>
 
 <template>
@@ -239,27 +394,44 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
       :avatar="userStore.userInfo?.avatar || preferences.app.defaultAvatar"
     >
       <template #title>
-        早安, {{ userStore.userInfo?.realName }}, 开始您一天的工作吧！
+        {{ greeting }}, {{ userStore.userInfo?.realName || $t('page.workspace.userFallback') }}
       </template>
-      <template #description> 今日晴，20℃ - 32℃！ </template>
+      <template #description>
+        {{ headerDescription }}
+      </template>
+      <template #stats>
+        <div
+          v-for="(item, index) in headerStats"
+          :key="item.label"
+          :class="index === 0 ? 'mr-4 flex flex-col justify-center text-right md:mr-10' : 'mr-4 ml-8 flex flex-col justify-center text-right md:mr-10 md:ml-12'"
+        >
+          <span class="text-foreground/80">{{ item.label }}</span>
+          <span class="text-2xl">{{ item.value }}</span>
+        </div>
+      </template>
     </WorkbenchHeader>
 
     <div class="mt-5 flex flex-col lg:flex-row">
       <div class="mr-4 w-full lg:w-3/5">
-        <WorkbenchProject :items="projectItems" title="项目" @click="navTo" />
-        <WorkbenchTrends :items="trendItems" class="mt-5" title="最新动态" />
+        <WorkbenchProject :items="projectItems" :title="$t('page.workspace.section.commonFunctions')" @click="navTo" />
+        <AnalysisChartCard class="mt-5" :title="$t('page.workspace.chart.taskTitle')">
+          <template #extra>
+            <span class="text-xs text-foreground/70">
+              {{ $t('page.workspace.chart.task.hour24Total') }}: {{ task24hTotal }}
+            </span>
+          </template>
+          <div v-if="taskChartLoading" class="h-[240px] animate-pulse rounded bg-muted/40" />
+          <EchartsUI v-else ref="task24hChartRef" class="h-[240px]" />
+        </AnalysisChartCard>
       </div>
       <div class="w-full lg:w-2/5">
         <WorkbenchQuickNav
           :items="quickNavItems"
           class="mt-5 lg:mt-0"
-          title="快捷导航"
+          :title="$t('page.workspace.section.quickNav')"
           @click="navTo"
         />
-        <WorkbenchTodo :items="todoItems" class="mt-5" title="待办事项" />
-        <AnalysisChartCard class="mt-5" title="访问来源">
-          <AnalyticsVisitsSource />
-        </AnalysisChartCard>
+        <WorkbenchTodo :items="todoItems" class="mt-5" :title="$t('page.workspace.section.todo')" />
       </div>
     </div>
   </div>

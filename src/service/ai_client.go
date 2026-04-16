@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,7 +16,7 @@ package service
 import (
 	"bufio"
 	"bytes"
-	"dbmcloud/src/model"
+	"dbmeta-core/src/model"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -431,7 +431,7 @@ type DeepSeekClient struct {
 // normalizeDeepSeekModelName 规范化DeepSeek模型名称
 func normalizeDeepSeekModelName(modelName string) string {
 	modelName = strings.ToLower(strings.TrimSpace(modelName))
-	
+
 	// 模型名称映射表
 	modelMap := map[string]string{
 		"deepseek-v3.2":     "deepseek-chat",
@@ -442,17 +442,17 @@ func normalizeDeepSeekModelName(modelName string) string {
 		"deepseek-r1":       "deepseek-reasoner",
 		"deepseek-coder":    "deepseek-coder",
 	}
-	
+
 	// 如果找到映射，返回映射后的名称
 	if mapped, ok := modelMap[modelName]; ok {
 		return mapped
 	}
-	
+
 	// 如果已经是正确的格式（以 deepseek- 开头），直接返回
 	if strings.HasPrefix(modelName, "deepseek-") {
 		return modelName
 	}
-	
+
 	// 默认返回 deepseek-chat
 	return "deepseek-chat"
 }
@@ -461,11 +461,11 @@ func normalizeDeepSeekModelName(modelName string) string {
 func (c *DeepSeekClient) Chat(messages []Message, options *ChatOptions) (*ChatResponse, error) {
 	// 规范化模型名称
 	normalizedModelName := normalizeDeepSeekModelName(c.Model.ModelName)
-	
+
 	// 创建模型副本并更新模型名称
 	modelCopy := *c.Model
 	modelCopy.ModelName = normalizedModelName
-	
+
 	// DeepSeek也使用OpenAI兼容接口
 	compatibleClient := &OpenAICompatibleClient{
 		BaseClient: &BaseClient{
@@ -481,11 +481,11 @@ func (c *DeepSeekClient) Chat(messages []Message, options *ChatOptions) (*ChatRe
 func (c *DeepSeekClient) ChatStream(messages []Message, options *ChatOptions) (<-chan *StreamChunk, error) {
 	// 规范化模型名称
 	normalizedModelName := normalizeDeepSeekModelName(c.Model.ModelName)
-	
+
 	// 创建模型副本并更新模型名称
 	modelCopy := *c.Model
 	modelCopy.ModelName = normalizedModelName
-	
+
 	// DeepSeek也使用OpenAI兼容接口
 	compatibleClient := &OpenAICompatibleClient{
 		BaseClient: &BaseClient{

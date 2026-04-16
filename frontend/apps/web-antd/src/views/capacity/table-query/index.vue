@@ -13,6 +13,7 @@ import {
 import { message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'DataCapacityTableQuery' });
 
@@ -82,7 +83,7 @@ const pagination = reactive({
   pageSize: 10,
   showQuickJumper: true,
   showSizeChanger: true,
-  showTotal: (total: number) => `共 ${total} 条`,
+  showTotal: (total: number) => `${$t('page.common.total')} ${total} ${$t('page.common.records')}`,
   total: 0,
 });
 
@@ -99,7 +100,7 @@ const sortOrder = ref<'ascend' | 'descend' | undefined>();
 
 const columns: TableColumnsType<TableCapacityRow> = [
   {
-    title: '数据库名',
+    title: $t('page.capacity.tableQuery.columns.databaseName'),
     dataIndex: 'databaseName',
     ellipsis: true,
     key: 'databaseName',
@@ -107,7 +108,7 @@ const columns: TableColumnsType<TableCapacityRow> = [
     width: 180,
   },
   {
-    title: '表名',
+    title: $t('page.capacity.tableQuery.columns.tableName'),
     dataIndex: 'tableName',
     ellipsis: true,
     key: 'tableName',
@@ -115,48 +116,48 @@ const columns: TableColumnsType<TableCapacityRow> = [
     width: 200,
   },
   {
-    title: '数据库类型',
+    title: $t('page.capacity.tableQuery.columns.datasourceType'),
     dataIndex: 'datasourceType',
     key: 'datasourceType',
     sorter: true,
     width: 120,
   },
   {
-    title: '主机',
+    title: $t('page.capacity.tableQuery.columns.host'),
     dataIndex: 'host',
     ellipsis: true,
     key: 'host',
     width: 150,
   },
   {
-    title: '端口',
+    title: $t('page.capacity.tableQuery.columns.port'),
     dataIndex: 'port',
     key: 'port',
     width: 80,
   },
   {
-    title: '数据存储大小',
+    title: $t('page.capacity.tableQuery.columns.dataSize'),
     dataIndex: 'dataSize',
     key: 'dataSize',
     sorter: true,
     width: 130,
   },
   {
-    title: '数据记录条数',
+    title: $t('page.capacity.tableQuery.columns.rowCount'),
     dataIndex: 'rowCount',
     key: 'rowCount',
     sorter: true,
     width: 130,
   },
   {
-    title: '数据存储日增长',
+    title: $t('page.capacity.tableQuery.columns.dataSizeIncr'),
     dataIndex: 'dataSizeIncr',
     key: 'dataSizeIncr',
     sorter: true,
     width: 140,
   },
   {
-    title: '数据记录日增长',
+    title: $t('page.capacity.tableQuery.columns.rowCountIncr'),
     dataIndex: 'rowCountIncr',
     key: 'rowCountIncr',
     sorter: true,
@@ -224,7 +225,7 @@ async function fetchTableCapacity() {
     dataSource.value = rows;
     pagination.total = total;
   } catch (error: any) {
-    message.error(error?.message || '获取数据表容量数据失败');
+    message.error(error?.message || $t('page.capacity.tableQuery.message.fetchFailed'));
     dataSource.value = [];
     pagination.total = 0;
   } finally {
@@ -275,54 +276,54 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="数据表容量信息查询">
+    <Card :title="$t('page.capacity.tableQuery.title')">
       <Form class="mb-4">
         <div class="query-grid">
-          <Form.Item label="数据库名" class="query-item">
+          <Form.Item :label="$t('page.capacity.tableQuery.form.databaseName')" class="query-item">
             <Input
               v-model:value="queryForm.databaseName"
               allow-clear
               class="query-control"
-              placeholder="请输入数据库名"
+              :placeholder="$t('page.capacity.tableQuery.placeholder.databaseName')"
             />
           </Form.Item>
-          <Form.Item label="表名" class="query-item">
+          <Form.Item :label="$t('page.capacity.tableQuery.form.tableName')" class="query-item">
             <Input
               v-model:value="queryForm.tableName"
               allow-clear
               class="query-control"
-              placeholder="请输入表名"
+              :placeholder="$t('page.capacity.tableQuery.placeholder.tableName')"
             />
           </Form.Item>
-          <Form.Item label="数据库类型" class="query-item">
+          <Form.Item :label="$t('page.capacity.tableQuery.form.datasourceType')" class="query-item">
             <Input
               v-model:value="queryForm.datasourceType"
               allow-clear
               class="query-control"
-              placeholder="请输入数据库类型"
+              :placeholder="$t('page.capacity.tableQuery.placeholder.datasourceType')"
             />
           </Form.Item>
-          <Form.Item label="主机" class="query-item">
+          <Form.Item :label="$t('page.capacity.tableQuery.form.host')" class="query-item">
             <Input
               v-model:value="queryForm.host"
               allow-clear
               class="query-control"
-              placeholder="请输入主机"
+              :placeholder="$t('page.capacity.tableQuery.placeholder.host')"
             />
           </Form.Item>
-          <Form.Item label="端口" class="query-item">
+          <Form.Item :label="$t('page.capacity.tableQuery.form.port')" class="query-item">
             <Input
               v-model:value="queryForm.port"
               allow-clear
               class="query-control"
-              placeholder="请输入端口"
+              :placeholder="$t('page.capacity.tableQuery.placeholder.port')"
             />
           </Form.Item>
         </div>
         <div class="query-actions">
           <Space>
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
           </Space>
         </div>
       </Form>

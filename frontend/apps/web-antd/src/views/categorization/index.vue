@@ -2,14 +2,18 @@
 import { Page } from '@vben/common-ui';
 
 import { Card, Empty } from 'ant-design-vue';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'Categorization' });
 </script>
 
 <template>
-  <Page auto-content-height description="按业务域与合规要求对数据资产进行类目与标签管理。">
+  <Page
+    auto-content-height
+    :description="$t('page.categorization.description')"
+  >
     <Card>
-      <Empty description="功能建设中" />
+      <Empty :description="$t('page.common.underConstruction')" />
     </Card>
   </Page>
 </template>

@@ -1,5 +1,5 @@
 /*
-Copyright 2014-2022 The Lepus Team Group, website: https://www.lepus.cc
+Copyright 2026 The Dbmeta Team Group, website: https://www.dbmeta.com
 Licensed under the GNU General Public License, Version 3.0 (the "GPLv3 License");
 You may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -9,17 +9,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-Special note:
-Please do not use this source code for any commercial purpose,
-or use it for commercial purposes after secondary development, otherwise you may bear legal risks.
 */
 
 package dataquality
 
 import (
-	"dbmcloud/src/database"
-	"dbmcloud/src/model"
-	"dbmcloud/src/utils"
+	"dbmeta-core/src/database"
+	"dbmeta-core/src/model"
+	"dbmeta-core/src/utils"
 	"net/http"
 	"time"
 
@@ -100,6 +97,35 @@ func DashboardInfo(c *gin.Context) {
 		case "uniqueness":
 			uniquenessData = append(uniquenessData, item)
 		}
+	}
+
+	// 兜底：若没有写入分布明细（data_quality_distribution），则基于评估百分比生成环图数据，
+	// 避免前端四个环形图无数据可渲染。
+	buildRateDistribution := func(goodLabel, badLabel string, rate float64) []map[string]interface{} {
+		if rate < 0 {
+			rate = 0
+		}
+		if rate > 100 {
+			rate = 100
+		}
+		good := int64(rate * 100)
+		bad := int64((100 - rate) * 100)
+		return []map[string]interface{}{
+			{"type": goodLabel, "value": good},
+			{"type": badLabel, "value": bad},
+		}
+	}
+	if len(completenessData) == 0 {
+		completenessData = buildRateDistribution("完整", "缺失", latestAssessment.FieldCompleteness)
+	}
+	if len(accuracyData) == 0 {
+		accuracyData = buildRateDistribution("准确", "异常", latestAssessment.FieldAccuracy)
+	}
+	if len(consistencyData) == 0 {
+		consistencyData = buildRateDistribution("一致", "不一致", latestAssessment.DataConsistency)
+	}
+	if len(uniquenessData) == 0 {
+		uniquenessData = buildRateDistribution("唯一", "重复", latestAssessment.DataUniqueness)
 	}
 
 	// 获取问题列表

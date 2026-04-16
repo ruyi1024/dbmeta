@@ -1,0 +1,13 @@
+.git
+.gitignore
+**/.DS_Store
+**/node_modules
+**/.turbo
+**/dist
+frontend/apps/*/dist
+frontend/vue-vben-admin
+*.exe
+log/
+tmp/
+.vscode
+.idea

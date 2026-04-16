@@ -17,6 +17,7 @@ import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'MetaDatabaseBusinessPage' });
 
@@ -61,21 +62,21 @@ const formModel = reactive({
 const appOptions = ref<{ label: string; value: string }[]>([]);
 
 const columns: TableColumnsType<LinkRow> = [
-  { title: 'ID', dataIndex: 'id', key: 'id', width: 72 },
-  { title: '数据库名', dataIndex: 'database_name', key: 'database_name', sorter: true },
-  { title: '应用名称', dataIndex: 'app_name', key: 'app_name', sorter: true },
+  { title: $t('page.metaDatabaseBusiness.columns.id'), dataIndex: 'id', key: 'id', width: 72 },
+  { title: $t('page.metaDatabaseBusiness.columns.databaseName'), dataIndex: 'database_name', key: 'database_name', sorter: true },
+  { title: $t('page.metaDatabaseBusiness.columns.appName'), dataIndex: 'app_name', key: 'app_name', sorter: true },
   {
-    title: '应用说明',
+    title: $t('page.metaDatabaseBusiness.columns.appDescription'),
     dataIndex: 'app_description',
     key: 'app_description',
     ellipsis: true,
     width: 220,
   },
-  { title: '负责人', dataIndex: 'app_owner', key: 'app_owner', width: 120 },
-  { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-  { title: '创建时间', dataIndex: 'gmt_created', key: 'gmt_created', sorter: true, width: 170 },
-  { title: '修改时间', dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
-  { title: '操作', dataIndex: 'option', key: 'option', fixed: 'right', width: 140 },
+  { title: $t('page.metaDatabaseBusiness.columns.appOwner'), dataIndex: 'app_owner', key: 'app_owner', width: 120 },
+  { title: $t('page.metaDatabaseBusiness.columns.remark'), dataIndex: 'remark', key: 'remark', ellipsis: true },
+  { title: $t('page.metaDatabaseBusiness.columns.createdAt'), dataIndex: 'gmt_created', key: 'gmt_created', sorter: true, width: 170 },
+  { title: $t('page.metaDatabaseBusiness.columns.updatedAt'), dataIndex: 'gmt_updated', key: 'gmt_updated', width: 170 },
+  { title: $t('page.metaDatabaseBusiness.columns.operation'), dataIndex: 'option', key: 'option', fixed: 'right', width: 140 },
 ];
 
 async function loadAppOptions() {
@@ -115,7 +116,7 @@ async function fetchList(sorter?: Record<string, string>) {
     dataSource.value = list;
     pagination.total = Number(payload?.total ?? list.length) || list.length;
   } catch (error: any) {
-    message.error(error?.message || '加载失败');
+    message.error(error?.message || $t('page.metaDatabaseBusiness.message.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -160,7 +161,7 @@ async function openCreate() {
   resetForm();
   await loadAppOptions();
   if (appOptions.value.length === 0) {
-    message.warning('请先在「业务信息」中新增至少一条应用');
+    message.warning($t('page.metaDatabaseBusiness.message.addAppFirst'));
   }
   modalOpen.value = true;
 }
@@ -181,11 +182,11 @@ async function openEdit(record: LinkRow) {
 
 async function handleModalOk() {
   if (!formModel.database_name.trim()) {
-    message.warning('请填写数据库名');
+    message.warning($t('page.metaDatabaseBusiness.message.databaseNameRequired'));
     return;
   }
   if (!String(formModel.app_name).trim()) {
-    message.warning('请选择应用名称');
+    message.warning($t('page.metaDatabaseBusiness.message.appNameRequired'));
     return;
   }
   modalLoading.value = true;
@@ -203,14 +204,18 @@ async function handleModalOk() {
         : await baseRequestClient.put('/v1/meta/database-business/list', payload);
     const resData = (response as any)?.data ?? response;
     if (resData?.success === false) {
-      message.error(resData?.msg || '保存失败');
+      message.error(resData?.msg || $t('page.metaDatabaseBusiness.message.saveFailed'));
       return;
     }
-    message.success(modalMode.value === 'create' ? '新增成功' : '保存成功');
+    message.success(
+      modalMode.value === 'create'
+        ? $t('page.metaDatabaseBusiness.message.createSuccess')
+        : $t('page.metaDatabaseBusiness.message.saveSuccess'),
+    );
     modalOpen.value = false;
     fetchList();
   } catch (error: any) {
-    message.error(error?.message || '保存失败');
+    message.error(error?.message || $t('page.metaDatabaseBusiness.message.saveFailed'));
   } finally {
     modalLoading.value = false;
   }
@@ -221,13 +226,13 @@ async function handleDelete(record: LinkRow) {
     const response = await baseRequestClient.delete(`/v1/meta/database-business/${record.id}`);
     const resData = (response as any)?.data ?? response;
     if (resData?.success === false) {
-      message.error(resData?.msg || '删除失败');
+      message.error(resData?.msg || $t('page.metaDatabaseBusiness.message.deleteFailed'));
       return;
     }
-    message.success('已删除');
+    message.success($t('page.metaDatabaseBusiness.message.deleted'));
     fetchList();
   } catch (error: any) {
-    message.error(error?.message || '删除失败');
+    message.error(error?.message || $t('page.metaDatabaseBusiness.message.deleteFailed'));
   }
 }
 
@@ -238,32 +243,32 @@ onMounted(() => {
 
 <template>
   <div class="p-5">
-    <Card title="库表业务关联">
+    <Card :title="$t('page.metaDatabaseBusiness.title')">
       <p class="mb-4 text-sm text-gray-500">
-        以<strong>数据库名</strong>与<strong>应用名</strong>为关联键，将元数据中的库与「业务信息」中的应用绑定；应用名须已在业务信息中存在。
+        {{ $t('page.metaDatabaseBusiness.intro') }}
       </p>
       <Form class="query-form">
         <div class="query-bar">
-          <Form.Item label="数据库名" class="query-item query-field">
+          <Form.Item :label="$t('page.metaDatabaseBusiness.columns.databaseName')" class="query-item query-field">
             <Input
               v-model:value="queryForm.database_name"
-              placeholder="模糊查询"
+              :placeholder="$t('page.metaDatabaseBusiness.placeholder.fuzzyQuery')"
               allow-clear
               class="query-input"
             />
           </Form.Item>
-          <Form.Item label="应用名称" class="query-item query-field">
+          <Form.Item :label="$t('page.metaDatabaseBusiness.columns.appName')" class="query-item query-field">
             <Input
               v-model:value="queryForm.app_name"
-              placeholder="模糊查询"
+              :placeholder="$t('page.metaDatabaseBusiness.placeholder.fuzzyQuery')"
               allow-clear
               class="query-input"
             />
           </Form.Item>
           <Space class="query-bar-actions" :size="8">
-            <Button type="primary" @click="handleSearch">查询</Button>
-            <Button @click="handleReset">重置</Button>
-            <Button type="primary" @click="openCreate">新增关联</Button>
+            <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
+            <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
+            <Button type="primary" @click="openCreate">{{ $t('page.metaDatabaseBusiness.action.createLink') }}</Button>
           </Space>
         </div>
       </Form>
@@ -286,9 +291,9 @@ onMounted(() => {
           </template>
           <template v-else-if="column.key === 'option'">
             <Space>
-              <a @click="openEdit(record as LinkRow)">编辑</a>
-              <Popconfirm title="确定删除该关联？" @confirm="handleDelete(record as LinkRow)">
-                <a class="text-red-500">删除</a>
+              <a @click="openEdit(record as LinkRow)">{{ $t('page.common.edit') }}</a>
+              <Popconfirm :title="$t('page.metaDatabaseBusiness.confirmDelete')" @confirm="handleDelete(record as LinkRow)">
+                <a class="text-red-500">{{ $t('page.common.delete') }}</a>
               </Popconfirm>
             </Space>
           </template>
@@ -297,26 +302,26 @@ onMounted(() => {
 
       <Modal
         v-model:open="modalOpen"
-        :title="modalMode === 'create' ? '新增关联' : '编辑关联'"
+        :title="modalMode === 'create' ? $t('page.metaDatabaseBusiness.modal.createTitle') : $t('page.metaDatabaseBusiness.modal.editTitle')"
         :confirm-loading="modalLoading"
         width="520px"
         destroy-on-close
         @ok="handleModalOk"
       >
         <Form layout="vertical">
-          <Form.Item label="数据库名" required>
+          <Form.Item :label="$t('page.metaDatabaseBusiness.columns.databaseName')" required>
             <Input
               v-model:value="formModel.database_name"
-              placeholder="与元数据中的 database_name 一致"
+              :placeholder="$t('page.metaDatabaseBusiness.placeholder.databaseNameMatch')"
             />
           </Form.Item>
-          <Form.Item label="应用名称" required>
+          <Form.Item :label="$t('page.metaDatabaseBusiness.columns.appName')" required>
             <Select
               v-model:value="formModel.app_name"
               allow-clear
               show-search
               :options="appOptions"
-              placeholder="请选择已在「业务信息」中维护的应用"
+              :placeholder="$t('page.metaDatabaseBusiness.placeholder.selectApp')"
               :filter-option="
                 (input: string, option: any) =>
                   (option?.label ?? '')
@@ -326,7 +331,7 @@ onMounted(() => {
               "
             />
           </Form.Item>
-          <Form.Item label="备注">
+          <Form.Item :label="$t('page.metaDatabaseBusiness.columns.remark')">
             <Input v-model:value="formModel.remark" />
           </Form.Item>
         </Form>
