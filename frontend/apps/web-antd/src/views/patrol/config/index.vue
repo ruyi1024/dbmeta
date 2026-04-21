@@ -24,6 +24,7 @@ import {
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'PatrolConfigPage' });
 
@@ -293,12 +294,14 @@ async function fetchLogs() {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   createEditMode.value = 'create';
   resetFormModel();
   createEditOpen.value = true;
 }
 
 async function openEdit(record: AlarmRow) {
+  if (!checkPermission()) return;
   createEditMode.value = 'edit';
   resetFormModel();
   formModel.id = record.id;
@@ -320,6 +323,7 @@ async function openEdit(record: AlarmRow) {
 }
 
 async function submitForm() {
+  if (!checkPermission()) return;
   if (!formModel.alarm_name?.trim()) return message.warning($t('page.patrolConfig.message.enterAlarmName'));
   if (!formModel.datasource_type?.trim()) return message.warning($t('page.patrolConfig.message.selectDatasourceType'));
   if (!formModel.datasource_id) return message.warning($t('page.patrolConfig.message.selectDatasource'));
@@ -370,6 +374,7 @@ async function submitForm() {
 }
 
 async function handleDelete(record: AlarmRow) {
+  if (!checkPermission()) return;
   if (!record.id) return;
   try {
     const response = await baseRequestClient.delete(`/v1/data/alarm/delete/${record.id}`);
@@ -402,6 +407,7 @@ async function handleExecute(record: AlarmRow) {
 }
 
 async function handleToggle(record: AlarmRow, checked: boolean) {
+  if (!checkPermission()) return;
   if (!record.id) return;
   try {
     const response = await baseRequestClient.put('/v1/data/alarm/toggle-status', {

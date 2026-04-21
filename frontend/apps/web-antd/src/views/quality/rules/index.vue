@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 interface RuleListItem {
   createdAt: string;
@@ -163,12 +164,14 @@ function resetFormModel() {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   isEdit.value = false;
   resetFormModel();
   modalVisible.value = true;
 }
 
 function openEdit(record: RuleListItem) {
+  if (!checkPermission()) return;
   isEdit.value = true;
   formModel.id = record.id;
   formModel.ruleName = record.ruleName;
@@ -183,6 +186,7 @@ function openEdit(record: RuleListItem) {
 }
 
 async function submitForm() {
+  if (!checkPermission()) return;
   if (!formModel.ruleName) {
     message.warning($t('page.qualityRules.message.ruleNameRequired'));
     return;
@@ -213,6 +217,7 @@ async function submitForm() {
 }
 
 async function handleDelete(id: number) {
+  if (!checkPermission()) return;
   try {
     const response = await baseRequestClient.delete(`/v1/dataquality/rules/${id}`);
     const result = (response as any)?.data ?? response;
@@ -228,6 +233,7 @@ async function handleDelete(id: number) {
 }
 
 async function handleToggleEnabled(record: RuleListItem, enabled: boolean) {
+  if (!checkPermission()) return;
   try {
     const response = await baseRequestClient.put('/v1/dataquality/rules', {
       ...record,

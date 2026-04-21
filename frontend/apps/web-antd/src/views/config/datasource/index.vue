@@ -9,6 +9,7 @@ import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 import { Badge, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'SettingDatasourcePage' });
 
@@ -183,12 +184,14 @@ function handleTableChange(pag: TablePaginationConfig) {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: DatasourceRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.name = record.name ?? '';
@@ -302,6 +305,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: DatasourceRow) {
+  if (!checkPermission()) return;
   if (record.id === undefined) return;
   try {
     const response = await baseRequestClient.delete('/v1/datasource/list', {

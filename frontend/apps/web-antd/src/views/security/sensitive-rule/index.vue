@@ -22,6 +22,7 @@ import {
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'DataSecuritySensitiveRule' });
 
@@ -181,12 +182,14 @@ function handleTableChange(pag: TablePaginationConfig) {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: SensitiveRuleRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.rule_type = record.rule_type ?? 'data';
@@ -201,6 +204,7 @@ function openEdit(record: SensitiveRuleRow) {
 }
 
 async function submitModal() {
+  if (!checkPermission()) return Promise.reject();
   if (!formModel.rule_key?.trim()) {
     message.warning($t('page.securitySensitiveRule.message.fillRuleKey'));
     return Promise.reject();
@@ -258,6 +262,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: SensitiveRuleRow) {
+  if (!checkPermission()) return;
   if (record.id === undefined) {
     return;
   }

@@ -20,6 +20,7 @@ import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 import { Page } from '@vben/common-ui';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'GradingAsset' });
 
@@ -141,6 +142,7 @@ async function fetchAssets() {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   isEdit.value = false;
   formModel.id = 0;
   formModel.datasourceId = undefined;
@@ -154,6 +156,7 @@ function openCreate() {
 }
 
 function openEdit(row: AssetRow) {
+  if (!checkPermission()) return;
   isEdit.value = true;
   formModel.id = row.id;
   formModel.datasourceId = row.datasourceId;
@@ -167,6 +170,7 @@ function openEdit(row: AssetRow) {
 }
 
 async function saveAsset() {
+  if (!checkPermission()) return;
   if (!formModel.datasourceId || !formModel.tableName?.trim() || !formModel.gradeId) {
     message.warning('请填写数据源、表名与分级');
     return;
@@ -199,6 +203,7 @@ async function saveAsset() {
 }
 
 async function removeRow(id: number) {
+  if (!checkPermission()) return;
   try {
     await baseRequestClient.delete(`/v1/grading/assets/${id}`);
     message.success('已删除');

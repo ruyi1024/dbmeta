@@ -21,7 +21,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { openWindow } from '@vben/utils';
 
 import { $t } from '#/locales';
-import { useAuthStore } from '#/store';
+import { useAuthStore, useEditionStore } from '#/store';
 import LoginForm from '#/views/_core/authentication/login.vue';
 
 const notifications = ref<NotificationItem[]>([
@@ -80,6 +80,7 @@ const notifications = ref<NotificationItem[]>([
 const router = useRouter();
 const userStore = useUserStore();
 const authStore = useAuthStore();
+const editionStore = useEditionStore();
 const accessStore = useAccessStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
 const showDot = computed(() =>
@@ -161,6 +162,7 @@ watch(
   () => ({
     content: preferences.app.watermarkContent,
     enable: preferences.app.watermark,
+    commercial: editionStore.isCommercial,
     /** 用户信息就绪后刷新水印文案 */
     userSig: [
       userStore.userInfo?.userId,
@@ -168,18 +170,18 @@ watch(
       userStore.userInfo?.realName,
     ].join('|'),
   }),
-  async ({ content, enable }) => {
-    if (enable) {
+  async ({ content, enable, commercial }) => {
+    if (enable && commercial) {
       const text =
         typeof content === 'string' && content.trim() !== ''
           ? content.trim()
           : getDefaultWatermarkText();
       await updateWatermark({
         content: text,
-        /** 默认约 20px，略缩小以减轻遮挡 */
+        /** 适当放大水印间距，减少同屏数量 */
         fontSize: '12px',
-        height: 150,
-        width: 130,
+        height: 220,
+        width: 200,
       });
     } else {
       destroyWatermark();
@@ -189,6 +191,8 @@ watch(
     immediate: true,
   },
 );
+
+void editionStore.ensureLoaded();
 </script>
 
 <template>

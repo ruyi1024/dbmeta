@@ -22,7 +22,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
-import { useUserStore } from '@vben/stores';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'TaskPlanPage' });
 
@@ -109,9 +109,6 @@ function parseTaskList(response: unknown): TaskOptionRow[] {
   const data = b.data;
   return Array.isArray(data) ? (data as TaskOptionRow[]) : [];
 }
-
-const userStore = useUserStore();
-const canAdmin = computed(() => userStore.userInfo?.roles?.includes('admin') ?? false);
 
 const loading = ref(false);
 const dataSource = ref<TaskOptionRow[]>([]);
@@ -321,6 +318,7 @@ const formEdit = reactive({
 });
 
 function openCreate() {
+  if (!checkPermission($t('page.taskPlan.message.permissionDenied'))) return;
   formCreate.task_key = '';
   formCreate.task_name = '';
   formCreate.task_description = '';
@@ -330,6 +328,7 @@ function openCreate() {
 }
 
 function openEdit(record: TaskOptionRow) {
+  if (!checkPermission($t('page.taskPlan.message.permissionDenied'))) return;
   editRecord.value = record;
   formEdit.task_name = record.task_name;
   formEdit.task_description = record.task_description;
@@ -339,10 +338,7 @@ function openEdit(record: TaskOptionRow) {
 }
 
 async function submitCreate() {
-  if (!canAdmin.value) {
-    message.error($t('page.taskPlan.message.permissionDenied'));
-    return;
-  }
+  if (!checkPermission($t('page.taskPlan.message.permissionDenied'))) return;
   if (!formCreate.task_key?.trim() || !formCreate.task_name?.trim()) {
     message.warning($t('page.taskPlan.message.keyNameRequired'));
     return;
@@ -369,10 +365,7 @@ async function submitCreate() {
 }
 
 async function submitEdit() {
-  if (!canAdmin.value) {
-    message.error($t('page.taskPlan.message.permissionDenied'));
-    return;
-  }
+  if (!checkPermission($t('page.taskPlan.message.permissionDenied'))) return;
   const key = editRecord.value?.task_key;
   if (!key) {
     return;
@@ -399,10 +392,7 @@ async function submitEdit() {
 }
 
 async function removeTask(taskKey: string) {
-  if (!canAdmin.value) {
-    message.error($t('page.taskPlan.message.permissionDenied'));
-    return;
-  }
+  if (!checkPermission($t('page.taskPlan.message.permissionDenied'))) return;
   try {
     const res = await baseRequestClient.delete('/v1/task/option', {
       data: { task_key: taskKey },

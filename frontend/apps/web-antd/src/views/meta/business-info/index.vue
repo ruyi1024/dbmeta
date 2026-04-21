@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'MetaBusinessInfoPage' });
 
@@ -133,12 +134,14 @@ function resetForm() {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetForm();
   modalOpen.value = true;
 }
 
 function openEdit(record: BusinessInfoRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.app_name = record.app_name || '';
@@ -151,6 +154,7 @@ function openEdit(record: BusinessInfoRow) {
 }
 
 async function handleModalOk() {
+  if (!checkPermission()) return;
   if (!formModel.app_name.trim()) {
     message.warning($t('page.metaBusinessInfo.message.appNameRequired'));
     return;
@@ -191,6 +195,7 @@ async function handleModalOk() {
 }
 
 async function handleDelete(record: BusinessInfoRow) {
+  if (!checkPermission()) return;
   try {
     const response = await baseRequestClient.delete(`/v1/meta/business-info/${record.id}`);
     const resData = (response as any)?.data ?? response;

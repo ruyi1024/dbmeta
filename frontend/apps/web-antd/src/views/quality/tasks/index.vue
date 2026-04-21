@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 interface TaskListItem {
   createdAt?: string;
@@ -148,6 +149,7 @@ async function fetchDatabaseList() {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   formModel.taskName = '';
   formModel.taskType = '全量';
   formModel.databaseName = '';
@@ -164,6 +166,7 @@ function onDatabaseChange(value: string) {
 }
 
 async function submitCreate() {
+  if (!checkPermission()) return;
   if (!formModel.taskName || !formModel.databaseName) {
     message.warning($t('page.qualityTasks.message.nameDbRequired'));
     return;
@@ -208,6 +211,7 @@ async function handleStart(record: TaskListItem) {
 }
 
 async function handleDelete(id: number) {
+  if (!checkPermission()) return;
   try {
     const response = await baseRequestClient.delete(`/v1/dataquality/tasks/${id}`);
     const payload = (response as any)?.data ?? response;

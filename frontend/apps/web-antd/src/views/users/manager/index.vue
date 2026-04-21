@@ -8,6 +8,7 @@ import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 import dayjs from 'dayjs';
 
@@ -122,12 +123,14 @@ function handleTableChange(pag: TablePaginationConfig, _filters: any, sorter: an
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: UserRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.username = record.username ?? '';
@@ -188,6 +191,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: UserRow) {
+  if (!checkPermission()) return;
   if (!record.username) return;
   try {
     const response = await baseRequestClient.delete('/v1/users/manager/lists', {

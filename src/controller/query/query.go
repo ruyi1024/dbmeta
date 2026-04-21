@@ -35,6 +35,7 @@ import (
 	"dbmeta-core/src/libary/mongodb"
 	"dbmeta-core/src/libary/redis"
 	"dbmeta-core/src/model"
+	"dbmeta-core/src/module"
 	"dbmeta-core/src/utils"
 )
 
@@ -188,7 +189,7 @@ func DoQuery(c *gin.Context) {
 		}
 
 		//非管理员进行鉴权
-		if admin != true {
+		if admin != true && module.HasCommercialEdition() {
 			//create/alter按库授权
 			if sqlType == "create" || sqlType == "alter" {
 				checkResult, msg = CheckPrivilege(username.(string), datasourceType, datasource, databaseName, "", sqlType, queryNumber)

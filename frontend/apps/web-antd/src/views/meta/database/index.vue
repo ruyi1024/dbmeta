@@ -17,6 +17,7 @@ import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'MetaDatabasePage' });
 
@@ -141,6 +142,7 @@ function deletedText(value: number | string) {
 }
 
 function openEdit(record: Record<string, any>) {
+  if (!checkPermission()) return;
   editingId.value = record.id;
   editForm.alias_name = record.alias_name || '';
   editForm.ops_owner = record.ops_owner || '';
@@ -150,6 +152,7 @@ function openEdit(record: Record<string, any>) {
 }
 
 async function openLinkBusiness(record: DatabaseItem) {
+  if (!checkPermission()) return;
   linkDatabaseName.value = record.database_name;
   linkModalOpen.value = true;
   linkLoading.value = true;
@@ -182,6 +185,7 @@ async function openLinkBusiness(record: DatabaseItem) {
 }
 
 async function handleLinkSubmit() {
+  if (!checkPermission()) return;
   linkSaving.value = true;
   try {
     const response = await baseRequestClient.post('/v1/meta/database-business/batch-sync', {
@@ -203,6 +207,7 @@ async function handleLinkSubmit() {
 }
 
 async function handleUpdateSubmit() {
+  if (!checkPermission()) return;
   if (!editingId.value) return;
   editLoading.value = true;
   try {

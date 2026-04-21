@@ -22,6 +22,7 @@ import (
 	"dbmeta-core/src/libary/mysql"
 	"dbmeta-core/src/libary/oracle"
 	"dbmeta-core/src/libary/postgres"
+	"dbmeta-core/src/module"
 	"dbmeta-core/src/utils"
 	"fmt"
 	"net/http"
@@ -38,7 +39,7 @@ func DatabaseList(c *gin.Context) {
 	//如果是非管理员，则查询权限表有权限的数据库列表，否则连到所有库查询所有数据库
 	admin, _ := c.Get("admin")
 	username, _ := c.Get("username")
-	if admin != true {
+	if admin != true && module.HasCommercialEdition() {
 		sql := fmt.Sprintf("select database_name from privileges where datasource_type='%s' and datasource='%s' and username='%s' group by database_name order by database_name asc", datasourceType, datasource, username)
 		dataList, _ := database.QueryAll(sql)
 		c.JSON(http.StatusOK, gin.H{

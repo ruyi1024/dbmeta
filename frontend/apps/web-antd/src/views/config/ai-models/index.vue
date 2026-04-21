@@ -25,6 +25,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'SettingAiModelsPage' });
 
@@ -234,12 +235,14 @@ function handleTableChange(pag: TablePaginationConfig) {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: AIModelRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.name = record.name ?? '';
@@ -333,6 +336,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: AIModelRow) {
+  if (!checkPermission()) return;
   if (!record.id) return;
   try {
     const response = await baseRequestClient.delete(`/v1/ai/models/${record.id}`);

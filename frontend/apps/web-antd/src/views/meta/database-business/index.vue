@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 
 import { baseRequestClient } from '#/api/request';
 import { $t } from '#/locales';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'MetaDatabaseBusinessPage' });
 
@@ -157,6 +158,7 @@ function resetForm() {
 }
 
 async function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetForm();
   await loadAppOptions();
@@ -167,6 +169,7 @@ async function openCreate() {
 }
 
 async function openEdit(record: LinkRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   await loadAppOptions();
   formModel.id = record.id;
@@ -181,6 +184,7 @@ async function openEdit(record: LinkRow) {
 }
 
 async function handleModalOk() {
+  if (!checkPermission()) return;
   if (!formModel.database_name.trim()) {
     message.warning($t('page.metaDatabaseBusiness.message.databaseNameRequired'));
     return;
@@ -222,6 +226,7 @@ async function handleModalOk() {
 }
 
 async function handleDelete(record: LinkRow) {
+  if (!checkPermission()) return;
   try {
     const response = await baseRequestClient.delete(`/v1/meta/database-business/${record.id}`);
     const resData = (response as any)?.data ?? response;

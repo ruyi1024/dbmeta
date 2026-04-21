@@ -22,6 +22,7 @@ import (
 	"dbmeta-core/src/libary/mysql"
 	"dbmeta-core/src/libary/oracle"
 	"dbmeta-core/src/libary/postgres"
+	"dbmeta-core/src/module"
 	"dbmeta-core/src/utils"
 	"fmt"
 	"net/http"
@@ -40,7 +41,7 @@ func TableList(c *gin.Context) {
 	//查询是否有按库授权的数据
 	databaseGrantList, _ := database.QueryAll(fmt.Sprintf("select database_name from privileges where datasource_type='%s' and datasource='%s' and database_name='%s' and username='%s' and grant_type='database' ", datasourceType, datasource, databaseName, username))
 	//如果是非管理员，切没有按库授权记录，则查询该库有权限的表
-	if admin != true && len(databaseGrantList) == 0 {
+	if admin != true && module.HasCommercialEdition() && len(databaseGrantList) == 0 {
 		sql := fmt.Sprintf("select table_name from privileges where datasource_type='%s' and datasource='%s' and database_name='%s' and username='%s' group by table_name order by table_name asc", datasourceType, datasource, databaseName, username)
 		dataList, _ := database.QueryAll(sql)
 		c.JSON(http.StatusOK, gin.H{

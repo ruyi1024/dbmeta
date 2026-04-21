@@ -21,6 +21,7 @@ import {
 } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'ConfigIdcPage' });
 
@@ -148,12 +149,14 @@ function handleTableChange(pag: TablePaginationConfig) {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: IdcRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.idc_key = record.idc_key ?? '';
@@ -218,6 +221,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: IdcRow) {
+  if (!checkPermission()) return;
   if (record.id === undefined) return;
   try {
     const response = await baseRequestClient.delete('/v1/datasource_idc/list', {

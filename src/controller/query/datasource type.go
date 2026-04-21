@@ -15,6 +15,7 @@ package query
 
 import (
 	"dbmeta-core/src/database"
+	"dbmeta-core/src/module"
 	"fmt"
 	"net/http"
 	_ "reflect"
@@ -28,7 +29,7 @@ func DataSourceTypeList(c *gin.Context) {
 	method := c.Request.Method
 	if method == "GET" {
 		var searchCondition string
-		if admin != true {
+		if admin != true && module.HasCommercialEdition() {
 			searchCondition = fmt.Sprintf(" and name in (select datasource_type from privileges where username='%s')", username)
 		}
 		sql := fmt.Sprintf("select id,name from datasource_type where enable=1 %s order by sort asc", searchCondition)

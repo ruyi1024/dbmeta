@@ -18,6 +18,7 @@ import type { TableColumnsType } from 'ant-design-vue';
 import { Page } from '@vben/common-ui';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'GradingGradeDict' });
 
@@ -65,6 +66,7 @@ async function fetchGrades() {
 }
 
 function openEdit(record: GradeRow) {
+  if (!checkPermission()) return;
   editForm.id = record.id;
   editForm.description = record.description ?? '';
   editForm.standardRef = record.standardRef ?? '';
@@ -73,6 +75,7 @@ function openEdit(record: GradeRow) {
 }
 
 async function saveEdit() {
+  if (!checkPermission()) return;
   saving.value = true;
   try {
     await baseRequestClient.put('/v1/grading/grades', {
@@ -92,6 +95,10 @@ async function saveEdit() {
 }
 
 async function onEnableChange(record: GradeRow, checked: boolean) {
+  if (!checkPermission()) {
+    await fetchGrades();
+    return;
+  }
   const next = checked ? 1 : 0;
   try {
     await baseRequestClient.put('/v1/grading/grades', {

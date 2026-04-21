@@ -11,6 +11,7 @@ import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 import { Button, Card, Form, Input, Modal, Popconfirm, Space, Table, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
+import { checkPermission } from '#/utils/check-permission';
 
 defineOptions({ name: 'SettingEnvPage' });
 
@@ -122,12 +123,14 @@ function handleTableChange(pag: TablePaginationConfig) {
 }
 
 function openCreate() {
+  if (!checkPermission()) return;
   modalMode.value = 'create';
   resetFormModel();
   modalOpen.value = true;
 }
 
 function openEdit(record: EnvRow) {
+  if (!checkPermission()) return;
   modalMode.value = 'edit';
   formModel.id = record.id;
   formModel.env_key = record.env_key ?? '';
@@ -182,6 +185,7 @@ async function submitModal() {
 }
 
 async function handleDelete(record: EnvRow) {
+  if (!checkPermission()) return;
   if (record.id === undefined) return;
   try {
     const response = await baseRequestClient.delete('/v1/datasource_env/list', {

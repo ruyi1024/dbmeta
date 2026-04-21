@@ -10,8 +10,8 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     defaultHomePath: '/workspace',
     name: import.meta.env.VITE_APP_TITLE,
-    /** 全屏水印（与旧版数据查询页一致，可在偏好设置中关闭或自定义文案） */
-    watermark: true,
+    /** 水印改为仅企业版生效，开源版默认关闭 */
+    watermark: false,
     watermarkContent: '',
   },
 });
