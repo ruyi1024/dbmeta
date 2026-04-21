@@ -34,12 +34,14 @@ func GetAIModelDefaults(c *gin.Context) {
 	gradingID := m[model.AIModelScenarioGrading]
 	tableColAccuracyID := m[model.AIModelScenarioTableColumnAccuracy]
 	tableColCommentID := m[model.AIModelScenarioTableColumnComment]
+	sqlGenerationID := m[model.AIModelScenarioSQLGeneration]
 	c.JSON(200, gin.H{
 		"success": true,
 		"data": gin.H{
 			"grading_model_id":               gradingID,
 			"table_column_accuracy_model_id": tableColAccuracyID,
 			"table_column_comment_model_id":  tableColCommentID,
+			"sql_generation_model_id":        sqlGenerationID,
 		},
 	})
 }
@@ -48,6 +50,7 @@ type aiModelDefaultsUpdateReq struct {
 	GradingModelId             *int `json:"grading_model_id"`
 	TableColumnAccuracyModelId *int `json:"table_column_accuracy_model_id"`
 	TableColumnCommentModelId  *int `json:"table_column_comment_model_id"`
+	SQLGenerationModelId       *int `json:"sql_generation_model_id"`
 }
 
 // UpdateAIModelDefaults 更新各场景默认模型
@@ -66,6 +69,10 @@ func UpdateAIModelDefaults(c *gin.Context) {
 		return
 	}
 	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioTableColumnComment, req.TableColumnCommentModelId); err != nil {
+		c.JSON(400, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if err := service.SetAIModelDefaultForScenario(model.AIModelScenarioSQLGeneration, req.SQLGenerationModelId); err != nil {
 		c.JSON(400, gin.H{"success": false, "message": err.Error()})
 		return
 	}

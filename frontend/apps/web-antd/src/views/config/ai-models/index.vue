@@ -73,7 +73,6 @@ const providerOptions = computed(() => [
   { label: $t('page.settingAiModels.provider.ollama'), value: 'ollama' },
   { label: $t('page.settingAiModels.provider.lm_studio'), value: 'lm_studio' },
   { label: $t('page.settingAiModels.provider.vllm'), value: 'vllm' },
-  { label: $t('page.settingAiModels.provider.dify_local'), value: 'dify_local' },
   { label: $t('page.settingAiModels.provider.openai'), value: 'openai' },
   { label: $t('page.settingAiModels.provider.deepseek'), value: 'deepseek' },
   { label: $t('page.settingAiModels.provider.qwen'), value: 'qwen' },
@@ -102,6 +101,8 @@ const gradingDefaultModelId = ref<number | undefined>(undefined);
 const tableColumnCommentDefaultModelId = ref<number | undefined>(undefined);
 /** 表字段准确度评估 */
 const tableColumnAccuracyDefaultModelId = ref<number | undefined>(undefined);
+/** 智能生成 SQL */
+const sqlGenerationDefaultModelId = ref<number | undefined>(undefined);
 const enabledModelOptions = ref<{ label: string; value: number }[]>([]);
 
 const searchForm = reactive({
@@ -388,17 +389,22 @@ async function fetchDefaults() {
     const payload =
       (defBody.data as {
         grading_model_id?: number;
+        sql_generation_model_id?: number;
         table_column_accuracy_model_id?: number;
         table_column_comment_model_id?: number;
       } | undefined) ??
       defBody;
     const p = payload as {
       grading_model_id?: number;
+      sql_generation_model_id?: number;
       table_column_accuracy_model_id?: number;
       table_column_comment_model_id?: number;
     };
     const gid = p.grading_model_id;
     gradingDefaultModelId.value = gid !== undefined && gid !== null ? Number(gid) : undefined;
+    const sgid = p.sql_generation_model_id;
+    sqlGenerationDefaultModelId.value =
+      sgid !== undefined && sgid !== null ? Number(sgid) : undefined;
     const taid = p.table_column_accuracy_model_id;
     tableColumnAccuracyDefaultModelId.value =
       taid !== undefined && taid !== null ? Number(taid) : undefined;
@@ -427,6 +433,7 @@ async function saveDefaults() {
   try {
     const response = await baseRequestClient.put('/v1/ai/model-defaults', {
       grading_model_id: gradingDefaultModelId.value ?? null,
+      sql_generation_model_id: sqlGenerationDefaultModelId.value ?? null,
       table_column_accuracy_model_id: tableColumnAccuracyDefaultModelId.value ?? null,
       table_column_comment_model_id: tableColumnCommentDefaultModelId.value ?? null,
     });
@@ -529,6 +536,17 @@ onMounted(() => {
                 show-search
                 option-filter-prop="label"
                 :placeholder="$t('page.settingAiModels.defaults.gradingPlaceholder')"
+                :options="enabledModelOptions"
+                class="w-full"
+              />
+            </Form.Item>
+            <Form.Item :label="$t('page.settingAiModels.defaults.sqlGeneration')">
+              <Select
+                v-model:value="sqlGenerationDefaultModelId"
+                allow-clear
+                show-search
+                option-filter-prop="label"
+                :placeholder="$t('page.settingAiModels.defaults.sqlGenerationPlaceholder')"
                 :options="enabledModelOptions"
                 class="w-full"
               />
@@ -669,7 +687,8 @@ onMounted(() => {
 }
 
 :deep(.query-control) {
-  width: 300px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .query-actions {

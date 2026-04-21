@@ -384,7 +384,8 @@ onMounted(() => {
 }
 
 :deep(.query-control) {
-  width: 300px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .query-actions {

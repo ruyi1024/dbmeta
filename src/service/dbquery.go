@@ -151,25 +151,35 @@ func ProcessDbQuery(req *DbQueryRequest) (*DbQueryResult, error) {
 		}
 		aiModel = model
 	} else {
-		// 查找启用的SQLCoder模型（模型名称包含sqlcoder）
-		models, err := GetEnabledModels()
+		// 优先使用“智能生成 SQL”场景配置的默认模型
+		defaultSQLModel, err := GetDefaultAIModelByScenario(model.AIModelScenarioSQLGeneration)
 		if err != nil {
-			return nil, fmt.Errorf("获取启用的模型失败: %v", err)
+			log.Logger.Warn("读取智能生成SQL默认模型失败，回退到自动选择", zap.Error(err))
+		} else if defaultSQLModel != nil && defaultSQLModel.Enabled == 1 {
+			aiModel = defaultSQLModel
 		}
 
-		// 优先查找名称包含sqlcoder的模型
-		for _, m := range models {
-			if strings.Contains(strings.ToLower(m.Name), "sqlcoder") ||
-				strings.Contains(strings.ToLower(m.ModelName), "sqlcoder") {
-				aiModel = &m
-				break
+		if aiModel == nil {
+			// 查找启用的SQLCoder模型（模型名称包含sqlcoder）
+			models, err := GetEnabledModels()
+			if err != nil {
+				return nil, fmt.Errorf("获取启用的模型失败: %v", err)
 			}
-		}
 
-		// 如果没有找到SQLCoder模型，使用第一个启用的模型
-		if aiModel == nil && len(models) > 0 {
-			aiModel = &models[0]
-			log.Logger.Warn("未找到SQLCoder模型，使用默认模型", zap.String("model", aiModel.Name))
+			// 优先查找名称包含sqlcoder的模型
+			for _, m := range models {
+				if strings.Contains(strings.ToLower(m.Name), "sqlcoder") ||
+					strings.Contains(strings.ToLower(m.ModelName), "sqlcoder") {
+					aiModel = &m
+					break
+				}
+			}
+
+			// 如果没有找到SQLCoder模型，使用第一个启用的模型
+			if aiModel == nil && len(models) > 0 {
+				aiModel = &models[0]
+				log.Logger.Warn("未找到SQLCoder模型，使用默认模型", zap.String("model", aiModel.Name))
+			}
 		}
 	}
 

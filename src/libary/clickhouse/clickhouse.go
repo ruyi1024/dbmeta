@@ -16,13 +16,15 @@ package clickhouse
 import (
 	"database/sql"
 	"fmt"
-	//_ "github.com/ClickHouse/clickhouse-go"
+
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 )
 
 var err error
 
 func Connect(host, port, username, password, database string) (*sql.DB, error) {
-	db, err := sql.Open("clickhouse", fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s&read_timeout=30s", host, port, database, username, password))
+	fmt.Printf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=5s&read_timeout=30s", username, password, host, port, database)
+	db, err := sql.Open("clickhouse", fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=5s&read_timeout=30s", username, password, host, port, database))
 	if err != nil {
 		return nil, err
 	}

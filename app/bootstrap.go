@@ -48,7 +48,7 @@ func Bootstrap(ctx context.Context, configPath string, opts BootstrapOptions) {
 
 	database.DB = database.InitDb()
 	database.SQL = database.InitConnect()
-	database.RDS = database.InitRedis()
+	//database.RDS = database.InitRedis()
 	//mq.NSQ = mq.InitNsq()
 
 	if opts.EnforceCommercialLicense {

@@ -31,6 +31,7 @@ import (
 )
 
 const aiGeneralTableCommentBatchSize = 20
+const aiGeneralTableCommentDefaultCron = "*/30 * * * *"
 
 type aiTableCommentBatchItem struct {
 	ID        int    `json:"id"`
@@ -61,18 +62,63 @@ func init() {
 func aiGeneralTableCommentCrontabTask() {
 	time.Sleep(time.Second * time.Duration(30))
 	var db = database.DB
-	var record model.TaskOption
-	db.Select("crontab").Where("task_key=?", "ai_general_table_comment").Take(&record)
-	c := cron.New()
-	c.AddFunc(record.Crontab, func() {
+	logger := log.Logger
+	currentCrontab := ""
+	var scheduler *cron.Cron
+
+	job := func() {
+		var record model.TaskOption
 		db.Select("enable").Where("task_key=?", "ai_general_table_comment").Take(&record)
 		if record.Enable == 1 {
 			db.Model(model.TaskHeartbeat{}).Where("heartbeat_key='ai_general_table_comment'").Updates(map[string]interface{}{"heartbeat_time": time.Now().Format("2006-01-02 15:04:05.999")})
 			doAiGeneralTableCommentTask()
 			db.Model(model.TaskHeartbeat{}).Where("heartbeat_key='ai_general_table_comment'").Updates(map[string]interface{}{"heartbeat_end_time": time.Now().Format("2006-01-02 15:04:05.999")})
 		}
-	})
-	c.Start()
+	}
+
+	var applyCrontab func(string)
+	applyCrontab = func(raw string) {
+		nextCrontab := strings.TrimSpace(raw)
+		if nextCrontab == "" {
+			nextCrontab = aiGeneralTableCommentDefaultCron
+		}
+		if nextCrontab == currentCrontab {
+			return
+		}
+
+		nextScheduler := cron.New()
+		if _, err := nextScheduler.AddFunc(nextCrontab, job); err != nil {
+			logger.Error("注册 ai_general_table_comment 定时任务失败",
+				zap.String("crontab", nextCrontab), zap.Error(err))
+			if currentCrontab == "" && nextCrontab != aiGeneralTableCommentDefaultCron {
+				// 首次加载时如果数据库表达式非法，兜底默认值，避免任务完全不执行。
+				applyCrontab(aiGeneralTableCommentDefaultCron)
+			}
+			return
+		}
+
+		nextScheduler.Start()
+		if scheduler != nil {
+			stopCtx := scheduler.Stop()
+			<-stopCtx.Done()
+		}
+		scheduler = nextScheduler
+		currentCrontab = nextCrontab
+		logger.Info("已加载 ai_general_table_comment 定时任务",
+			zap.String("crontab", currentCrontab))
+	}
+
+	for {
+		var record model.TaskOption
+		if err := db.Select("crontab").Where("task_key=?", "ai_general_table_comment").Take(&record).Error; err != nil {
+			logger.Warn("加载 ai_general_table_comment 定时配置失败，使用默认表达式",
+				zap.Error(err), zap.String("default_crontab", aiGeneralTableCommentDefaultCron))
+			applyCrontab(aiGeneralTableCommentDefaultCron)
+		} else {
+			applyCrontab(record.Crontab)
+		}
+		time.Sleep(30 * time.Second)
+	}
 }
 
 func doAiGeneralTableCommentTask() {

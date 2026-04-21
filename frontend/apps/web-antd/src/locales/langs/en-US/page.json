@@ -895,14 +895,16 @@
       "settings": "Model Settings",
       "defaults": "Default Models"
     },
-    "defaultsIntro": "Assign default AI models per scenario (from enabled models). When unset, tasks fall back to existing logic (e.g. Dify agents).",
+    "defaultsIntro": "Assign default AI models per scenario (from enabled models). If not selected, the highest-priority enabled model will be used automatically.",
     "defaults": {
       "grading": "Default data classification model",
-      "gradingPlaceholder": "Leave empty to use built-in policy",
+      "gradingPlaceholder": "If unset, the highest-priority enabled model is used automatically",
+      "sqlGeneration": "Default SQL generation model",
+      "sqlGenerationPlaceholder": "Used for SQL generation in smart query; if unset, the highest-priority enabled model is used automatically",
       "tableComment": "Default table/column comment model",
-      "tableCommentPlaceholder": "For AI table/column comment tasks; falls back to Dify if unset",
+      "tableCommentPlaceholder": "For AI table/column comment tasks; if unset, the highest-priority enabled model is used automatically",
       "accuracy": "Default accuracy evaluation model",
-      "accuracyPlaceholder": "For table/column accuracy tasks; falls back to system default if unset"
+      "accuracyPlaceholder": "For table/column accuracy tasks; if unset, the highest-priority enabled model is used automatically"
     },
     "columns": {
       "name": "Name",
@@ -948,7 +950,6 @@
       "ollama": "Ollama",
       "lm_studio": "LM Studio",
       "vllm": "vLLM",
-      "dify_local": "Dify (local)",
       "openai": "OpenAI",
       "deepseek": "DeepSeek",
       "qwen": "Qwen"

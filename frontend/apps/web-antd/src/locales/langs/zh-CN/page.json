@@ -895,14 +895,16 @@
       "settings": "模型设置",
       "defaults": "默认模型"
     },
-    "defaultsIntro": "为业务场景指定默认 AI 模型（从已启用的模型中选择）。未指定时将按各任务原有回退逻辑（例如 Dify 智能体）。",
+    "defaultsIntro": "为业务场景指定默认 AI 模型（从已启用模型中选择）。未选择时会自动使用优先级最高的已启用模型。",
     "defaults": {
       "grading": "数据分级默认模型",
-      "gradingPlaceholder": "不指定则使用系统内置策略",
+      "gradingPlaceholder": "不选择则自动使用优先级最高的已启用模型",
+      "sqlGeneration": "智能生成SQL默认模型",
+      "sqlGenerationPlaceholder": "用于智能查数 SQL 生成；不选择则自动使用优先级最高的已启用模型",
       "tableComment": "表字段备注生成默认模型",
-      "tableCommentPlaceholder": "用于 AI 生成表注释、字段注释任务；不指定则回退 Dify",
+      "tableCommentPlaceholder": "用于 AI 生成表注释、字段注释任务；不选择则自动使用优先级最高的已启用模型",
       "accuracy": "表字段准确度评估默认模型",
-      "accuracyPlaceholder": "用于表字段与注释准确度评估任务；不指定则回退系统默认逻辑"
+      "accuracyPlaceholder": "用于表字段与注释准确度评估任务；不选择则自动使用优先级最高的已启用模型"
     },
     "columns": {
       "name": "模型名称",
@@ -948,7 +950,6 @@
       "ollama": "Ollama",
       "lm_studio": "LM Studio",
       "vllm": "vLLM",
-      "dify_local": "Dify本地",
       "openai": "OpenAI",
       "deepseek": "DeepSeek",
       "qwen": "Qwen"
@@ -1613,9 +1614,9 @@
       "aiComment": "请输入AI注释"
     },
     "form": {
-      "hasTableComment": "是否有表注释",
-      "hasAiComment": "是否有AI注释",
-      "aiStatus": "AI注释应用状态"
+      "hasTableComment": "表注释",
+      "hasAiComment": "AI注释",
+      "aiStatus": "AI注释状态"
     },
     "message": {
       "keepOneColumn": "至少保留一列",
@@ -1681,9 +1682,9 @@
       "aiComment": "请输入AI注释"
     },
     "form": {
-      "hasColumnComment": "是否有字段注释",
-      "hasAiComment": "是否有AI注释",
-      "aiStatus": "AI注释应用状态"
+      "hasColumnComment": "字段注释",
+      "hasAiComment": "AI注释",
+      "aiStatus": "AI注释状态"
     },
     "message": {
       "keepOneColumn": "至少保留一列",

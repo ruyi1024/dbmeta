@@ -21,7 +21,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	//_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/godror/godror"
 	_ "github.com/lib/pq"
@@ -108,7 +108,7 @@ func Connect(ops ...Option) (*sql.DB, error) {
 		url = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", opt.host, opt.port, opt.username, opt.password, opt.database)
 	}
 	if opt.driver == "clickhouse" {
-		url = fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s&read_timeout=30s", opt.host, opt.port, opt.database, opt.username, opt.password)
+		url = fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=5s&read_timeout=30s", opt.username, opt.password, opt.host, opt.port, opt.database)
 	}
 
 	//连接数据库
