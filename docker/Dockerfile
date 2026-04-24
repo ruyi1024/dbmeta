@@ -30,7 +30,7 @@ RUN mkdir -p /opt/oracle \
   && ln -sfn "$IC" /opt/oracle/instantclient
 
 # ---------- Go 编译 ----------
-FROM golang:1.22-bookworm AS gobuild
+FROM golang:1.24-bookworm AS gobuild
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev libaio1 \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=oci /opt/oracle /opt/oracle
