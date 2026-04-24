@@ -19,6 +19,7 @@
 ### Docs
 
 - 新增中文变更日志文件 `CHANGELOG.md`，用于后续版本持续记录。
+- 新增仓库级 PR 模板（`.github/pull_request_template.md`），补充 `webassets`（B 方案）变更检查项，并同步更新中英文 README 的前端产物管理规范。
 
 ## [1.0.0-rc.1] - 2026-04-24
 

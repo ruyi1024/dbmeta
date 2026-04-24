@@ -129,6 +129,14 @@ dbmeta-core/
 go build .
 ```
 
+### 前端产物管理（B 方案）
+
+- `webassets/` 作为前端构建产物目录，默认保留在仓库中，保障后端开箱即用。
+- 允许提交：`webassets/index.html` 与 `webassets/static/**`。
+- 非前端发布类改动（如纯后端、文档、脚本）不应携带 `webassets` 变更。
+- 若 PR 包含 `webassets`，请在 PR 描述中说明对应前端源码改动范围与构建命令。
+- 建议仅在发版、前端功能上线或前端依赖升级时同步更新 `webassets`。
+
 ---
 
 ## FAQ

@@ -1,0 +1,1 @@
+import{A as e}from"./useConfigInject-DD0x2B1A.js";var t=e.map(e=>`${e}-inverse`),n=[`success`,`processing`,`error`,`default`,`warning`];function r(n){return!(arguments.length>1&&arguments[1]!==void 0)||arguments[1]?[...t,...e].includes(n):e.includes(n)}function i(e){return n.includes(e)}export{i as n,r as t};

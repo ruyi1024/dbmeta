@@ -133,6 +133,14 @@ Default access URL: `http://127.0.0.1:8086`
 go build .
 ```
 
+### Frontend Build Artifacts Policy (Plan B)
+
+- `webassets/` is kept in the repository as built frontend artifacts to support backend-first, out-of-box startup.
+- Allowed tracked artifacts: `webassets/index.html` and `webassets/static/**`.
+- Non-frontend-release changes (for example backend-only, docs-only, or scripts-only) should not include `webassets` diffs.
+- If a PR includes `webassets` changes, describe the related frontend source scope and build command in the PR body.
+- It is recommended to update `webassets` only for release sync, frontend feature delivery, or frontend dependency upgrades.
+
 ---
 
 ## FAQ

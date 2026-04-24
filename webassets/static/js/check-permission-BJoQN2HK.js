@@ -1,0 +1,1 @@
+import{h as e}from"./store-Ca6zl49A.js";import{a as t}from"./config-provider-eStNiD5j.js";function n(n=`没有操作权限，请联系管理员`){var r,i;return(r=(i=e().userInfo)==null||(i=i.roles)==null?void 0:i.includes(`admin`))!=null&&r?!0:(t.warning(n),!1)}export{n as t};
