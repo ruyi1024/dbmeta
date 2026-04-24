@@ -14,10 +14,10 @@ limitations under the License.
 package task
 
 import (
-	"dbmeta-core/log"
-	"dbmeta-core/src/controller/data"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/src/controller/data"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"time"
 
 	"github.com/robfig/cron/v3"

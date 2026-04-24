@@ -14,9 +14,9 @@ limitations under the License.
 package dataquality
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

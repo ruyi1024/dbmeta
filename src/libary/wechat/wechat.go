@@ -14,7 +14,7 @@ limitations under the License.
 package wechat
 
 import (
-	"dbmeta-core/setting"
+	"github.com/ruyi1024/dbmeta/setting"
 	"encoding/json"
 	"errors"
 	"fmt"

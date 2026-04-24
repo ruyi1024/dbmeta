@@ -2,12 +2,12 @@ package task
 
 import (
 	"bytes"
-	"dbmeta-core/log"
-	"dbmeta-core/src/database"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/src/database"
 
-	"dbmeta-core/src/libary/tool"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/src/libary/tool"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"encoding/json"
 	"fmt"
 	"io"

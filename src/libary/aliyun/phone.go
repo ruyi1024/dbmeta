@@ -14,7 +14,7 @@ limitations under the License.
 package aliyun
 
 import (
-	"dbmeta-core/setting"
+	"github.com/ruyi1024/dbmeta/setting"
 	"fmt"
 	"strconv"
 	"strings"

@@ -18,7 +18,7 @@ import (
 	"os"
 	"strings"
 
-	"dbmeta-core/src/license"
+	"github.com/ruyi1024/dbmeta/src/license"
 )
 
 const Version = "1.0.0-rc.1"

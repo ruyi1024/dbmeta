@@ -15,9 +15,9 @@ limitations under the License.
 package task
 
 import (
-	"dbmeta-core/log"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"encoding/json"
 	"fmt"
 	"math"

@@ -15,11 +15,11 @@ package service
 
 import (
 	"database/sql"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/libary/db"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/libary/db"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"fmt"
 	"regexp"
 	"strings"

@@ -16,9 +16,9 @@ package config
 import (
 	"net/http"
 
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm/clause"

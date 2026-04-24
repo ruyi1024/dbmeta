@@ -14,10 +14,10 @@ limitations under the License.
 package utils
 
 import (
-	"dbmeta-core/log"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"

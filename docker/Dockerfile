@@ -35,9 +35,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev l
   && rm -rf /var/lib/apt/lists/*
 COPY --from=oci /opt/oracle /opt/oracle
 ENV CGO_ENABLED=1
-ENV GO111MODULE=off
+ENV GO111MODULE=on
+ENV GOFLAGS=-mod=vendor
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient
-WORKDIR /go/src/dbmeta-core
+WORKDIR /src
 COPY . .
 COPY --from=frontend /src/frontend/apps/web-antd/dist /tmp/web-dist
 # 清空旧版静态资源，避免与 Vite 产物混用

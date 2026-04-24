@@ -17,10 +17,10 @@ import (
 	"html/template"
 	"net/http"
 
-	"dbmeta-core/log"
-	"dbmeta-core/router"
-	"dbmeta-core/setting"
-	"dbmeta-core/webassets"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/router"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/webassets"
 
 	"github.com/gin-gonic/gin"
 )

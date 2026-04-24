@@ -14,7 +14,7 @@ limitations under the License.
 package service
 
 import (
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"fmt"
 	"sync"
 

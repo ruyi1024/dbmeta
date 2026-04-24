@@ -16,7 +16,7 @@ package query
 import (
 	"context"
 	"database/sql"
-	"dbmeta-core/setting"
+	"github.com/ruyi1024/dbmeta/setting"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -30,13 +30,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/libary/db"
-	"dbmeta-core/src/libary/mongodb"
-	"dbmeta-core/src/libary/redis"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/module"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/libary/db"
+	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
+	"github.com/ruyi1024/dbmeta/src/libary/redis"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/module"
+	"github.com/ruyi1024/dbmeta/src/utils"
 )
 
 var dbCon *sql.DB

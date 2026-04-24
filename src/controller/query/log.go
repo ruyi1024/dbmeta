@@ -15,7 +15,7 @@ Special note:
 package query
 
 import (
-	"dbmeta-core/src/module"
+	"github.com/ruyi1024/dbmeta/src/module"
 )
 
 // WriteLog 在 SQL 执行路径中调用；仅当企业版注册了 module.WriteQueryLog 时写入 query_log。

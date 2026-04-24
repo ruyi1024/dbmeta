@@ -16,7 +16,7 @@ package service
 import (
 	"bufio"
 	"bytes"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"encoding/json"
 	"fmt"
 	"io"

@@ -17,8 +17,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 )
 
 // connectToDatabase 连接业务库（原 task/analysis.go，数据质量等任务复用）。

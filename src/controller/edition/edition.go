@@ -1,7 +1,7 @@
 package edition
 
 import (
-	"dbmeta-core/src/module"
+	"github.com/ruyi1024/dbmeta/src/module"
 
 	"github.com/gin-gonic/gin"
 )

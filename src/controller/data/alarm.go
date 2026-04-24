@@ -1,10 +1,10 @@
 package data
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/libary/mail"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/service"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/libary/mail"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/service"
 	"encoding/json"
 	"fmt"
 	stdhtml "html"

@@ -14,7 +14,7 @@ limitations under the License.
 package mail
 
 import (
-	"dbmeta-core/setting"
+	"github.com/ruyi1024/dbmeta/setting"
 	"strconv"
 
 	"gopkg.in/gomail.v2"

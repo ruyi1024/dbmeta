@@ -1,4 +1,4 @@
-module dbmeta-core
+module github.com/ruyi1024/dbmeta
 
 go 1.24.1
 

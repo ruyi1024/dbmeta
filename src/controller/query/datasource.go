@@ -14,8 +14,8 @@ limitations under the License.
 package query
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/module"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/module"
 	"fmt"
 	"net/http"
 	_ "reflect"

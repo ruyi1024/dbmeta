@@ -15,8 +15,8 @@ package main
 
 import (
 	"context"
-	"dbmeta-core/app"
-	_ "dbmeta-core/src/task" // run task
+	"github.com/ruyi1024/dbmeta/app"
+	_ "github.com/ruyi1024/dbmeta/src/task" // run task
 )
 
 func main() {

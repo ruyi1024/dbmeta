@@ -15,10 +15,10 @@ package ai
 
 import (
 	"bytes"
-	"dbmeta-core/log"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/service"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/service"
 	"encoding/json"
 	"fmt"
 	"io"

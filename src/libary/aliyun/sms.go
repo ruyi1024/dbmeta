@@ -14,7 +14,7 @@ limitations under the License.
 package aliyun
 
 import (
-	"dbmeta-core/setting"
+	"github.com/ruyi1024/dbmeta/setting"
 
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dysmsapi20170525 "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"

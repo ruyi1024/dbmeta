@@ -14,8 +14,8 @@ limitations under the License.
 package meta
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"net/http"
 	"unicode"
 

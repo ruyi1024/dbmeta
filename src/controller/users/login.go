@@ -15,11 +15,11 @@ package users
 
 import (
 	"bytes"
-	"dbmeta-core/log"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"

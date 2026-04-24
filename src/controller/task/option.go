@@ -14,10 +14,10 @@ limitations under the License.
 package task
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/module"
-	taskRunner "dbmeta-core/src/task"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/module"
+	taskRunner "github.com/ruyi1024/dbmeta/src/task"
 	"encoding/json"
 	"fmt"
 	"net/http"

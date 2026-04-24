@@ -14,8 +14,8 @@ limitations under the License.
 package pumpkin
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
 	"fmt"
 	"net/http"
 	"strings"

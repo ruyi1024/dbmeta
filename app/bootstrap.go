@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"dbmeta-core/log"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/license"
-	"dbmeta-core/src/module"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/license"
+	"github.com/ruyi1024/dbmeta/src/module"
 )
 
 // BootstrapOptions 控制启动阶段可选行为（如是否执行商业授权文件校验）。

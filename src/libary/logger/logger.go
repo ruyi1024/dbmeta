@@ -14,7 +14,7 @@ limitations under the License.
 package logger
 
 import (
-	"dbmeta-core/src/libary/conf"
+	"github.com/ruyi1024/dbmeta/src/libary/conf"
 
 	go_logger "github.com/phachon/go-logger"
 )

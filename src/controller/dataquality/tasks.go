@@ -14,10 +14,10 @@ limitations under the License.
 package dataquality
 
 import (
-	"dbmeta-core/src/database"
-	"dbmeta-core/src/model"
-	qualityTask "dbmeta-core/src/task"
-	"dbmeta-core/src/utils"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
+	qualityTask "github.com/ruyi1024/dbmeta/src/task"
+	"github.com/ruyi1024/dbmeta/src/utils"
 	"net/http"
 	"time"
 

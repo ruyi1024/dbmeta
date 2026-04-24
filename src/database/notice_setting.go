@@ -1,8 +1,8 @@
 package database
 
 import (
-	"dbmeta-core/setting"
-	"dbmeta-core/src/model"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/model"
 
 	"gorm.io/gorm"
 )

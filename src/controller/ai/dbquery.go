@@ -14,8 +14,8 @@ limitations under the License.
 package ai
 
 import (
-	"dbmeta-core/log"
-	"dbmeta-core/src/service"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/src/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

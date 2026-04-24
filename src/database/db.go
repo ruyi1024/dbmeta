@@ -15,11 +15,11 @@ package database
 
 import (
 	"database/sql"
-	"dbmeta-core/log"
-	"dbmeta-core/setting"
-	"dbmeta-core/src/aes"
-	"dbmeta-core/src/model"
-	"dbmeta-core/src/module"
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/setting"
+	"github.com/ruyi1024/dbmeta/src/aes"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/module"
 	"fmt"
 	"os"
 	"time"
