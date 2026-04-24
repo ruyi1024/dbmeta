@@ -7,7 +7,6 @@
 frontend/apps/*/dist
 frontend/vue-vben-admin
 *.exe
-log/
 tmp/
 .vscode
 .idea
