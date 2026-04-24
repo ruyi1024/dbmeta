@@ -259,6 +259,8 @@ go build .
 
 建议提交前执行基础构建校验并附带测试说明。
 
+详细贡献流程与发布规范请参见：[CONTRIBUTING.md](./CONTRIBUTING.md)。
+
 ---
 
 ## License
