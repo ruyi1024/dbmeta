@@ -296,6 +296,8 @@
         "dailyGrowthRows": "Daily Row Growth"
       },
       "chart": {
+        "databaseTypeSizeDistribution": "Database Capacity Distribution",
+        "databaseTypeRowsDistribution": "Database Row Count Distribution",
         "databaseTop": "Top Databases by Size",
         "tableTop": "Top Tables by Size",
         "fragmentationTop": "Top Tables by Fragmentation",
@@ -839,6 +841,7 @@
       "datasourceName": "Data source name",
       "type": "Type",
       "host": "Host",
+      "port": "Port",
       "user": "User",
       "password": "Password",
       "passwordEditHint": "Password (leave blank to clear)",

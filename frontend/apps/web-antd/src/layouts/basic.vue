@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
 import { AuthenticationLoginExpiredModal } from '@vben/common-ui';
-import { VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
+import { LOGIN_PATH, VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
 import { useWatermark } from '@vben/hooks';
 import { BookOpenText, CircleHelp, SvgGithubIcon } from '@vben/icons';
 import {
@@ -129,7 +129,8 @@ const avatar = computed(() => {
 });
 
 async function handleLogout() {
-  await authStore.logout(false);
+  await authStore.logout(true);
+  window.location.replace(LOGIN_PATH);
 }
 
 function handleNoticeClear() {

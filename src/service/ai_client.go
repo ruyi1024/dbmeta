@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 )
@@ -122,6 +124,62 @@ func normalizeApiUrl(provider, apiUrl string) string {
 	default:
 		return apiUrl
 	}
+}
+
+func extractOllamaBaseURL(apiURL string) string {
+	base := strings.TrimSpace(apiURL)
+	base = strings.TrimSuffix(base, "/")
+	base = strings.TrimSuffix(base, "/v1/chat/completions")
+	base = strings.TrimSuffix(base, "/api/chat")
+	base = strings.TrimSuffix(base, "/api/generate")
+	return base
+}
+
+func listOllamaModels(baseURL string, timeout time.Duration) ([]string, error) {
+	if baseURL == "" {
+		return nil, fmt.Errorf("ollama base url为空")
+	}
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	tagsURL, err := url.JoinPath(baseURL, "/api/tags")
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("GET", tagsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("查询ollama模型列表失败，状态码: %d, 响应: %s", resp.StatusCode, string(body))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var tagsResp struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := json.Unmarshal(body, &tagsResp); err != nil {
+		return nil, err
+	}
+	models := make([]string, 0, len(tagsResp.Models))
+	for _, m := range tagsResp.Models {
+		if strings.TrimSpace(m.Name) != "" {
+			models = append(models, m.Name)
+		}
+	}
+	sort.Strings(models)
+	return models, nil
 }
 
 // NewAIClient 根据模型配置创建对应的客户端
@@ -246,7 +304,20 @@ func (c *OpenAICompatibleClient) callOpenAICompatibleAPI(requestBody map[string]
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("AI模型API请求失败 (URL: %s)，状态码: %d, 响应: %s", c.Model.ApiUrl, resp.StatusCode, string(body))
+		bodyText := string(body)
+		if c.Model.Provider == model.ProviderOllama && strings.Contains(strings.ToLower(bodyText), "not found") {
+			baseURL := extractOllamaBaseURL(c.Model.ApiUrl)
+			models, listErr := listOllamaModels(baseURL, c.Timeout)
+			if listErr != nil {
+				return nil, fmt.Errorf("AI模型API请求失败 (URL: %s)，状态码: %d, 响应: %s。检测到Ollama模型不存在，请先执行: ollama pull %s（查询本地模型列表失败: %v）", c.Model.ApiUrl, resp.StatusCode, bodyText, c.Model.ModelName, listErr)
+			}
+			available := "无"
+			if len(models) > 0 {
+				available = strings.Join(models, ", ")
+			}
+			return nil, fmt.Errorf("AI模型API请求失败 (URL: %s)，状态码: %d, 响应: %s。检测到Ollama模型不存在，请先执行: ollama pull %s。当前本地可用模型: %s", c.Model.ApiUrl, resp.StatusCode, bodyText, c.Model.ModelName, available)
+		}
+		return nil, fmt.Errorf("AI模型API请求失败 (URL: %s)，状态码: %d, 响应: %s", c.Model.ApiUrl, resp.StatusCode, bodyText)
 	}
 
 	body, err := io.ReadAll(resp.Body)

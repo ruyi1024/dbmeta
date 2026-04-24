@@ -36,8 +36,14 @@ interface DatabaseItem {
   port: number | string;
 }
 
+interface DatasourceTypeOption {
+  id?: number;
+  name?: string;
+}
+
 const loading = ref(false);
 const dataSource = ref<DatabaseItem[]>([]);
+const datasourceTypeOptions = ref<DatasourceTypeOption[]>([]);
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -104,6 +110,19 @@ async function fetchDatabases(sorter?: Record<string, string>) {
     message.error(error?.message || $t('page.metaDatabase.message.fetchFailed'));
   } finally {
     loading.value = false;
+  }
+}
+
+async function fetchDatasourceTypes() {
+  try {
+    const response = await baseRequestClient.get('/v1/datasource_type/list');
+    const payload = (response as any)?.data ?? response;
+    const listRaw = payload?.data;
+    datasourceTypeOptions.value = Array.isArray(listRaw)
+      ? (listRaw as DatasourceTypeOption[])
+      : [];
+  } catch {
+    datasourceTypeOptions.value = [];
   }
 }
 
@@ -231,7 +250,10 @@ async function handleUpdateSubmit() {
   }
 }
 
-onMounted(fetchDatabases);
+onMounted(async () => {
+  await fetchDatasourceTypes();
+  await fetchDatabases();
+});
 </script>
 
 <template>
@@ -248,11 +270,14 @@ onMounted(fetchDatabases);
             />
           </Form.Item>
           <Form.Item :label="$t('page.metaDatabase.columns.datasourceType')" class="query-item">
-            <Input
+            <Select
               v-model:value="queryForm.datasource_type"
+              show-search
+              option-filter-prop="label"
               :placeholder="$t('page.metaDatabase.placeholder.datasourceType')"
               allow-clear
               class="query-control"
+              :options="datasourceTypeOptions.map((item) => ({ label: item.name, value: item.name }))"
             />
           </Form.Item>
           <Form.Item :label="$t('page.metaDatabase.columns.host')" class="query-item">

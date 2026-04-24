@@ -1,6 +1,6 @@
 # DBMeta · Open Source Data Governance Platform
 
-[中文](./README.md) | English
+[中文](./README.md) | English | [Changelog](./CHANGELOG.md)
 
 DBMeta is an open-source platform for database governance, providing unified capabilities across metadata management, data quality governance, task orchestration, and AI-assisted analysis.
 
@@ -163,5 +163,16 @@ Please run basic build checks and include test notes before submitting.
 
 ## License
 
-This project follows the license file in the repository root.
+AGPL-3.0 for non-commercial use. Commercial license required for any commercial use.
+
+| Use Case | Allowed? |
+|---|---|
+| Personal / research / educational | Yes |
+| Self-hosted (non-commercial) | Yes, with attribution |
+| Fork and modify (non-commercial) | Yes, share source under AGPL-3.0 |
+| Commercial use / SaaS / rebranding | Requires commercial license |
+
+See LICENSE for full terms. For commercial licensing, contact the maintainer.
+
+Copyright (C) 2026 DBMETA.COM  All rights reserved.
 

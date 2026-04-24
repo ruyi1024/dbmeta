@@ -177,6 +177,7 @@ func Router() *gin.Engine {
 
 		// 数据容量相关接口
 		v1.GET("/pumpkin/capacity/stats", pumpkin.GetCapacityStats)
+		v1.GET("/pumpkin/capacity/database/type-distribution", pumpkin.GetDatabaseTypeDistribution)
 		v1.GET("/pumpkin/capacity/database/top10/chart", pumpkin.GetDatabaseCapacityTop10Chart)
 		v1.GET("/pumpkin/capacity/database/top10", pumpkin.GetDatabaseCapacityTop10)
 		v1.GET("/pumpkin/capacity/table/top10", pumpkin.GetTableCapacityTop10)

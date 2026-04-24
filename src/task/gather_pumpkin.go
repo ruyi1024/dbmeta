@@ -14,16 +14,19 @@ limitations under the License.
 package task
 
 import (
+	"context"
 	"database/sql"
 	"dbmeta-core/log"
 	"dbmeta-core/setting"
 	"dbmeta-core/src/database"
+	"dbmeta-core/src/libary/mongodb"
 	"dbmeta-core/src/model"
 	"dbmeta-core/src/utils"
 	"fmt"
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 )
 
@@ -103,6 +106,7 @@ func doPumpkinTask() {
 	successCount := 0
 	failedCount := 0
 	errorDetails := []string{}
+	instanceStatuses := []string{}
 
 	for i, datasource := range dataList {
 		datasourceType := datasource.Type
@@ -123,6 +127,7 @@ func doPumpkinTask() {
 				errorMsg := fmt.Sprintf("数据源 %s:%s 密码解密失败: %v", host, port, err)
 				logger.Error(errorMsg)
 				errorDetails = append(errorDetails, errorMsg)
+				instanceStatuses = append(instanceStatuses, fmt.Sprintf("[失败] %s: 密码解密失败", formatDatasourceInstance(datasource)))
 				failedCount++
 				continue
 			}
@@ -133,8 +138,10 @@ func doPumpkinTask() {
 			errorMsg := fmt.Sprintf("数据源 %s:%s 表容量采集失败: %v", host, port, err)
 			logger.Error(errorMsg)
 			errorDetails = append(errorDetails, errorMsg)
+			instanceStatuses = append(instanceStatuses, fmt.Sprintf("[失败] %s: %s", formatDatasourceInstance(datasource), truncateText(err.Error(), 100)))
 			failedCount++
 		} else {
+			instanceStatuses = append(instanceStatuses, fmt.Sprintf("[成功] %s", formatDatasourceInstance(datasource)))
 			successCount++
 		}
 
@@ -155,6 +162,7 @@ func doPumpkinTask() {
 	// 记录最终结果
 	finalResult := fmt.Sprintf("任务完成 - 数据源总计: %d, 成功: %d, 失败: %d",
 		len(dataList), successCount, failedCount)
+	finalResult += fmt.Sprintf("。实例状态: %s", summarizeInstanceStatuses(instanceStatuses, 20, 1300))
 	if len(errorDetails) > 0 {
 		finalResult += fmt.Sprintf("。失败详情: %s", errorDetails[0])
 		if len(errorDetails) > 1 {
@@ -178,6 +186,18 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 	switch datasourceType {
 	case "MySQL", "TiDB", "Doris", "MariaDB", "GreatSQL", "OceanBase":
 		dbCon, err = database.Connect(database.WithDriver("mysql"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("information_schema"))
+	case "PostgreSQL":
+		pgDatabase := dbid
+		if pgDatabase == "" {
+			pgDatabase = "postgres"
+		}
+		dbCon, err = database.Connect(database.WithDriver("postgres"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(pgDatabase))
+	case "SQLServer":
+		sqlServerDatabase := dbid
+		if sqlServerDatabase == "" {
+			sqlServerDatabase = "master"
+		}
+		dbCon, err = database.Connect(database.WithDriver("mssql"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(sqlServerDatabase))
 	case "ClickHouse":
 		dbCon, err = database.Connect(database.WithDriver("clickhouse"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("system"))
 	}
@@ -190,6 +210,10 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 }
 
 func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid string) error {
+	if datasourceType == "MongoDB" {
+		return doMongoPumpkinCollectorTask(host, port, user, origPass, dbid)
+	}
+
 	//var db = database.DB
 	var queryTableSizeSql string
 
@@ -210,22 +234,69 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 			AND table_rows > 0
 			and table_type='BASE TABLE'
 		`
-	// case "ClickHouse":
-	// 	// ClickHouse的表容量查询SQL
-	// 	queryTableSizeSql = `
-	// 		SELECT
-	// 			database as database_name,
-	// 			name as table_name,
-	// 			ROUND((data_compressed_bytes / 1024 / 1024), 2) as data_size,
-	// 			ROUND((data_uncompressed_bytes / 1024 / 1024), 2) as index_size,
-	// 			0 as free_size,
-	// 			rows as table_rows,
-	// 			ROUND((data_uncompressed_bytes / rows), 2) as avg_row_length
-	// 		FROM system.tables
-	// 		WHERE database NOT IN ('information_schema', 'INFORMATION_SCHEMA', 'system')
-	// 		AND rows > 0
-	// 		ORDER BY data_compressed_bytes DESC
-	//	`
+	case "PostgreSQL":
+		queryTableSizeSql = `
+			SELECT
+				lower(current_database()) as database_name,
+				lower(concat(n.nspname, '.', c.relname)) as table_name,
+				(pg_total_relation_size(c.oid) - pg_indexes_size(c.oid))::bigint as data_size,
+				pg_indexes_size(c.oid)::bigint as index_size,
+				0::bigint as free_size,
+				coalesce(s.n_live_tup, 0)::bigint as table_rows,
+				CASE
+					WHEN coalesce(s.n_live_tup, 0) > 0 THEN (pg_total_relation_size(c.oid) / s.n_live_tup)::bigint
+					ELSE 0::bigint
+				END as avg_row_length
+			FROM pg_class c
+			JOIN pg_namespace n ON n.oid = c.relnamespace
+			LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
+			WHERE c.relkind IN ('r', 'm')
+			AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+			AND n.nspname NOT LIKE 'pg_toast%'
+			AND n.nspname NOT LIKE 'pg_temp_%'
+		`
+	case "ClickHouse":
+		queryTableSizeSql = `
+			SELECT
+				lower(database) as database_name,
+				lower(table) as table_name,
+				sum(data_compressed_bytes) as data_size,
+				0 as index_size,
+				0 as free_size,
+				sum(rows) as table_rows,
+				CASE
+					WHEN sum(rows) > 0 THEN toInt64(sum(data_uncompressed_bytes) / sum(rows))
+					ELSE 0
+				END as avg_row_length
+			FROM system.parts
+			WHERE active = 1
+			AND lower(database) NOT IN ('information_schema', 'system')
+			GROUP BY database, table
+			HAVING sum(rows) > 0
+		`
+	case "SQLServer":
+		queryTableSizeSql = `
+			SELECT
+				lower(DB_NAME()) as database_name,
+				lower(t.name) as table_name,
+				SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END) * 8 * 1024 as data_size,
+				(SUM(a.used_pages) - SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END)) * 8 * 1024 as index_size,
+				(SUM(a.total_pages) - SUM(a.used_pages)) * 8 * 1024 as free_size,
+				SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) as table_rows,
+				CASE
+					WHEN SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) > 0
+					THEN (SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END) * 8 * 1024)
+						/ SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END)
+					ELSE 0
+				END as avg_row_length
+			FROM sys.tables t
+			JOIN sys.indexes i ON t.object_id = i.object_id
+			JOIN sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
+			JOIN sys.allocation_units a ON p.partition_id = a.container_id
+			WHERE t.is_ms_shipped = 0
+			GROUP BY t.name
+			HAVING SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) > 0
+		`
 	default:
 		return fmt.Errorf("不支持的数据库类型: %s", datasourceType)
 	}
@@ -312,4 +383,102 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 // ExecutePumpkinTask 导出函数，用于手动执行任务
 func ExecutePumpkinTask() {
 	doPumpkinTask()
+}
+
+func doMongoPumpkinCollectorTask(host, port, user, origPass, dbid string) error {
+	ctx := context.Background()
+	client, err := mongodb.Connect(host, port, user, origPass, dbid)
+	if err != nil {
+		return fmt.Errorf("连接MongoDB失败: %v", err)
+	}
+	defer client.Disconnect(ctx)
+
+	databaseNames, err := mongodb.ListDatabase(client)
+	if err != nil {
+		return fmt.Errorf("查询MongoDB数据库列表失败: %v", err)
+	}
+
+	insertedCount := 0
+	for _, databaseName := range databaseNames {
+		if isMongoSystemDatabase(databaseName) {
+			continue
+		}
+
+		collectionNames, err := mongodb.ListCollection(client, databaseName)
+		if err != nil {
+			return fmt.Errorf("查询MongoDB库[%s]集合列表失败: %v", databaseName, err)
+		}
+
+		for _, collectionName := range collectionNames {
+			var stats bson.M
+			if err := client.Database(databaseName).RunCommand(ctx, bson.D{{Key: "collStats", Value: collectionName}}).Decode(&stats); err != nil {
+				log.Logger.Warn("查询MongoDB集合统计失败，已跳过",
+					zap.String("host", host),
+					zap.String("port", port),
+					zap.String("database", databaseName),
+					zap.String("collection", collectionName),
+					zap.Error(err))
+				continue
+			}
+
+			storageSize := mongoNumberToInt64(stats["storageSize"])
+			dataSize := storageSize
+			if dataSize == 0 {
+				dataSize = mongoNumberToInt64(stats["size"])
+			}
+			indexSize := mongoNumberToInt64(stats["totalIndexSize"])
+			tableRows := mongoNumberToInt64(stats["count"])
+			avgRowLength := mongoNumberToInt64(stats["avgObjSize"])
+			freeSize := int64(0)
+			rawSize := mongoNumberToInt64(stats["size"])
+			if storageSize > rawSize && rawSize >= 0 {
+				freeSize = storageSize - rawSize
+			}
+
+			record := model.PumpkinTableSize{
+				DatasourceType: "MongoDB",
+				Host:           host,
+				Port:           port,
+				DatabaseName:   databaseName,
+				TableNameField: collectionName,
+				DataSize:       dataSize,
+				IndexSize:      indexSize,
+				FreeSize:       freeSize,
+				TableRows:      tableRows,
+				AvgRowLength:   avgRowLength,
+			}
+			result := database.DB.Create(&record)
+			if result.Error != nil {
+				return fmt.Errorf("创建MongoDB表容量记录失败: %s", result.Error.Error())
+			}
+			insertedCount++
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+
+	if insertedCount == 0 {
+		return fmt.Errorf("未采集到MongoDB表容量数据，请检查权限或集合数据")
+	}
+	return nil
+}
+
+func mongoNumberToInt64(v interface{}) int64 {
+	switch val := v.(type) {
+	case nil:
+		return 0
+	case int:
+		return int64(val)
+	case int32:
+		return int64(val)
+	case int64:
+		return val
+	case float32:
+		return int64(val)
+	case float64:
+		return int64(val)
+	case string:
+		return utils.StrToInt64(val)
+	default:
+		return utils.StrToInt64(formatPumpkinInterface(val))
+	}
 }

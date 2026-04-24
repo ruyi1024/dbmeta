@@ -609,6 +609,72 @@ func GetCapacityStats(c *gin.Context) {
 	})
 }
 
+// GetDatabaseTypeDistribution 获取按数据库类型聚合的容量与记录数分布
+func GetDatabaseTypeDistribution(c *gin.Context) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	querySQL := `
+		SELECT
+			t.datasource_type,
+			COUNT(*) as database_count,
+			CAST(COALESCE(SUM(t.database_size), 0) AS SIGNED) as total_data_size,
+			CAST(COALESCE(SUM(t.database_rows), 0) AS SIGNED) as total_rows
+		FROM (
+			SELECT
+				t1.datasource_type,
+				t1.database_size,
+				t1.database_rows
+			FROM pumpkin_database_growth t1
+			INNER JOIN (
+				SELECT datasource_type, host, port, database_name, MAX(gmt_created) as max_created
+				FROM pumpkin_database_growth
+				WHERE gmt_created >= ?
+				GROUP BY datasource_type, host, port, database_name
+			) t2 ON t1.datasource_type = t2.datasource_type
+				AND t1.host = t2.host
+				AND t1.port = t2.port
+				AND t1.database_name = t2.database_name
+				AND t1.gmt_created = t2.max_created
+		) t
+		GROUP BY t.datasource_type
+		ORDER BY total_data_size DESC
+	`
+
+	var results []struct {
+		DatasourceType string `gorm:"column:datasource_type"`
+		DatabaseCount  int64  `gorm:"column:database_count"`
+		TotalDataSize  int64  `gorm:"column:total_data_size"`
+		TotalRows      int64  `gorm:"column:total_rows"`
+	}
+
+	result := database.DB.Raw(querySQL, todayStart).Scan(&results)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "查询数据库类型分布失败: " + result.Error.Error(),
+		})
+		return
+	}
+
+	dataList := make([]map[string]interface{}, 0, len(results))
+	for _, item := range results {
+		dataList = append(dataList, map[string]interface{}{
+			"datasourceType":   item.DatasourceType,
+			"databaseCount":    item.DatabaseCount,
+			"totalDataSize":    formatSize(item.TotalDataSize),
+			"totalDataSizeBytes": item.TotalDataSize,
+			"totalRows":        item.TotalRows,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    dataList,
+		"total":   len(dataList),
+	})
+}
+
 // GetTableFragmentationTop10 获取表碎片大小TOP10（保留原接口路径）
 func GetTableFragmentationTop10(c *gin.Context) {
 	// 获取今天起始时间

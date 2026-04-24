@@ -14,13 +14,16 @@ limitations under the License.
 package task
 
 import (
+	"context"
 	"database/sql"
 	"dbmeta-core/log"
 	"dbmeta-core/setting"
 	"dbmeta-core/src/database"
+	"dbmeta-core/src/libary/mongodb"
 	"dbmeta-core/src/model"
 	"dbmeta-core/src/utils"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -93,6 +96,7 @@ func doDbMetaTask() {
 	successCount := 0
 	failedCount := 0
 	errorDetails := []string{}
+	instanceStatuses := []string{}
 
 	for i, datasource := range dataList {
 		datasourceType := datasource.Type
@@ -113,6 +117,7 @@ func doDbMetaTask() {
 				errorMsg := fmt.Sprintf("数据源 %s:%s 密码解密失败: %v", host, port, err)
 				logger.Error(errorMsg)
 				errorDetails = append(errorDetails, errorMsg)
+				instanceStatuses = append(instanceStatuses, fmt.Sprintf("[失败] %s: 密码解密失败", formatDatasourceInstance(datasource)))
 				failedCount++
 				continue
 			}
@@ -123,8 +128,10 @@ func doDbMetaTask() {
 			errorMsg := fmt.Sprintf("数据源 %s:%s 元数据采集失败: %v", host, port, err)
 			logger.Error(errorMsg)
 			errorDetails = append(errorDetails, errorMsg)
+			instanceStatuses = append(instanceStatuses, fmt.Sprintf("[失败] %s: %s", formatDatasourceInstance(datasource), truncateText(err.Error(), 100)))
 			failedCount++
 		} else {
+			instanceStatuses = append(instanceStatuses, fmt.Sprintf("[成功] %s", formatDatasourceInstance(datasource)))
 			successCount++
 		}
 
@@ -148,6 +155,7 @@ func doDbMetaTask() {
 	// 记录最终结果
 	finalResult := fmt.Sprintf("任务完成 - 数据源总计: %d, 成功: %d, 失败: %d, %s",
 		len(dataList), successCount, failedCount, cleanupMsg)
+	finalResult += fmt.Sprintf("。实例状态: %s", summarizeInstanceStatuses(instanceStatuses, 20, 1300))
 	if len(errorDetails) > 0 {
 		finalResult += fmt.Sprintf("。失败详情: %s", errorDetails[0])
 		if len(errorDetails) > 1 {
@@ -171,6 +179,16 @@ func getDbCon(datasourceType, host, port, user, origPass, dbid string) *sql.DB {
 			log.Logger.Error(fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err))
 			return nil
 		}
+	} else if datasourceType == "PostgreSQL" {
+		pgDatabase := dbid
+		if pgDatabase == "" {
+			pgDatabase = "postgres"
+		}
+		dbCon, err = database.Connect(database.WithDriver("postgres"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(pgDatabase))
+		if err != nil {
+			log.Logger.Error(fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err))
+			return nil
+		}
 	} else if datasourceType == "ClickHouse" {
 		dbCon, err = database.Connect(database.WithDriver("clickhouse"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("system"))
 		if err != nil {
@@ -182,6 +200,9 @@ func getDbCon(datasourceType, host, port, user, origPass, dbid string) *sql.DB {
 }
 
 func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid string) error {
+	if datasourceType == "MongoDB" {
+		return doMongoMetaCollectorTask(host, port, user, origPass, dbid)
+	}
 
 	var db = database.DB
 	var (
@@ -193,7 +214,10 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 		queryDatabaseSql = "select lower(schema_name) as database_name,lower(schema_name) as schema_name,default_character_set_name as characters from information_schema.schemata where lower(schema_name) not in ('information_schema','performance_schema','sys','mysql','metrics_schema','__internal_schema','sys_audit','lbacsys','oceanbase','ocs','oraauditor') order by database_name asc"
 		queryTableSql = "select table_type as table_type,lower(table_schema) as database_name,lower(table_name) as table_name,table_comment as table_comment,table_collation as characters from information_schema.tables where lower(table_schema) not in ('information_schema','performance_schema','sys','mysql','metrics_schema','__internal_schema','sys_audit','lbacsys','oceanbase','ocs','oraauditor') order by database_name asc,table_name asc"
 		queryColumnSql = "select lower(table_schema)  as database_name,lower(table_name) as table_name,lower(column_name) as column_name,  lower(column_comment) as column_comment, lower(data_type) as data_type,lower(is_nullable) as is_nullable,lower(column_default) as default_value,lower(ordinal_position) as ordinal_position,lower(collation_name) as characters from information_schema.COLUMNS where lower(table_schema) not in ('information_schema','performance_schema','sys','mysql','metrics_schema','__internal_schema','sys_audit','lbacsys','oceanbase','ocs','oraauditor')  order by table_name asc,ordinal_position asc"
-
+	} else if datasourceType == "PostgreSQL" {
+		queryDatabaseSql = "select lower(current_database()) as database_name,lower(nspname) as schema_name,'' as characters from pg_namespace where nspname not in ('pg_catalog','information_schema') and nspname not like 'pg_toast%' and nspname not like 'pg_temp_%' order by schema_name asc"
+		queryTableSql = "select t.table_type as table_type,lower(current_database()) as database_name,lower(concat(t.table_schema,'.',t.table_name)) as table_name,coalesce(obj_description(c.oid,'pg_class'),'') as table_comment,'' as characters from information_schema.tables t join pg_namespace n on n.nspname=t.table_schema join pg_class c on c.relname=t.table_name and c.relnamespace=n.oid where t.table_schema not in ('pg_catalog','information_schema') and t.table_type in ('BASE TABLE','VIEW') order by table_name asc"
+		queryColumnSql = "select lower(current_database()) as database_name,lower(concat(c.table_schema,'.',c.table_name)) as table_name,lower(c.column_name) as column_name,coalesce(col_description(pc.oid,c.ordinal_position),'') as column_comment,lower(c.data_type) as data_type,lower(c.is_nullable) as is_nullable,coalesce(c.column_default,'') as default_value,lower(c.ordinal_position::text) as ordinal_position,coalesce(c.collation_name,'') as characters from information_schema.columns c join pg_namespace n on n.nspname=c.table_schema join pg_class pc on pc.relname=c.table_name and pc.relnamespace=n.oid where c.table_schema not in ('pg_catalog','information_schema') order by table_name asc,c.ordinal_position asc"
 	} else if datasourceType == "ClickHouse" {
 		queryDatabaseSql = "select lower(name) as database_name,lower(name) as schema_name,'' as characters from databases where lower(name) not in ('information_schema','INFORMATION_SCHEMA','system') order by name asc"
 		//queryTableSql = "select engine as table_type,lower(`database`) as database_name,lower(name) as table_name,comment as table_comment,'' as characters from tables where database_name not in ('information_schema','INFORMATION_SCHEMA','system') order by database_name asc,table_name asc limit 100"
@@ -386,4 +410,131 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 // ExecuteDbMetaTask 导出函数，用于手动执行任务
 func ExecuteDbMetaTask() {
 	doDbMetaTask()
+}
+
+func doMongoMetaCollectorTask(host, port, user, origPass, dbid string) error {
+	var db = database.DB
+	client, err := mongodb.Connect(host, port, user, origPass, dbid)
+	if err != nil {
+		return fmt.Errorf("连接MongoDB失败: %v", err)
+	}
+	defer client.Disconnect(context.Background())
+
+	databaseNames, err := mongodb.ListDatabase(client)
+	if err != nil {
+		return fmt.Errorf("查询MongoDB数据库列表失败: %v", err)
+	}
+
+	for _, databaseName := range databaseNames {
+		if isMongoSystemDatabase(databaseName) {
+			continue
+		}
+		var dataList []model.MetaDatabase
+		db.Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("schema_name=?", databaseName).Find(&dataList)
+		if len(dataList) == 0 {
+			record := model.MetaDatabase{
+				DatasourceType: "MongoDB",
+				Host:           host,
+				Port:           port,
+				DatabaseName:   databaseName,
+				SchemaName:     databaseName,
+				Characters:     "",
+			}
+			result := db.Create(&record)
+			if result.Error != nil {
+				return fmt.Errorf("创建MongoDB数据库元数据失败: %s", result.Error.Error())
+			}
+		} else {
+			record := model.MetaDatabase{
+				Characters: "",
+				IsDeleted:  0,
+			}
+			result := db.Model(&record).Select("characters", "is_deleted").Omit("id").Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("schema_name=?", databaseName).Updates(&record)
+			if result.Error != nil {
+				return fmt.Errorf("更新MongoDB数据库元数据失败: %s", result.Error.Error())
+			}
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	for _, databaseName := range databaseNames {
+		if isMongoSystemDatabase(databaseName) {
+			continue
+		}
+		collectionNames, err := mongodb.ListCollection(client, databaseName)
+		if err != nil {
+			return fmt.Errorf("查询MongoDB数据表列表失败(%s): %v", databaseName, err)
+		}
+		for _, collectionName := range collectionNames {
+			var dataList []model.MetaTable
+			db.Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("table_name=?", collectionName).Find(&dataList)
+			if len(dataList) == 0 {
+				record := model.MetaTable{
+					DatasourceType: "MongoDB",
+					Host:           host,
+					Port:           port,
+					DatabaseName:   databaseName,
+					TableType:      "collection",
+					TableNameX:     collectionName,
+					TableComment:   "",
+					Characters:     "",
+					IsDeleted:      0,
+				}
+				result := db.Create(&record)
+				if result.Error != nil {
+					return fmt.Errorf("创建MongoDB数据表元数据失败: %s", result.Error.Error())
+				}
+			} else {
+				record := model.MetaTable{
+					TableType:    "collection",
+					TableComment: "",
+					Characters:   "",
+					IsDeleted:    0,
+				}
+				result := db.Model(&record).Select("table_comment", "table_type", "characters", "is_deleted").Omit("id").Where("host=?", host).Where("port=?", port).Where("database_name=?", databaseName).Where("table_name=?", collectionName).Updates(&record)
+				if result.Error != nil {
+					return fmt.Errorf("更新MongoDB数据表元数据失败: %s", result.Error.Error())
+				}
+			}
+			time.Sleep(1 * time.Millisecond)
+		}
+	}
+	return nil
+}
+
+func isMongoSystemDatabase(databaseName string) bool {
+	name := strings.ToLower(strings.TrimSpace(databaseName))
+	return name == "admin" || name == "config" || name == "local"
+}
+
+func formatDatasourceInstance(datasource model.Datasource) string {
+	if datasource.Dbid != "" {
+		return fmt.Sprintf("%s(%s %s:%s/%s)", datasource.Name, datasource.Type, datasource.Host, datasource.Port, datasource.Dbid)
+	}
+	return fmt.Sprintf("%s(%s %s:%s)", datasource.Name, datasource.Type, datasource.Host, datasource.Port)
+}
+
+func truncateText(text string, maxRunes int) string {
+	runes := []rune(text)
+	if len(runes) <= maxRunes {
+		return text
+	}
+	return string(runes[:maxRunes]) + "..."
+}
+
+func summarizeInstanceStatuses(statuses []string, maxItems, maxRunes int) string {
+	if len(statuses) == 0 {
+		return "无"
+	}
+	items := statuses
+	omitted := 0
+	if maxItems > 0 && len(statuses) > maxItems {
+		items = statuses[:maxItems]
+		omitted = len(statuses) - maxItems
+	}
+	result := strings.Join(items, "；")
+	if omitted > 0 {
+		result += fmt.Sprintf("；... 其余 %d 个实例", omitted)
+	}
+	return truncateText(result, maxRunes)
 }

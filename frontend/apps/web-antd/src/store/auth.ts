@@ -92,12 +92,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout(redirect: boolean = true) {
-    try {
-      await logoutApi();
-    } catch {
+    // 先清空 token，避免路由守卫在跳转到登录页时又回跳首页。
+    accessStore.setAccessToken(null);
+    accessStore.setRefreshToken(null);
+    accessStore.setIsAccessChecked(false);
+    // 不阻塞前端跳转：后端退出接口异步执行，避免接口卡顿导致页面无响应。
+    void logoutApi().catch(() => {
       // 不做任何处理
-    }
+    });
     resetAllStores();
+    // reset 后再次兜底，确保持久化状态已覆盖。
+    accessStore.setAccessToken(null);
+    accessStore.setRefreshToken(null);
+    accessStore.setIsAccessChecked(false);
     accessStore.setLoginExpired(false);
 
     // 回登录页带上当前路由地址

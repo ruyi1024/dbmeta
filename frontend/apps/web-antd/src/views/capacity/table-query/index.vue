@@ -6,6 +6,7 @@ import {
   Card,
   Form,
   Input,
+  Select,
   Space,
   Table,
   type TableColumnsType,
@@ -30,6 +31,11 @@ interface TableCapacityRow {
   dataSizeIncr: string;
   dataSizeIncrBytes: number;
   rowCountIncr: number;
+}
+
+interface DatasourceTypeOption {
+  id?: number;
+  name?: string;
 }
 
 function unwrapAxiosData(response: unknown): unknown {
@@ -78,6 +84,7 @@ function parsePagedPumpkin(response: unknown): { rows: TableCapacityRow[]; total
 
 const loading = ref(false);
 const dataSource = ref<TableCapacityRow[]>([]);
+const datasourceTypeOptions = ref<DatasourceTypeOption[]>([]);
 const pagination = reactive({
   current: 1,
   pageSize: 10,
@@ -233,6 +240,19 @@ async function fetchTableCapacity() {
   }
 }
 
+async function fetchDatasourceTypes() {
+  try {
+    const response = await baseRequestClient.get('/v1/datasource_type/list');
+    const payload = (response as any)?.data ?? response;
+    const listRaw = payload?.data;
+    datasourceTypeOptions.value = Array.isArray(listRaw)
+      ? (listRaw as DatasourceTypeOption[])
+      : [];
+  } catch {
+    datasourceTypeOptions.value = [];
+  }
+}
+
 function handleSearch() {
   pagination.current = 1;
   fetchTableCapacity();
@@ -269,8 +289,9 @@ function handleTableChange(pag: any, _filters: unknown, sorter: any) {
   fetchTableCapacity();
 }
 
-onMounted(() => {
-  fetchTableCapacity();
+onMounted(async () => {
+  await fetchDatasourceTypes();
+  await fetchTableCapacity();
 });
 </script>
 
@@ -296,11 +317,14 @@ onMounted(() => {
             />
           </Form.Item>
           <Form.Item :label="$t('page.capacity.tableQuery.form.datasourceType')" class="query-item">
-            <Input
+            <Select
               v-model:value="queryForm.datasourceType"
+              show-search
+              option-filter-prop="label"
               allow-clear
               class="query-control"
               :placeholder="$t('page.capacity.tableQuery.placeholder.datasourceType')"
+              :options="datasourceTypeOptions.map((item) => ({ label: item.name, value: item.name }))"
             />
           </Form.Item>
           <Form.Item :label="$t('page.capacity.tableQuery.form.host')" class="query-item">

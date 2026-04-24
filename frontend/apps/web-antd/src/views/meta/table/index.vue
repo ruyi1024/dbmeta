@@ -40,8 +40,14 @@ interface TableItem {
   table_type?: string;
 }
 
+interface DatasourceTypeOption {
+  id?: number;
+  name?: string;
+}
+
 const loading = ref(false);
 const dataSource = ref<TableItem[]>([]);
+const datasourceTypeOptions = ref<DatasourceTypeOption[]>([]);
 const selectedRowKeys = ref<number[]>([]);
 /** 双击编辑「AI注释生成」 */
 const editingAiCommentId = ref<number | null>(null);
@@ -181,6 +187,19 @@ async function fetchTables(sorter?: Record<string, string>) {
   }
 }
 
+async function fetchDatasourceTypes() {
+  try {
+    const response = await baseRequestClient.get('/v1/datasource_type/list');
+    const payload = (response as any)?.data ?? response;
+    const listRaw = payload?.data;
+    datasourceTypeOptions.value = Array.isArray(listRaw)
+      ? (listRaw as DatasourceTypeOption[])
+      : [];
+  } catch {
+    datasourceTypeOptions.value = [];
+  }
+}
+
 async function handleBatchUpdate(aiFixed: number) {
   if (selectedRowKeys.value.length === 0) {
     message.warning($t('page.metaTable.message.selectRowsFirst'));
@@ -313,7 +332,10 @@ async function commitAiCommentEdit(record: TableItem) {
   }
 }
 
-onMounted(fetchTables);
+onMounted(async () => {
+  await fetchDatasourceTypes();
+  await fetchTables();
+});
 </script>
 
 <template>
@@ -338,11 +360,14 @@ onMounted(fetchTables);
             />
           </Form.Item>
           <Form.Item :label="$t('page.metaTable.columns.datasourceType')" class="query-item">
-            <Input
+            <Select
               v-model:value="queryForm.datasource_type"
+              show-search
+              option-filter-prop="label"
               :placeholder="$t('page.metaTable.placeholder.datasourceType')"
               allow-clear
               class="query-control"
+              :options="datasourceTypeOptions.map((item) => ({ label: item.name, value: item.name }))"
             />
           </Form.Item>
           <Form.Item :label="$t('page.metaTable.columns.host')" class="query-item">

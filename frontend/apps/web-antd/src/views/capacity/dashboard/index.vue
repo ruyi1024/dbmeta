@@ -169,6 +169,7 @@ const stats = reactive<CapacityStats>({
 });
 
 const databaseList = ref<any[]>([]);
+const databaseTypeDistributionList = ref<any[]>([]);
 const tableList = ref<any[]>([]);
 const fragmentationList = ref<any[]>([]);
 const tableRowsList = ref<any[]>([]);
@@ -255,12 +256,99 @@ const tableRowsChartData = computed(() => {
   }));
 });
 
+const databaseSizeDistributionPieData = computed(() => {
+  const fromApi = databaseTypeDistributionList.value
+    .map((item: any) => ({
+      name: String(item.datasourceType ?? '-'),
+      value: Number(item.totalDataSizeBytes ?? 0),
+      raw: item,
+    }))
+    .filter((item) => item.value > 0);
+  if (fromApi.length > 0) {
+    return fromApi;
+  }
+
+  // 兜底：接口异常或返回0时，用已加载的数据库容量数据按类型重算
+  const grouped = new Map<string, { size: number; rows: number; count: number }>();
+  for (const item of databaseList.value) {
+    const key = String(item.datasourceType ?? '-');
+    const current = grouped.get(key) ?? { size: 0, rows: 0, count: 0 };
+    current.size += Number(item.dataSizeBytes ?? 0);
+    current.rows += Number(item.rowCount ?? 0);
+    current.count += 1;
+    grouped.set(key, current);
+  }
+  return [...grouped.entries()]
+    .map(([name, v]) => ({
+      name,
+      value: v.size,
+      raw: {
+        datasourceType: name,
+        totalDataSize: formatBytes(v.size),
+        totalDataSizeBytes: v.size,
+        totalRows: v.rows,
+        databaseCount: v.count,
+      },
+    }))
+    .filter((item) => item.value > 0);
+});
+
+const databaseRowsDistributionPieData = computed(() => {
+  const fromApi = databaseTypeDistributionList.value
+    .map((item: any) => ({
+      name: String(item.datasourceType ?? '-'),
+      value: Number(item.totalRows ?? 0),
+      raw: item,
+    }))
+    .filter((item) => item.value > 0);
+  if (fromApi.length > 0) {
+    return fromApi;
+  }
+
+  // 兜底：接口异常或返回0时，用已加载的数据库容量数据按类型重算
+  const grouped = new Map<string, { size: number; rows: number; count: number }>();
+  for (const item of databaseList.value) {
+    const key = String(item.datasourceType ?? '-');
+    const current = grouped.get(key) ?? { size: 0, rows: 0, count: 0 };
+    current.size += Number(item.dataSizeBytes ?? 0);
+    current.rows += Number(item.rowCount ?? 0);
+    current.count += 1;
+    grouped.set(key, current);
+  }
+  return [...grouped.entries()]
+    .map(([name, v]) => ({
+      name,
+      value: v.rows,
+      raw: {
+        datasourceType: name,
+        totalDataSize: formatBytes(v.size),
+        totalDataSizeBytes: v.size,
+        totalRows: v.rows,
+        databaseCount: v.count,
+      },
+    }))
+    .filter((item) => item.value > 0);
+});
+
+const PIE_COLORS = ['#5B8FF9', '#61DDAA', '#F6BD16', '#7262fd', '#78D3F8', '#9661BC', '#F6903D', '#008685'];
+
+function formatRowsHuman(v: number): string {
+  if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(2)}B`;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1000) return `${(v / 1000).toFixed(2)}K`;
+  return `${v}`;
+}
+
 const dbBarRef = ref<EchartsUIType>();
+const dbSizePieRef = ref<EchartsUIType>();
+const dbRowsPieRef = ref<EchartsUIType>();
 const tableBarRef = ref<EchartsUIType>();
 const fragBarRef = ref<EchartsUIType>();
 const rowsBarRef = ref<EchartsUIType>();
 
 const { renderEcharts: renderDbBar } = useEcharts(dbBarRef);
+const { renderEcharts: renderDbSizePie } = useEcharts(dbSizePieRef);
+const { renderEcharts: renderDbRowsPie } = useEcharts(dbRowsPieRef);
 const { renderEcharts: renderTableBar } = useEcharts(tableBarRef);
 const { renderEcharts: renderFragBar } = useEcharts(fragBarRef);
 const { renderEcharts: renderRowsBar } = useEcharts(rowsBarRef);
@@ -575,8 +663,58 @@ function renderRowsBarChart(render: EchartsRender, list: { name: string; value: 
   });
 }
 
+function renderTypePieChart(
+  render: EchartsRender,
+  list: { name: string; value: number; raw: any }[],
+  metric: 'size' | 'rows',
+) {
+  if (!list.length) {
+    return emptyChart(render);
+  }
+  return render({
+    color: PIE_COLORS,
+    legend: {
+      bottom: 8,
+      itemHeight: 10,
+      itemWidth: 10,
+      left: 'center',
+      textStyle: { fontSize: 12 },
+      type: 'scroll',
+    },
+    series: [
+      {
+        avoidLabelOverlap: true,
+        center: ['50%', '44%'],
+        data: list,
+        label: {
+          formatter: (p: any) => `${p.name}\n${p.percent}%`,
+          fontSize: 12,
+        },
+        labelLine: { length: 12, length2: 10 },
+        radius: ['38%', '66%'],
+        type: 'pie',
+      },
+    ],
+    tooltip: {
+      borderWidth: 0,
+      extraCssText: 'border-radius:8px;box-shadow:0 3px 14px rgba(0,0,0,0.1);',
+      formatter: (params: any) => {
+        const row = params?.data?.raw;
+        if (!row) return '';
+        if (metric === 'size') {
+          return `${row.datasourceType}<br/>${$t('page.capacity.dashboard.tooltip.capacity')}: ${row.totalDataSize || '-'}<br/>${$t('page.capacity.dashboard.stat.databaseCount')}: ${row.databaseCount ?? 0}`;
+        }
+        return `${row.datasourceType}<br/>${$t('page.capacity.dashboard.tooltip.rowCount')}: ${formatRowsHuman(Number(row.totalRows ?? 0))}<br/>${$t('page.capacity.dashboard.stat.databaseCount')}: ${row.databaseCount ?? 0}`;
+      },
+      trigger: 'item',
+    },
+  });
+}
+
 async function renderAllCharts() {
   await Promise.all([
+    Promise.resolve(renderTypePieChart(renderDbSizePie, databaseSizeDistributionPieData.value, 'size')),
+    Promise.resolve(renderTypePieChart(renderDbRowsPie, databaseRowsDistributionPieData.value, 'rows')),
     Promise.resolve(renderGbBar(renderDbBar, databaseChartData.value, 'database')),
     Promise.resolve(renderGbBar(renderTableBar, tableChartData.value, 'table')),
     Promise.resolve(renderFragBarChart(renderFragBar, fragmentationChartData.value)),
@@ -599,17 +737,20 @@ async function fetchDashboard() {
   try {
     const results = await Promise.allSettled([
       baseRequestClient.get('/v1/pumpkin/capacity/stats'),
+      baseRequestClient.get('/v1/pumpkin/capacity/database/type-distribution'),
       baseRequestClient.get('/v1/pumpkin/capacity/database/top10/chart'),
       baseRequestClient.get('/v1/pumpkin/capacity/table/top10'),
       baseRequestClient.get('/v1/pumpkin/capacity/table/fragmentation/top10'),
       baseRequestClient.get('/v1/pumpkin/capacity/table/rows/top10'),
     ]);
 
-    const [statsR, dbR, tableR, fragR, rowsR] = results;
+    const [statsR, typeDistR, dbR, tableR, fragR, rowsR] = results;
 
     if (statsR.status === 'fulfilled') {
       applyStats(parsePumpkinStatsPayload(statsR.value));
     }
+    databaseTypeDistributionList.value =
+      typeDistR.status === 'fulfilled' ? parsePumpkinListPayload(typeDistR.value) : [];
     databaseList.value =
       dbR.status === 'fulfilled' ? parsePumpkinListPayload(dbR.value) : [];
     tableList.value =
@@ -625,6 +766,7 @@ async function fetchDashboard() {
     stats.totalRows = 0;
     stats.dailyGrowth = '0 B';
     stats.dailyGrowthRows = 0;
+    databaseTypeDistributionList.value = [];
     databaseList.value = [];
     tableList.value = [];
     fragmentationList.value = [];
@@ -707,6 +849,12 @@ onMounted(fetchDashboard);
     </div>
 
     <div class="mt-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.databaseTypeSizeDistribution')">
+        <EchartsUI ref="dbSizePieRef" class="h-[320px]" />
+      </AnalysisChartCard>
+      <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.databaseTypeRowsDistribution')">
+        <EchartsUI ref="dbRowsPieRef" class="h-[320px]" />
+      </AnalysisChartCard>
       <AnalysisChartCard :title="$t('page.capacity.dashboard.chart.databaseTop')">
         <EchartsUI ref="dbBarRef" class="h-[320px]" />
       </AnalysisChartCard>
