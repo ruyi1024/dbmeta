@@ -28,7 +28,6 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/tidwall/gjson v1.17.1
-	github.com/xinggaoya/qwen-sdk v1.2.2
 	go.mongodb.org/mongo-driver v1.15.0
 	go.uber.org/zap v1.27.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
