@@ -3,6 +3,7 @@ setting.yml
 **/vendor
 ./vendor
 /web/dist/*
+/webassets/dist/*
 .idea
 main
 nohup.out
