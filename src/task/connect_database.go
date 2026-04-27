@@ -59,6 +59,14 @@ func connectToDatabase(datasource model.Datasource, password string) (*sql.DB, e
 			database.WithUsername(datasource.User),
 			database.WithPassword(password),
 			database.WithSid(datasource.Dbid))
+	case "达梦数据库":
+		db, err = database.Connect(
+			database.WithDriver("dm"),
+			database.WithHost(datasource.Host),
+			database.WithPort(datasource.Port),
+			database.WithUsername(datasource.User),
+			database.WithPassword(password),
+			database.WithDatabase(datasource.Dbid))
 	case "SQLServer":
 		db, err = database.Connect(
 			database.WithDriver("mssql"),

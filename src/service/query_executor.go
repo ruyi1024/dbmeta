@@ -15,12 +15,12 @@ package service
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/db"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -459,6 +459,20 @@ func connectToDatabase(datasource *model.Datasource, password string, databaseNa
 			db.WithPassword(password),
 			db.WithSid(datasource.Dbid),
 		)
+	case "达梦数据库":
+		opts := []db.Option{
+			db.WithDriver("dm"),
+			db.WithHost(datasource.Host),
+			db.WithPort(datasource.Port),
+			db.WithUsername(datasource.User),
+			db.WithPassword(password),
+		}
+		if dbName != "" {
+			opts = append(opts, db.WithDatabase(dbName))
+		} else if datasource.Dbid != "" {
+			opts = append(opts, db.WithDatabase(datasource.Dbid))
+		}
+		return db.Connect(opts...)
 	case "CLICKHOUSE":
 		// ClickHouse连接需要特殊处理
 		return nil, fmt.Errorf("ClickHouse连接暂未实现，请使用其他数据源")

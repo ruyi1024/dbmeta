@@ -38,6 +38,7 @@ require (
 )
 
 require (
+	gitee.com/chunanyong/dm v1.8.22 // indirect
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/ClickHouse/ch-go v0.71.0 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect

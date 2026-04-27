@@ -14,10 +14,13 @@ limitations under the License.
 package datasource
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/clickhouse"
+	"github.com/ruyi1024/dbmeta/src/libary/dm"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/libary/mssql"
 	"github.com/ruyi1024/dbmeta/src/libary/mysql"
@@ -26,8 +29,6 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/redis"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -200,6 +201,14 @@ func Check(c *gin.Context) {
 		}
 		if datasourceType == "Oracle" {
 			db, err := oracle.Connect(host, port, user, pass, dbid)
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				return
+			}
+			defer db.Close()
+		}
+		if datasourceType == "达梦数据库" {
+			db, err := dm.Connect(host, port, user, pass, dbid)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
 				return

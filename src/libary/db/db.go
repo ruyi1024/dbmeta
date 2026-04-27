@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "gitee.com/chunanyong/dm"
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/godror/godror"
@@ -109,6 +110,12 @@ func Connect(ops ...Option) (*sql.DB, error) {
 	}
 	if opt.driver == "clickhouse" {
 		url = fmt.Sprintf("clickhouse://%s:%s@%s:%s/%s?dial_timeout=5s&read_timeout=30s", opt.username, opt.password, opt.host, opt.port, opt.database)
+	}
+	if opt.driver == "dm" {
+		url = fmt.Sprintf("dm://%s:%s@%s:%s", opt.username, opt.password, opt.host, opt.port)
+		if opt.database != "" {
+			url = fmt.Sprintf("%s?schema=%s", url, opt.database)
+		}
 	}
 
 	//连接数据库

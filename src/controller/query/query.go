@@ -16,9 +16,9 @@ package query
 import (
 	"context"
 	"database/sql"
-	"github.com/ruyi1024/dbmeta/setting"
 	"encoding/json"
 	"fmt"
+	"github.com/ruyi1024/dbmeta/setting"
 	"net/http"
 	_ "reflect"
 	"regexp"
@@ -96,7 +96,7 @@ func DoQuery(c *gin.Context) {
 	)
 
 	//执行SQL规则检查
-	if queryType == "execute" && (datasourceType == "MySQL" || datasourceType == "TiDB" || datasourceType == "Doris" || datasourceType == "MariaDB" || datasourceType == "GreatSQL" || datasourceType == "PostgreSQL" || datasourceType == "Oracle" || datasourceType == "ClickHouse") {
+	if queryType == "execute" && (datasourceType == "MySQL" || datasourceType == "TiDB" || datasourceType == "Doris" || datasourceType == "MariaDB" || datasourceType == "GreatSQL" || datasourceType == "PostgreSQL" || datasourceType == "Oracle" || datasourceType == "达梦数据库" || datasourceType == "ClickHouse") {
 		var (
 			queryTable     string
 			findQueryTable [][]string
@@ -136,7 +136,7 @@ func DoQuery(c *gin.Context) {
 			return
 		}
 		matchRownum, _ := regexp.MatchString(`\s+(?i)rownum\s*<`, sql)
-		if (sqlType == "select" || sqlType == "update" || sqlType == "delete") && !matchRownum && (datasourceType == "Oracle") {
+		if (sqlType == "select" || sqlType == "update" || sqlType == "delete") && !matchRownum && (datasourceType == "Oracle" || datasourceType == "达梦数据库") {
 			WriteLog(username.(string), datasourceType, datasource, queryType, sqlType, databaseName, intercept, 0, sql, "数据操作请使用rownum限制行数.")
 			c.JSON(http.StatusOK, gin.H{"success": false, "msg": "数据操作请使用rownum限制行数."})
 			return
@@ -314,6 +314,36 @@ func DoQuery(c *gin.Context) {
 			sql = fmt.Sprintf("select pg_size_pretty(pg_relation_size('%s')) as size", table)
 		}
 
+	}
+	if datasourceType == "达梦数据库" {
+		if queryType == "doExplain" {
+			sql = "select '达梦当前环境下暂不支持该语句的 EXPLAIN，请直接执行查询或使用达梦客户端查看执行计划' as \"提示\" from dual"
+		}
+		if queryType == "showColumn" {
+			sql = fmt.Sprintf("select column_id as \"字段ID\", column_name as \"字段名\", data_type as \"数据类型\", nullable as \"允许为空\", data_default as \"默认值\", table_name as \"表名称\" from all_tab_columns where owner=upper('%s') and table_name=upper('%s') order by column_id asc", databaseName, tableNameForMeta(table))
+		}
+		if queryType == "showIndex" {
+			sql = fmt.Sprintf("select index_name as \"索引名\", table_name as \"表名\", uniqueness as \"唯一性\", status as \"状态\" from all_indexes where table_owner=upper('%s') and table_name=upper('%s') order by index_name asc", databaseName, tableNameForMeta(table))
+		}
+		if queryType == "showCreate" {
+			sql = "select '达梦暂不支持 show create，请使用系统视图查询 DDL' as \"提示\" from dual"
+		}
+		if queryType == "showTableSize" {
+			sql = fmt.Sprintf("select segment_name as \"对象名\", bytes/1024/1024 as \"大小MB\" from dba_segments where owner=upper('%s') and segment_name=upper('%s')", databaseName, tableNameForMeta(table))
+		}
+		dbCon, err = db.Connect(
+			db.WithDriver("dm"),
+			db.WithHost(host),
+			db.WithPort(port),
+			db.WithUsername(user),
+			db.WithPassword(origPass),
+			db.WithDatabase(databaseName),
+		)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect dm server on %s:%s, %s", host, port, err)})
+			return
+		}
+		defer dbCon.Close()
 	}
 	if datasourceType == "PostgreSQL" {
 

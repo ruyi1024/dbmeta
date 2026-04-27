@@ -302,7 +302,7 @@ function onClickTable(tableName: string) {
   let sql = '';
   if (['MySQL', 'TiDB', 'Doris', 'MariaDB', 'GreatSQL', 'OceanBase', 'ClickHouse', 'PostgreSQL'].includes(globalFormState.type)) {
     sql = `select * from ${tableName} limit 100`;
-  } else if (globalFormState.type === 'Oracle') {
+  } else if (globalFormState.type === 'Oracle' || globalFormState.type === '达梦数据库') {
     sql = `select * from ${globalFormState.database}.${tableName} where rownum<=100`;
   } else if (globalFormState.type === 'SQLServer') {
     sql = `select top 100 * from ${tableName}`;

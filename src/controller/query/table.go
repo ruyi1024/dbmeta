@@ -14,9 +14,11 @@ limitations under the License.
 package query
 
 import (
+	"fmt"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/clickhouse"
+	"github.com/ruyi1024/dbmeta/src/libary/dm"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/libary/mssql"
 	"github.com/ruyi1024/dbmeta/src/libary/mysql"
@@ -24,7 +26,6 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/postgres"
 	"github.com/ruyi1024/dbmeta/src/module"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
 	"net/http"
 	_ "reflect"
 	"strings"
@@ -103,6 +104,42 @@ func TableList(c *gin.Context) {
 		dataList, err := oracle.QueryAll(db, fmt.Sprintf("select table_name  from dba_tables where owner='%s' order by table_name asc", databaseName))
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("%s", err)})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"msg":     "OK",
+			"data":    dataList,
+			"total":   len(dataList),
+		})
+		return
+	}
+	if datasourceType == "达梦数据库" {
+		schema := databaseName
+		if schema == "" {
+			schema = userPass[0]["dbid"].(string)
+		}
+		db, err := dm.Connect(host, port, user, origPass, schema)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+			return
+		}
+		defer db.Close()
+
+		sqlCandidates := []string{
+			fmt.Sprintf("select table_name as table_name from all_tables where owner='%s' order by table_name asc", strings.ToUpper(databaseName)),
+			"select table_name as table_name from user_tables order by table_name asc",
+		}
+		var dataList []map[string]interface{}
+		var lastErr error
+		for _, q := range sqlCandidates {
+			dataList, lastErr = dm.QueryAll(db, q)
+			if lastErr == nil {
+				break
+			}
+		}
+		if lastErr != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("%s", lastErr)})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{

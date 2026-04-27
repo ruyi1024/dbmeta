@@ -15,10 +15,12 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/clickhouse"
+	"github.com/ruyi1024/dbmeta/src/libary/dm"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/libary/mssql"
 	"github.com/ruyi1024/dbmeta/src/libary/mysql"
@@ -27,7 +29,6 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/redis"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -186,6 +187,15 @@ func doDatasourceCheckTask(datasourceType, host, port, user, pass, dbid, env str
 		}
 	} else if datasourceType == "Oracle" {
 		db, err := oracle.Connect(host, port, user, pass, dbid)
+		if err != nil {
+			status = 0
+			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)
+			log.Logger.Error(fmt.Sprintf("Datasource check: Can't connect server on %s:%s, %s", host, port, err))
+		} else {
+			defer db.Close()
+		}
+	} else if datasourceType == "达梦数据库" {
+		db, err := dm.Connect(host, port, user, pass, dbid)
 		if err != nil {
 			status = 0
 			statusText = fmt.Sprintf("数据源通信失败: Can't connect server on %s:%s, %s", host, port, err)

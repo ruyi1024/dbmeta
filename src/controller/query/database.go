@@ -14,9 +14,11 @@ limitations under the License.
 package query
 
 import (
+	"fmt"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/clickhouse"
+	"github.com/ruyi1024/dbmeta/src/libary/dm"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/libary/mssql"
 	"github.com/ruyi1024/dbmeta/src/libary/mysql"
@@ -24,7 +26,6 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/postgres"
 	"github.com/ruyi1024/dbmeta/src/module"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
 	"net/http"
 	_ "reflect"
 	"strings"
@@ -100,6 +101,40 @@ func DatabaseList(c *gin.Context) {
 		dataList, err := oracle.QueryAll(db, "select username as database_name from dba_users where username not in ('SYSTEM','SYS') order by username asc")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("%s", err)})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"msg":     "OK",
+			"data":    dataList,
+			"total":   len(dataList),
+		})
+		return
+	}
+	if datasourceType == "达梦数据库" {
+		schema := userPass[0]["dbid"].(string)
+		db, err := dm.Connect(host, port, user, origPass, schema)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+			return
+		}
+		defer db.Close()
+
+		sqlCandidates := []string{
+			"select username as database_name from dba_users order by username asc",
+			"select username as database_name from all_users order by username asc",
+			"select distinct owner as database_name from all_tables order by owner asc",
+		}
+		var dataList []map[string]interface{}
+		var lastErr error
+		for _, q := range sqlCandidates {
+			dataList, lastErr = dm.QueryAll(db, q)
+			if lastErr == nil {
+				break
+			}
+		}
+		if lastErr != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("%s", lastErr)})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{

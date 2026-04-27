@@ -15,12 +15,12 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/aes"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/module"
-	"fmt"
 	"os"
 	"time"
 
@@ -29,6 +29,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	_ "gitee.com/chunanyong/dm"
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	//_ "github.com/go-sql-driver/mysql"
 	//_ "github.com/lib/pq"
@@ -106,7 +107,28 @@ func InitDb() *gorm.DB {
 		db.Create(&model.DatasourceType{Id: 10, Name: "SQLServer", Sort: 10, Enable: 1})
 		db.Create(&model.DatasourceType{Id: 11, Name: "MongoDB", Sort: 11, Enable: 1})
 		db.Create(&model.DatasourceType{Id: 12, Name: "Redis", Sort: 12, Enable: 1})
-
+	}
+	// 对已存在的 datasource_type 表做默认值补齐，避免老版本升级缺少新类型。
+	defaultDatasourceTypes := []model.DatasourceType{
+		{Id: 1, Name: "MySQL", Sort: 1, Enable: 1},
+		{Id: 2, Name: "MariaDB", Sort: 2, Enable: 1},
+		{Id: 3, Name: "GreatSQL", Sort: 3, Enable: 1},
+		{Id: 4, Name: "TiDB", Sort: 4, Enable: 1},
+		{Id: 5, Name: "Doris", Sort: 5, Enable: 1},
+		{Id: 6, Name: "OceanBase", Sort: 6, Enable: 1},
+		{Id: 7, Name: "ClickHouse", Sort: 7, Enable: 1},
+		{Id: 8, Name: "Oracle", Sort: 8, Enable: 1},
+		{Id: 9, Name: "PostgreSQL", Sort: 9, Enable: 1},
+		{Id: 10, Name: "SQLServer", Sort: 10, Enable: 1},
+		{Id: 11, Name: "MongoDB", Sort: 11, Enable: 1},
+		{Id: 12, Name: "Redis", Sort: 12, Enable: 1},
+		{Id: 13, Name: "达梦数据库", Sort: 13, Enable: 1},
+	}
+	for _, t := range defaultDatasourceTypes {
+		var existing model.DatasourceType
+		if result := db.Where("name = ?", t.Name).First(&existing); result.Error != nil {
+			db.Create(&t)
+		}
 	}
 
 	if !db.Migrator().HasTable(&model.Idc{}) {
@@ -842,6 +864,12 @@ func Connect(ops ...Option) (*sql.DB, error) {
 	}
 	if opt.driver == "mssql" {
 		url = fmt.Sprintf("server=%s;user id=%s;password=%s;port=%s;database=%s;encrypt=disable;connection timeout=6;", opt.host, opt.username, opt.password, opt.port, opt.database)
+	}
+	if opt.driver == "dm" {
+		url = fmt.Sprintf("dm://%s:%s@%s:%s", opt.username, opt.password, opt.host, opt.port)
+		if opt.database != "" {
+			url = fmt.Sprintf("%s?schema=%s", url, opt.database)
+		}
 	}
 	//连接数据库
 	db, err := sql.Open(opt.driver, url)
