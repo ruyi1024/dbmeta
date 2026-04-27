@@ -1,10 +1,13 @@
 package task
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/robfig/cron/v3"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/model"
-	"fmt"
-	"time"
 )
 
 // TaskLogger 任务日志记录器
@@ -37,6 +40,7 @@ func (tl *TaskLogger) Start() error {
 	}
 
 	tl.LogID = taskLog.Id
+	_ = updateTaskOptionOnStart(tl.TaskKey, tl.StartTime)
 	return nil
 }
 
@@ -59,6 +63,7 @@ func (tl *TaskLogger) Complete(status string, result string) error {
 	if dbResult.Error != nil {
 		return fmt.Errorf("更新任务日志失败: %v", dbResult.Error)
 	}
+	_ = updateTaskOptionOnComplete(tl.TaskKey, status, completeTime)
 
 	return nil
 }
@@ -116,4 +121,57 @@ func GetTaskLogsByDateRange(taskKey string, startDate, endDate time.Time) ([]mod
 	}
 
 	return logs, nil
+}
+
+func updateTaskOptionOnStart(taskKey string, startTime time.Time) error {
+	updates := map[string]interface{}{
+		"last_run_status": "running",
+		"last_run_time":   &startTime,
+	}
+	result := database.DB.Model(&model.TaskOption{}).Where("task_key = ?", taskKey).Updates(updates)
+	return result.Error
+}
+
+func updateTaskOptionOnComplete(taskKey, status string, completeTime time.Time) error {
+	normalizedStatus := strings.TrimSpace(strings.ToLower(status))
+	if normalizedStatus == "" {
+		normalizedStatus = "unknown"
+	}
+	updates := map[string]interface{}{
+		"last_run_status": normalizedStatus,
+		"last_run_time":   &completeTime,
+	}
+
+	var option model.TaskOption
+	if err := database.DB.Where("task_key = ?", taskKey).First(&option).Error; err == nil {
+		nextRun := computeNextRunTime(option.Crontab, completeTime)
+		if nextRun != nil {
+			updates["next_run_time"] = nextRun
+		}
+	}
+
+	result := database.DB.Model(&model.TaskOption{}).Where("task_key = ?", taskKey).Updates(updates)
+	return result.Error
+}
+
+func computeNextRunTime(crontab string, from time.Time) *time.Time {
+	expr := strings.TrimSpace(crontab)
+	if expr == "" {
+		return nil
+	}
+	parser := cron.NewParser(
+		cron.SecondOptional |
+			cron.Minute |
+			cron.Hour |
+			cron.Dom |
+			cron.Month |
+			cron.Dow |
+			cron.Descriptor,
+	)
+	schedule, err := parser.Parse(expr)
+	if err != nil {
+		return nil
+	}
+	next := schedule.Next(from)
+	return &next
 }

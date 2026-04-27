@@ -16,6 +16,8 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -23,7 +25,19 @@ import (
 var err error
 
 func Connect(host, port, username, password, database string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, username, password, database))
+	dbname := strings.TrimSpace(database)
+	if dbname == "" {
+		dbname = "postgres"
+	}
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		url.QueryEscape(username),
+		url.QueryEscape(password),
+		host,
+		port,
+		url.PathEscape(dbname),
+	)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}

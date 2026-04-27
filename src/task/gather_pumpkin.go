@@ -23,6 +23,7 @@ import (
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -200,6 +201,8 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 		dbCon, err = database.Connect(database.WithDriver("mssql"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(sqlServerDatabase))
 	case "ClickHouse":
 		dbCon, err = database.Connect(database.WithDriver("clickhouse"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("system"))
+	case "达梦数据库":
+		dbCon, err = database.Connect(database.WithDriver("dm"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(dbid))
 	}
 
 	if err != nil {
@@ -209,6 +212,24 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 	return dbCon
 }
 
+func normalizePumpkinRowKeysToLower(data []map[string]interface{}) []map[string]interface{} {
+	if len(data) == 0 {
+		return data
+	}
+	result := make([]map[string]interface{}, 0, len(data))
+	for _, row := range data {
+		if row == nil {
+			continue
+		}
+		normalized := make(map[string]interface{}, len(row))
+		for k, v := range row {
+			normalized[strings.ToLower(k)] = v
+		}
+		result = append(result, normalized)
+	}
+	return result
+}
+
 func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid string) error {
 	if datasourceType == "MongoDB" {
 		return doMongoPumpkinCollectorTask(host, port, user, origPass, dbid)
@@ -216,6 +237,7 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 
 	//var db = database.DB
 	var queryTableSizeSql string
+	var queryTableSizeSqlList []string
 
 	switch datasourceType {
 	case "MySQL", "TiDB", "Doris", "MariaDB", "GreatSQL", "OceanBase":
@@ -297,6 +319,91 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 			GROUP BY t.name
 			HAVING SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) > 0
 		`
+	case "达梦数据库":
+		queryTableSizeSqlList = []string{
+			`
+			SELECT
+				t.owner as database_name,
+				t.table_name as table_name,
+				COALESCE(ds.data_size, 0) as data_size,
+				COALESCE(idx.index_size, 0) as index_size,
+				0 as free_size,
+				COALESCE(t.num_rows, 0) as table_rows,
+				CASE
+					WHEN COALESCE(t.num_rows, 0) > 0 THEN (COALESCE(ds.data_size, 0) + COALESCE(idx.index_size, 0)) / t.num_rows
+					ELSE 0
+				END as avg_row_length
+			FROM all_tables t
+			LEFT JOIN (
+				SELECT owner, segment_name as table_name, SUM(bytes) as data_size
+				FROM dba_segments
+				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
+				GROUP BY owner, segment_name
+			) ds
+				ON ds.owner = t.owner AND ds.table_name = t.table_name
+			LEFT JOIN (
+				SELECT i.table_owner as owner, i.table_name, SUM(s.bytes) as index_size
+				FROM all_indexes i
+				JOIN dba_segments s ON s.owner = i.owner AND s.segment_name = i.index_name
+				GROUP BY i.table_owner, i.table_name
+			) idx
+				ON idx.owner = t.owner AND idx.table_name = t.table_name
+			WHERE t.owner NOT IN ('SYS', 'SYSTEM', 'SYSAUDITOR')
+			AND COALESCE(t.num_rows, 0) > 0
+			`,
+			`
+			SELECT
+				t.owner as database_name,
+				t.table_name as table_name,
+				COALESCE(ds.data_size, 0) as data_size,
+				0 as index_size,
+				0 as free_size,
+				COALESCE(t.num_rows, 0) as table_rows,
+				CASE
+					WHEN COALESCE(t.num_rows, 0) > 0 THEN COALESCE(ds.data_size, 0) / t.num_rows
+					ELSE 0
+				END as avg_row_length
+			FROM all_tables t
+			LEFT JOIN (
+				SELECT owner, segment_name as table_name, SUM(bytes) as data_size
+				FROM all_segments
+				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
+				GROUP BY owner, segment_name
+			) ds
+				ON ds.owner = t.owner AND ds.table_name = t.table_name
+			WHERE t.owner NOT IN ('SYS', 'SYSTEM', 'SYSAUDITOR')
+			AND COALESCE(t.num_rows, 0) > 0
+			`,
+			`
+			SELECT
+				USER as database_name,
+				t.table_name as table_name,
+				COALESCE(ds.data_size, 0) as data_size,
+				COALESCE(idx.index_size, 0) as index_size,
+				0 as free_size,
+				COALESCE(t.num_rows, 0) as table_rows,
+				CASE
+					WHEN COALESCE(t.num_rows, 0) > 0 THEN (COALESCE(ds.data_size, 0) + COALESCE(idx.index_size, 0)) / t.num_rows
+					ELSE 0
+				END as avg_row_length
+			FROM user_tables t
+			LEFT JOIN (
+				SELECT segment_name as table_name, SUM(bytes) as data_size
+				FROM user_segments
+				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
+				GROUP BY segment_name
+			) ds
+				ON ds.table_name = t.table_name
+			LEFT JOIN (
+				SELECT i.table_name, SUM(s.bytes) as index_size
+				FROM user_indexes i
+				JOIN user_segments s ON s.segment_name = i.index_name
+				GROUP BY i.table_name
+			) idx
+				ON idx.table_name = t.table_name
+			WHERE COALESCE(t.num_rows, 0) > 0
+			`,
+		}
 	default:
 		return fmt.Errorf("不支持的数据库类型: %s", datasourceType)
 	}
@@ -309,10 +416,28 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 	defer dbCon.Close()
 
 	// 查询表容量数据
-	tableSizeList, err := database.QueryRemote(dbCon, queryTableSizeSql)
-	if err != nil {
-		return fmt.Errorf("查询表容量数据失败: %v", err)
+	var tableSizeList []map[string]interface{}
+	var err error
+	if len(queryTableSizeSqlList) > 0 {
+		var lastErr error
+		for _, oneSql := range queryTableSizeSqlList {
+			tableSizeList, err = database.QueryRemote(dbCon, oneSql)
+			if err == nil {
+				lastErr = nil
+				break
+			}
+			lastErr = err
+		}
+		if lastErr != nil {
+			return fmt.Errorf("查询表容量数据失败: %v", lastErr)
+		}
+	} else {
+		tableSizeList, err = database.QueryRemote(dbCon, queryTableSizeSql)
+		if err != nil {
+			return fmt.Errorf("查询表容量数据失败: %v", err)
+		}
 	}
+	tableSizeList = normalizePumpkinRowKeysToLower(tableSizeList)
 
 	// 处理查询结果
 	for _, item := range tableSizeList {

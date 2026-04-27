@@ -311,6 +311,7 @@ type TaskOption struct {
 	TaskDescription string     `gorm:"size:500," json:"task_description"`
 	Crontab         string     `gorm:"size:100," json:"crontab"`
 	Enable          int8       `gorm:"default:1" json:"enable"`
+	LastRunStatus   string     `gorm:"column:last_run_status;size:20;default:''" json:"last_run_status"`
 	CommercialOnly  int8       `gorm:"column:commercial_only;default:0" json:"commercial_only"` // 0: 开源可用, 1: 仅企业版
 	LastRunTime     *time.Time `gorm:"column:last_run_time" json:"last_run_time"`
 	NextRunTime     *time.Time `gorm:"column:next_run_time" json:"next_run_time"`

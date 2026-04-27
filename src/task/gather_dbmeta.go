@@ -16,13 +16,13 @@ package task
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
 	"strings"
 	"time"
 
@@ -60,6 +60,21 @@ func formatInterface(inter interface{}) string {
 	} else {
 		return ""
 	}
+}
+
+func normalizeRowKeysToLower(rows []map[string]interface{}) []map[string]interface{} {
+	if len(rows) == 0 {
+		return rows
+	}
+	normalized := make([]map[string]interface{}, 0, len(rows))
+	for _, row := range rows {
+		next := make(map[string]interface{}, len(row))
+		for k, v := range row {
+			next[strings.ToLower(k)] = v
+		}
+		normalized = append(normalized, next)
+	}
+	return normalized
 }
 
 func doDbMetaTask() {
@@ -195,6 +210,13 @@ func getDbCon(datasourceType, host, port, user, origPass, dbid string) *sql.DB {
 			log.Logger.Error(fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err))
 			return nil
 		}
+	} else if datasourceType == "达梦数据库" {
+		dmSchema := dbid
+		dbCon, err = database.Connect(database.WithDriver("dm"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(dmSchema))
+		if err != nil {
+			log.Logger.Error(fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err))
+			return nil
+		}
 	}
 	return dbCon
 }
@@ -225,6 +247,10 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 		queryTableSql = "select engine as table_type,lower(`database`) as database_name,name as table_name,comment as table_comment,'' as characters from tables where database_name not in ('information_schema','INFORMATION_SCHEMA','system')  order by database_name asc,table_name asc limit 100"
 		queryColumnSql = "select lower(`database`) as database_name,lower(`table`) as table_name, lower(name) as column_name,comment as column_comment,type as data_type,'' as is_nullable, '' as default_value, toString(position) as ordinal_position,'' as characters from columns where database_name not in ('information_schema','INFORMATION_SCHEMA','system') order by database_name asc,table_name asc,ordinal_position asc"
 
+	} else if datasourceType == "达梦数据库" {
+		queryDatabaseSql = "select username as database_name,username as schema_name,'' as characters from all_users where upper(username) not in ('SYS','SYSTEM','SYSAUDITOR') order by username asc"
+		queryTableSql = "select 'TABLE' as table_type,t.owner as database_name,t.table_name as table_name,coalesce(tc.comments,'') as table_comment,'' as characters from all_tables t left join all_tab_comments tc on t.owner=tc.owner and t.table_name=tc.table_name where upper(t.owner) not in ('SYS','SYSTEM','SYSAUDITOR') order by t.owner asc,t.table_name asc"
+		queryColumnSql = "select c.owner as database_name,c.table_name as table_name,c.column_name as column_name,coalesce(cc.comments,'') as column_comment,c.data_type as data_type,case when c.nullable='Y' then 'yes' else 'no' end as is_nullable,coalesce(c.data_default,'') as default_value,to_char(c.column_id) as ordinal_position,'' as characters from all_tab_columns c left join all_col_comments cc on c.owner=cc.owner and c.table_name=cc.table_name and c.column_name=cc.column_name where upper(c.owner) not in ('SYS','SYSTEM','SYSAUDITOR') order by c.owner asc,c.table_name asc,c.column_id asc"
 		// } else if datasourceType == "PostgreSQL" {
 		// 	queryDatabaseSql = "select pg_database.datname as database_name,pg_database.datname as schema_name,pg_encoding_to_char(encoding) as characters from pg_database where datname not in ('postgres','template0','template1') order by database_name asc"
 		// 	queryTableSql = ""
@@ -270,6 +296,7 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 	if err != nil {
 		return fmt.Errorf("查询数据库列表失败: %v", err)
 	}
+	databaseList = normalizeRowKeysToLower(databaseList)
 	for _, item := range databaseList {
 		var dataList []model.MetaDatabase
 		if item["database_name"] == nil || item["schema_name"] == nil {
@@ -319,6 +346,7 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 		log.Logger.Error(fmt.Sprintf("Can't query table meta on %s:%s, %s", host, port, err))
 		return fmt.Errorf("查询数据表列表失败: %v", err)
 	}
+	tableList = normalizeRowKeysToLower(tableList)
 
 	for _, item := range tableList {
 		var dataList []model.MetaTable
@@ -365,6 +393,7 @@ func doDbMetaCollectorTask(datasourceType, host, port, user, origPass, dbid stri
 		log.Logger.Error(fmt.Sprintf("Can't query column meta on %s:%s, %s", host, port, err))
 		return fmt.Errorf("查询字段列表失败: %v", err)
 	}
+	columnList = normalizeRowKeysToLower(columnList)
 	for _, item := range columnList {
 		var dataList []model.MetaColumn
 		db.Where("host=?", host).Where("port=?", port).Where("database_name=?", item["database_name"].(string)).Where("table_name=?", item["table_name"].(string)).Where("column_name=?", item["column_name"].(string)).Find(&dataList)

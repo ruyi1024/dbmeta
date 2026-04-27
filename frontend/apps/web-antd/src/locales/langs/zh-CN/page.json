@@ -627,6 +627,7 @@
       "taskDescription": "任务描述",
       "crontab": "计划任务",
       "enable": "启用",
+      "lastRunStatus": "运行状态",
       "lastRunTime": "上次运行时间",
       "nextRunTime": "下次运行时间",
       "actions": "操作"

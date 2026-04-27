@@ -27,6 +27,7 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/oracle"
 	"github.com/ruyi1024/dbmeta/src/libary/postgres"
 	"github.com/ruyi1024/dbmeta/src/libary/redis"
+	"github.com/ruyi1024/dbmeta/src/libary/tool"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
 	"time"
@@ -233,18 +234,21 @@ func doDatasourceCheckTask(datasourceType, host, port, user, pass, dbid, env str
 	}
 
 	// 创建事件
-	var events []model.Event
 	event := model.Event{
-		EventEntity: datasourceType,
+		EventUuid:   tool.GetUUID(),
+		EventType:   datasourceType,
+		EventGroup:  "DatasourceMonitor",
+		EventEntity: fmt.Sprintf("%s:%s", host, port),
 		EventKey:    "datasourceCheck",
 		EventValue:  float32(status),
+		EventTag:    env,
+		EventUnit:   "",
 		EventDetail: statusText,
 		EventTime:   time.Now(),
 	}
-	events = append(events, event)
 
 	// write events to mysql
-	result := database.DB.Model(&model.Event{}).Create(events)
+	result := database.DB.Model(&model.Event{}).Create(&event)
 	if result.Error != nil {
 		fmt.Println("Insert Event To MySQL Error: " + result.Error.Error())
 		log.Logger.Error(fmt.Sprintf("Can't add events data to mysql: %s", result.Error.Error()))

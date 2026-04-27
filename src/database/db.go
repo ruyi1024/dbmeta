@@ -16,14 +16,15 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/aes"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/module"
-	"os"
-	"strings"
-	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -32,6 +33,7 @@ import (
 
 	_ "gitee.com/chunanyong/dm"
 	_ "github.com/ClickHouse/clickhouse-go/v2"
+
 	//_ "github.com/go-sql-driver/mysql"
 	//_ "github.com/lib/pq"
 	"github.com/go-redis/redis"
@@ -515,6 +517,11 @@ func InitDb() *gorm.DB {
 	// task_option：始终 AutoMigrate，便于为已存在表增加字段（如 commercial_only）
 	if err = db.AutoMigrate(&model.TaskOption{}); err != nil {
 		log.Error("db sync TaskOption error.", zap.Error(err))
+	}
+	if !db.Migrator().HasColumn(&model.TaskOption{}, "last_run_status") {
+		if err := db.Exec("ALTER TABLE task_option ADD COLUMN last_run_status varchar(20) NOT NULL DEFAULT '' AFTER enable").Error; err != nil {
+			log.Error("add task_option.last_run_status column failed", zap.Error(err))
+		}
 	}
 
 	// 初始化默认任务配置（如果不存在则创建）

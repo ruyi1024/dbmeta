@@ -3,6 +3,7 @@ import type { EchartsUIType } from '@vben/plugins/echarts';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 import {
+  Badge,
   Button,
   Card,
   Col,
@@ -34,6 +35,7 @@ interface TaskOptionRow {
   task_description: string;
   crontab: string;
   enable: number;
+  last_run_status?: string;
   last_run_time?: string;
   next_run_time?: string;
   gmt_created?: string;
@@ -520,6 +522,7 @@ const columns = [
     title: $t('page.taskPlan.columns.enable'),
     width: 90,
   },
+  { dataIndex: 'last_run_status', key: 'last_run_status', title: $t('page.taskPlan.columns.lastRunStatus'), width: 110 },
   { dataIndex: 'last_run_time', key: 'last_run_time', sorter: true, title: $t('page.taskPlan.columns.lastRunTime'), width: 170 },
   { dataIndex: 'next_run_time', key: 'next_run_time', sorter: true, title: $t('page.taskPlan.columns.nextRunTime'), width: 170 },
   { key: 'actions', title: $t('page.taskPlan.columns.actions'), width: 320, fixed: 'right' as const },
@@ -535,7 +538,29 @@ const logColumns = [
 ];
 
 function formatTime(v?: string) {
-  return v || '-';
+  if (!v) {
+    return '-';
+  }
+  const raw = String(v).trim();
+  if (!raw) {
+    return '-';
+  }
+  const normalized = raw.replace('T', ' ');
+  const matched = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (matched) {
+    return `${matched[1]}-${matched[2]}-${matched[3]} ${matched[4]}:${matched[5]}:${matched[6]}`;
+  }
+  const dt = new Date(raw);
+  if (!Number.isNaN(dt.getTime())) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const ss = String(dt.getSeconds()).padStart(2, '0');
+    return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+  }
+  return normalized;
 }
 
 function statusBadge(status: string) {
@@ -549,6 +574,32 @@ function statusBadge(status: string) {
     return { color: 'error', text: $t('page.taskPlan.logStatus.failed') };
   }
   return { color: 'default', text: status || '-' };
+}
+
+function taskRunStatusText(status?: string) {
+  if (status === 'running') {
+    return $t('page.taskPlan.logStatus.running');
+  }
+  if (status === 'success') {
+    return $t('page.taskPlan.logStatus.success');
+  }
+  if (status === 'failed') {
+    return $t('page.taskPlan.logStatus.failed');
+  }
+  return '-';
+}
+
+function taskRunStatusBadge(status?: string) {
+  if (status === 'running') {
+    return { color: 'processing', text: $t('page.taskPlan.logStatus.running') };
+  }
+  if (status === 'success') {
+    return { color: 'success', text: $t('page.taskPlan.logStatus.success') };
+  }
+  if (status === 'failed') {
+    return { color: 'error', text: $t('page.taskPlan.logStatus.failed') };
+  }
+  return { color: 'default', text: taskRunStatusText(status) };
 }
 
 onMounted(async () => {
@@ -681,7 +732,7 @@ onUnmounted(() => {
         :loading="loading"
         :pagination="pagination"
         :row-key="(r: TaskOptionRow) => r.task_key"
-        :scroll="{ x: 1400 }"
+        :scroll="{ x: 1520 }"
         size="middle"
         @change="handleTableChange"
       >
@@ -690,6 +741,9 @@ onUnmounted(() => {
             <span :style="{ color: record.enable === 1 ? '#52c41a' : '#8c8c8c' }">
               {{ record.enable === 1 ? $t('page.taskPlan.enabled.on') : $t('page.taskPlan.enabled.off') }}
             </span>
+          </template>
+          <template v-else-if="column.key === 'last_run_status'">
+            <Badge :status="taskRunStatusBadge(record.last_run_status).color as any" :text="taskRunStatusBadge(record.last_run_status).text" />
           </template>
           <template v-else-if="column.key === 'last_run_time'">
             {{ formatTime(record.last_run_time) }}

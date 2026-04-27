@@ -627,6 +627,7 @@
       "taskDescription": "Description",
       "crontab": "Schedule",
       "enable": "Enabled",
+      "lastRunStatus": "Run status",
       "lastRunTime": "Last run",
       "nextRunTime": "Next run",
       "actions": "Actions"
