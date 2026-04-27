@@ -6,7 +6,7 @@ import { $t } from '#/locales';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
-import { Badge, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tooltip, message } from 'ant-design-vue';
+import { Badge, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
 import { checkPermission } from '#/utils/check-permission';
@@ -39,6 +39,9 @@ interface DatasourceRow {
 interface OptionItem {
   id?: number;
   name?: string;
+  logo?: string;
+  sort?: number;
+  enable?: number;
   env_key?: string;
   env_name?: string;
   idc_key?: string;
@@ -87,6 +90,21 @@ const modalOpen = ref(false);
 const modalMode = ref<'create' | 'edit'>('create');
 const saving = ref(false);
 const testing = ref(false);
+const typeModalOpen = ref(false);
+const typeLoading = ref(false);
+const typeRows = ref<OptionItem[]>([]);
+
+function normalizeLogoUrl(logo?: string) {
+  const raw = String(logo ?? '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const normalizedPath = raw.startsWith('/')
+    ? raw
+    : raw.startsWith('static/')
+      ? `/${raw}`
+      : `/static/${raw}`;
+  return `/api/v1/datasource_type/logo?path=${encodeURIComponent(normalizedPath)}`;
+}
 
 const formModel = reactive<DatasourceRow>({
   alarm_enable: 0,
@@ -140,6 +158,19 @@ async function loadOptions() {
   idcOptions.value = (extractApiBody(idcRes).data as OptionItem[]) || [];
   envOptions.value = (extractApiBody(envRes).data as OptionItem[]) || [];
   typeOptions.value = (extractApiBody(typeRes).data as OptionItem[]) || [];
+}
+
+async function loadTypeRows() {
+  typeLoading.value = true;
+  try {
+    const response = await baseRequestClient.get('/v1/datasource_type/list');
+    const body = extractApiBody(response);
+    typeRows.value = Array.isArray(body.data) ? (body.data as OptionItem[]) : [];
+  } catch (e: unknown) {
+    message.error((e as Error)?.message || '加载数据源类型失败');
+  } finally {
+    typeLoading.value = false;
+  }
 }
 
 async function fetchList() {
@@ -323,6 +354,36 @@ async function handleDelete(record: DatasourceRow) {
   }
 }
 
+async function openTypeModal() {
+  typeModalOpen.value = true;
+  await loadTypeRows();
+}
+
+async function updateDatasourceType(record: OptionItem, patch: Partial<OptionItem>) {
+  if (!record.id) return;
+  const payload = {
+    id: record.id,
+    name: record.name ?? '',
+    logo: record.logo ?? '',
+    description: '',
+    sort: Number(patch.sort ?? record.sort ?? 1),
+    enable: Number(patch.enable ?? record.enable ?? 0),
+  };
+  try {
+    const response = await baseRequestClient.put('/v1/datasource_type/list', payload);
+    const body = extractApiBody(response);
+    if (body.success !== true) {
+      message.error(String(body.msg ?? '更新数据源类型失败'));
+      return;
+    }
+    record.sort = payload.sort;
+    record.enable = payload.enable;
+    message.success('已更新');
+  } catch (e: unknown) {
+    message.error((e as Error)?.message || '更新数据源类型失败');
+  }
+}
+
 const columns = computed<TableColumnsType<DatasourceRow>>(() => [
   { title: $t('page.settingDatasource.columns.name'), dataIndex: 'name', key: 'name', width: 180 },
   { title: $t('page.settingDatasource.columns.type'), dataIndex: 'type', key: 'type', width: 130 },
@@ -372,6 +433,7 @@ onMounted(async () => {
             <Button type="primary" @click="handleSearch">{{ $t('page.common.search') }}</Button>
             <Button @click="handleReset">{{ $t('page.common.reset') }}</Button>
             <Button type="primary" ghost @click="openCreate">{{ $t('page.common.create') }}</Button>
+            <Button @click="openTypeModal">数据源类型</Button>
           </Space>
         </div>
       </Form>
@@ -485,6 +547,60 @@ onMounted(async () => {
           <Button type="primary" :loading="saving" @click="submitModal">{{ $t('page.settingCommon.save') }}</Button>
         </Space>
       </template>
+    </Modal>
+
+    <Modal
+      v-model:open="typeModalOpen"
+      title="数据源类型管理"
+      width="900px"
+      :footer="null"
+      destroy-on-close
+    >
+      <Table
+        row-key="id"
+        :loading="typeLoading"
+        :data-source="typeRows"
+        :pagination="false"
+        size="small"
+        :columns="[
+          { title: '数据源类型名称', dataIndex: 'name', key: 'name', width: 220 },
+          { title: '是否启用', dataIndex: 'enable', key: 'enable', width: 120 },
+          { title: '排序', dataIndex: 'sort', key: 'sort', width: 140 }
+        ]"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
+            <div class="flex items-center gap-2">
+              <img
+                v-if="record.logo"
+                :src="normalizeLogoUrl(record.logo)"
+                alt="logo"
+                style="background: #fff; border: 1px solid #f0f0f0; border-radius: 4px; display: block; height: 24px; object-fit: contain; padding: 2px; width: 24px;"
+                @error="(e) => (((e.target as HTMLImageElement).style.display = 'none'))"
+              />
+              <span class="inline-block max-w-[200px] truncate" :title="record.name || ''">{{ record.name || '-' }}</span>
+            </div>
+          </template>
+          <template v-else-if="column.key === 'enable'">
+            <Switch
+              :checked="Number(record.enable) === 1"
+              checked-children="启用"
+              un-checked-children="停用"
+              @change="(checked: any) => { void updateDatasourceType(record, { enable: checked ? 1 : 0 }); }"
+            />
+          </template>
+          <template v-else-if="column.key === 'sort'">
+            <InputNumber
+              :value="Number(record.sort ?? 1)"
+              :min="1"
+              :max="999"
+              :precision="0"
+              style="width: 100px;"
+              @change="(value: any) => { void updateDatasourceType(record, { sort: Number(value || 1) }); }"
+            />
+          </template>
+        </template>
+      </Table>
     </Modal>
   </div>
 </template>

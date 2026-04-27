@@ -22,6 +22,7 @@ import (
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/module"
 	"os"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -40,6 +41,41 @@ var DB *gorm.DB
 var CK *gorm.DB
 var SQL *sql.DB
 var RDS *redis.Client
+
+const defaultDatasourceTypeLogo = "/static/dblogo/logo-mysql.png"
+
+func datasourceTypeDefaultLogo(name string) string {
+	switch strings.TrimSpace(name) {
+	case "MySQL":
+		return "/static/dblogo/logo-mysql.png"
+	case "MariaDB":
+		return "/static/dblogo/logo-mariadb.png"
+	case "GreatSQL":
+		return "/static/dblogo/logo-greatsql.png"
+	case "TiDB":
+		return "/static/dblogo/logo-tidb.png"
+	case "Doris":
+		return "/static/dblogo/logo-doris.png"
+	case "OceanBase":
+		return "/static/dblogo/logo-oceanbase.png"
+	case "ClickHouse":
+		return "/static/dblogo/logo-clickhouse.png"
+	case "Oracle":
+		return "/static/dblogo/logo-oracle.png"
+	case "PostgreSQL":
+		return "/static/dblogo/logo-postgresql.png"
+	case "SQLServer":
+		return "/static/dblogo/logo-sqlserver.png"
+	case "MongoDB":
+		return "/static/dblogo/logo-mongodb.png"
+	case "Redis":
+		return "/static/dblogo/logo-redis.png"
+	case "达梦数据库":
+		return "/static/dblogo/logo-dm.png"
+	default:
+		return defaultDatasourceTypeLogo
+	}
+}
 
 func InitDb() *gorm.DB {
 
@@ -95,41 +131,52 @@ func InitDb() *gorm.DB {
 		if err = db.AutoMigrate(&model.DatasourceType{}); err != nil {
 			log.Error("db sync error.", zap.Error(err))
 		}
-		db.Create(&model.DatasourceType{Id: 1, Name: "MySQL", Sort: 1, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 2, Name: "MariaDB", Sort: 2, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 3, Name: "GreatSQL", Sort: 3, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 4, Name: "TiDB", Sort: 4, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 5, Name: "Doris", Sort: 5, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 6, Name: "OceanBase", Sort: 6, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 7, Name: "ClickHouse", Sort: 7, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 8, Name: "Oracle", Sort: 8, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 9, Name: "PostgreSQL", Sort: 9, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 10, Name: "SQLServer", Sort: 10, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 11, Name: "MongoDB", Sort: 11, Enable: 1})
-		db.Create(&model.DatasourceType{Id: 12, Name: "Redis", Sort: 12, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 1, Name: "MySQL", Logo: datasourceTypeDefaultLogo("MySQL"), Sort: 1, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 2, Name: "MariaDB", Logo: datasourceTypeDefaultLogo("MariaDB"), Sort: 2, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 3, Name: "GreatSQL", Logo: datasourceTypeDefaultLogo("GreatSQL"), Sort: 3, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 4, Name: "TiDB", Logo: datasourceTypeDefaultLogo("TiDB"), Sort: 4, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 5, Name: "Doris", Logo: datasourceTypeDefaultLogo("Doris"), Sort: 5, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 6, Name: "OceanBase", Logo: datasourceTypeDefaultLogo("OceanBase"), Sort: 6, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 7, Name: "ClickHouse", Logo: datasourceTypeDefaultLogo("ClickHouse"), Sort: 7, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 8, Name: "Oracle", Logo: datasourceTypeDefaultLogo("Oracle"), Sort: 8, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 9, Name: "PostgreSQL", Logo: datasourceTypeDefaultLogo("PostgreSQL"), Sort: 9, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 10, Name: "SQLServer", Logo: datasourceTypeDefaultLogo("SQLServer"), Sort: 10, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 11, Name: "MongoDB", Logo: datasourceTypeDefaultLogo("MongoDB"), Sort: 11, Enable: 1})
+		db.Create(&model.DatasourceType{Id: 12, Name: "Redis", Logo: datasourceTypeDefaultLogo("Redis"), Sort: 12, Enable: 1})
+	}
+	if !db.Migrator().HasColumn(&model.DatasourceType{}, "logo") {
+		if err := db.Exec("ALTER TABLE datasource_type ADD COLUMN logo varchar(255) NOT NULL DEFAULT '/static/dblogo/logo-mysql.png' AFTER name").Error; err != nil {
+			log.Error("add datasource_type.logo column failed", zap.Error(err))
+		}
 	}
 	// 对已存在的 datasource_type 表做默认值补齐，避免老版本升级缺少新类型。
 	defaultDatasourceTypes := []model.DatasourceType{
-		{Id: 1, Name: "MySQL", Sort: 1, Enable: 1},
-		{Id: 2, Name: "MariaDB", Sort: 2, Enable: 1},
-		{Id: 3, Name: "GreatSQL", Sort: 3, Enable: 1},
-		{Id: 4, Name: "TiDB", Sort: 4, Enable: 1},
-		{Id: 5, Name: "Doris", Sort: 5, Enable: 1},
-		{Id: 6, Name: "OceanBase", Sort: 6, Enable: 1},
-		{Id: 7, Name: "ClickHouse", Sort: 7, Enable: 1},
-		{Id: 8, Name: "Oracle", Sort: 8, Enable: 1},
-		{Id: 9, Name: "PostgreSQL", Sort: 9, Enable: 1},
-		{Id: 10, Name: "SQLServer", Sort: 10, Enable: 1},
-		{Id: 11, Name: "MongoDB", Sort: 11, Enable: 1},
-		{Id: 12, Name: "Redis", Sort: 12, Enable: 1},
-		{Id: 13, Name: "达梦数据库", Sort: 13, Enable: 1},
+		{Id: 1, Name: "MySQL", Logo: datasourceTypeDefaultLogo("MySQL"), Sort: 1, Enable: 1},
+		{Id: 2, Name: "MariaDB", Logo: datasourceTypeDefaultLogo("MariaDB"), Sort: 2, Enable: 1},
+		{Id: 3, Name: "GreatSQL", Logo: datasourceTypeDefaultLogo("GreatSQL"), Sort: 3, Enable: 1},
+		{Id: 4, Name: "TiDB", Logo: datasourceTypeDefaultLogo("TiDB"), Sort: 4, Enable: 1},
+		{Id: 5, Name: "Doris", Logo: datasourceTypeDefaultLogo("Doris"), Sort: 5, Enable: 1},
+		{Id: 6, Name: "OceanBase", Logo: datasourceTypeDefaultLogo("OceanBase"), Sort: 6, Enable: 1},
+		{Id: 7, Name: "ClickHouse", Logo: datasourceTypeDefaultLogo("ClickHouse"), Sort: 7, Enable: 1},
+		{Id: 8, Name: "Oracle", Logo: datasourceTypeDefaultLogo("Oracle"), Sort: 8, Enable: 1},
+		{Id: 9, Name: "PostgreSQL", Logo: datasourceTypeDefaultLogo("PostgreSQL"), Sort: 9, Enable: 1},
+		{Id: 10, Name: "SQLServer", Logo: datasourceTypeDefaultLogo("SQLServer"), Sort: 10, Enable: 1},
+		{Id: 11, Name: "MongoDB", Logo: datasourceTypeDefaultLogo("MongoDB"), Sort: 11, Enable: 1},
+		{Id: 12, Name: "Redis", Logo: datasourceTypeDefaultLogo("Redis"), Sort: 12, Enable: 1},
+		{Id: 13, Name: "达梦数据库", Logo: datasourceTypeDefaultLogo("达梦数据库"), Sort: 13, Enable: 1},
 	}
 	for _, t := range defaultDatasourceTypes {
 		var existing model.DatasourceType
 		if result := db.Where("name = ?", t.Name).First(&existing); result.Error != nil {
 			db.Create(&t)
+		} else if existing.Logo == "" {
+			db.Model(&model.DatasourceType{}).Where("id = ?", existing.Id).Update("logo", datasourceTypeDefaultLogo(existing.Name))
 		}
 	}
+	for _, t := range defaultDatasourceTypes {
+		db.Model(&model.DatasourceType{}).Where("name = ?", t.Name).Update("logo", datasourceTypeDefaultLogo(t.Name))
+	}
+	db.Model(&model.DatasourceType{}).Where("logo = '' OR logo IS NULL").Update("logo", defaultDatasourceTypeLogo)
 
 	if !db.Migrator().HasTable(&model.Idc{}) {
 		if err = db.AutoMigrate(&model.Idc{}); err != nil {

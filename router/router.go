@@ -61,6 +61,7 @@ func Router() *gin.Engine {
 		v1.POST("/datasource/check", datasource.Check)
 
 		v1.GET("/datasource_type/list", datasource.TypeList)
+		v1.GET("/datasource_type/logo", datasource.TypeLogo)
 		v1.POST("/datasource_type/list", datasource.TypeList)
 		v1.PUT("/datasource_type/list", datasource.TypeList)
 		v1.DELETE("/datasource_type/list", datasource.TypeList)

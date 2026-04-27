@@ -38,6 +38,7 @@ type Token struct {
 type DatasourceType struct {
 	Id          int       `gorm:"primarykey" json:"id"`
 	Name        string    `gorm:"size:30;uniqueIndex" json:"name"`
+	Logo        string    `gorm:"column:logo;size:255;default:'/static/dblogo/logo-mysql.png'" json:"logo"`
 	Description string    `gorm:"size:100" json:"description"`
 	Sort        int8      `gorm:"default:1" json:"sort"`
 	Enable      int8      `gorm:"default:1" json:"enable"`
