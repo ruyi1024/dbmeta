@@ -6,7 +6,7 @@ import { $t } from '#/locales';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TablePaginationConfig } from 'ant-design-vue/es/table/interface';
 
-import { Badge, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tooltip, message } from 'ant-design-vue';
+import { Badge, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Tooltip, message } from 'ant-design-vue';
 
 import { baseRequestClient } from '#/api/request';
 import { checkPermission } from '#/utils/check-permission';
@@ -283,13 +283,20 @@ async function handleTestConnection() {
   }
   testing.value = true;
   try {
-    const response = await baseRequestClient.post('/v1/datasource/check', buildPayload());
+    const payload: Record<string, unknown> = { ...buildPayload() };
+    if (formModel.id !== undefined && formModel.id !== null) {
+      payload.id = formModel.id;
+    }
+    const response = await baseRequestClient.post('/v1/datasource/check', payload);
     const body = extractApiBody(response);
     if (body.success !== true) {
       message.error(String(body.msg ?? $t('page.settingDatasource.message.checkFailed')));
       return;
     }
     message.success($t('page.settingDatasource.message.checkSuccess'));
+    if (formModel.id !== undefined && formModel.id !== null) {
+      void fetchList();
+    }
   } catch (e: unknown) {
     message.error((e as Error)?.message || $t('page.settingDatasource.message.checkFailed'));
   } finally {
@@ -392,8 +399,7 @@ const columns = computed<TableColumnsType<DatasourceRow>>(() => [
   { title: $t('page.settingDatasource.columns.idc'), dataIndex: 'idc', key: 'idc', width: 100 },
   { title: $t('page.settingDatasource.columns.env'), dataIndex: 'env', key: 'env', width: 100 },
   { title: $t('page.settingDatasource.columns.enable'), dataIndex: 'enable', key: 'enable', width: 70 },
-  { title: $t('page.settingDatasource.columns.status'), dataIndex: 'status', key: 'status', width: 80 },
-  { title: $t('page.settingDatasource.columns.status_text'), dataIndex: 'status_text', key: 'status_text', width: 180 },
+  { title: $t('page.settingDatasource.columns.status'), dataIndex: 'status', key: 'status', width: 130 },
   { title: $t('page.settingDatasource.columns.action'), key: 'action', width: 140, fixed: 'right' },
 ]);
 
@@ -444,7 +450,7 @@ onMounted(async () => {
         :loading="loading"
         :pagination="pagination"
         :row-key="(record: DatasourceRow, index?: number) => record.id ?? `ds-${pagination.current}-${index ?? 0}`"
-        :scroll="{ x: 1600 }"
+        :scroll="{ x: 1420 }"
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
@@ -452,11 +458,15 @@ onMounted(async () => {
             <Badge :status="Number(record.enable) === 1 ? 'success' : 'default'" />
           </template>
           <template v-else-if="column.key === 'status'">
-            <Badge :status="Number(record.status) === 1 ? 'success' : 'error'" />
-          </template>
-          <template v-else-if="column.key === 'status_text'">
-            <Tooltip :title="record.status_text || '-'">
-              <span class="inline-block max-w-[150px] truncate">{{ record.status_text || '-' }}</span>
+            <Tooltip :title="(record.status_text ?? '').trim() || '-'">
+              <span class="inline-flex cursor-default items-center">
+                <Space size="small" align="center">
+                  <Badge :status="Number(record.status) === 1 ? 'success' : 'error'" />
+                  <Tag :color="Number(record.status) === 1 ? 'success' : 'error'">
+                    {{ Number(record.status) === 1 ? $t('page.settingDatasource.conn.ok') : $t('page.settingDatasource.conn.fail') }}
+                  </Tag>
+                </Space>
+              </span>
             </Tooltip>
           </template>
           <template v-else-if="column.key === 'action'">

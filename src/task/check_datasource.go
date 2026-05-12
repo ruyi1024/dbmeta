@@ -29,6 +29,7 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/redis"
 	"github.com/ruyi1024/dbmeta/src/libary/tool"
 	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/service"
 	"github.com/ruyi1024/dbmeta/src/utils"
 	"time"
 
@@ -112,6 +113,7 @@ func doDatasourceCheck() {
 				logger.Error(errorMsg)
 				errorDetails = append(errorDetails, errorMsg)
 				failedCount++
+				service.UpdateDatasourceConnectionStatus(datasource.Id, 0, fmt.Sprintf("密码解密失败: %v", err))
 				continue
 			}
 		}
@@ -126,12 +128,14 @@ func doDatasourceCheck() {
 			successCount++
 		}
 
+		service.UpdateDatasourceConnectionStatus(datasource.Id, int32(checkResult.Status), checkResult.StatusText)
+
 		// 更新进度
 		progressMsg := fmt.Sprintf("已处理 %d/%d 个数据源 (成功: %d, 失败: %d)", i+1, len(dataList), successCount, failedCount)
 		taskLogger.UpdateResult(progressMsg)
 	}
 
-	// 记录最终结果
+	// 记录最终结果：脚本完整跑完即视为任务成功；单个数据源连不通或解密失败只记日志与结果摘要，不将整任务标为失败
 	finalResult := fmt.Sprintf("任务完成 - 数据源总计: %d, 成功: %d, 失败: %d",
 		len(dataList), successCount, failedCount)
 	if len(errorDetails) > 0 {
@@ -141,12 +145,7 @@ func doDatasourceCheck() {
 		}
 	}
 
-	if failedCount == 0 {
-		taskLogger.Success(finalResult)
-	} else {
-		taskLogger.Failed(finalResult)
-	}
-
+	taskLogger.Success(finalResult)
 	logger.Info(finalResult)
 }
 
@@ -231,6 +230,10 @@ func doDatasourceCheckTask(datasourceType, host, port, user, pass, dbid, env str
 		} else {
 			defer db.Close()
 		}
+	} else {
+		status = 0
+		statusText = fmt.Sprintf("暂不支持类型「%s」的连接检查", datasourceType)
+		log.Logger.Warn(statusText)
 	}
 
 	// 创建事件

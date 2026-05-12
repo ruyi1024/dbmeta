@@ -28,6 +28,7 @@ import (
 	"github.com/ruyi1024/dbmeta/src/libary/postgres"
 	"github.com/ruyi1024/dbmeta/src/libary/redis"
 	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/service"
 	"github.com/ruyi1024/dbmeta/src/utils"
 	"net/http"
 	"strings"
@@ -161,6 +162,22 @@ func Check(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"success": false, "msg": "Bind Record Error:" + err.Error()})
 			return
 		}
+
+		checkOK := false
+		failMsg := ""
+		defer func() {
+			if record.Id <= 0 {
+				return
+			}
+			if checkOK {
+				service.UpdateDatasourceConnectionStatus(record.Id, 1, "数据源连接正常")
+				return
+			}
+			if failMsg != "" {
+				service.UpdateDatasourceConnectionStatus(record.Id, 0, failMsg)
+			}
+		}()
+
 		datasourceType := record.Type
 		host := record.Host
 		port := record.Port
@@ -171,13 +188,16 @@ func Check(c *gin.Context) {
 		//更新场景，密码为空时从数据库读取密码，检查数据源是否连通
 		if pass == "" {
 			userPass, _ := database.QueryAll(fmt.Sprintf("select pass from datasource where host='%s' and port='%s' limit 1 ", host, port))
-			passInDb := userPass[0]["pass"].(string)
-			if passInDb != "" {
-				var err error
-				pass, err = utils.AesPassDecode(passInDb, setting.Setting.DbPassKey)
-				if err != nil {
-					c.JSON(http.StatusOK, gin.H{"success": false, "msg": "Encrypt Password Error."})
-					return
+			if len(userPass) > 0 {
+				passInDb := userPass[0]["pass"].(string)
+				if passInDb != "" {
+					var decErr error
+					pass, decErr = utils.AesPassDecode(passInDb, setting.Setting.DbPassKey)
+					if decErr != nil {
+						failMsg = fmt.Sprintf("密码解密失败: %v", decErr)
+						c.JSON(http.StatusOK, gin.H{"success": false, "msg": "Encrypt Password Error."})
+						return
+					}
 				}
 			}
 		}
@@ -185,68 +205,69 @@ func Check(c *gin.Context) {
 		if datasourceType == "MySQL" || datasourceType == "TiDB" || datasourceType == "Doris" || datasourceType == "MariaDB" || datasourceType == "GreatSQL" || datasourceType == "OceanBase" {
 			db, err := mysql.Connect(host, port, user, pass, "")
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "SQLServer" {
-			//fmt.Println(host, port, user, pass)
+		} else if datasourceType == "SQLServer" {
 			db, err := mssql.Connect(host, port, user, pass, "")
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "Oracle" {
+		} else if datasourceType == "Oracle" {
 			db, err := oracle.Connect(host, port, user, pass, dbid)
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "达梦数据库" {
+		} else if datasourceType == "达梦数据库" {
 			db, err := dm.Connect(host, port, user, pass, dbid)
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "PostgreSQL" {
+		} else if datasourceType == "PostgreSQL" {
 			db, err := postgres.Connect(host, port, user, pass, "postgres")
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "ClickHouse" {
+		} else if datasourceType == "ClickHouse" {
 			db, err := clickhouse.Connect(host, port, user, pass, "system")
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "Redis" {
+		} else if datasourceType == "Redis" {
 			db, err := redis.Connect(host, port, pass)
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
 			defer db.Close()
-		}
-		if datasourceType == "MongoDB" {
+		} else if datasourceType == "MongoDB" {
 			_, err := mongodb.Connect(host, port, user, pass, "local")
 			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"success": false, "msg": fmt.Sprintf("Can't connect mongo server on %s:%s, %s", host, port, err)})
+				failMsg = fmt.Sprintf("Can't connect mongo server on %s:%s, %s", host, port, err)
+				c.JSON(http.StatusOK, gin.H{"success": false, "msg": failMsg})
 				return
 			}
-			//defer db.Disconnect()
 		}
+
+		checkOK = true
 		c.JSON(http.StatusOK, gin.H{"success": true})
 		return
 	}

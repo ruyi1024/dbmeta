@@ -833,9 +833,13 @@
       "idc": "机房",
       "env": "环境",
       "enable": "启用",
-      "status": "状态",
-      "status_text": "状态说明",
+      "status": "连接状态",
+      "status_text": "连接说明",
       "action": "操作"
+    },
+    "conn": {
+      "ok": "正常",
+      "fail": "异常"
     },
     "form": {
       "name": "数据源",

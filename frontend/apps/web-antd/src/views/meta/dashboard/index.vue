@@ -127,7 +127,7 @@ function renderPie(
   const pieData = normalizePieData(data);
   render({
     legend: {
-      bottom: '2%',
+      bottom: '0%',
       left: 'center',
     },
     series: [
@@ -150,7 +150,8 @@ function renderPie(
           show: true,
         },
         name: title,
-        radius: ['40%', '65%'],
+        center: ['50%', '42%'],
+        radius: ['36%', '58%'],
         type: 'pie',
       },
     ],

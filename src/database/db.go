@@ -529,16 +529,21 @@ func InitDb() *gorm.DB {
 		{TaskKey: "recycle_token", TaskName: "回收用户令牌", TaskDescription: "回收用户过期的ToKen", Crontab: "* * * * *"},
 		{TaskKey: "check_datasource", TaskName: "监测数据源状态", TaskDescription: "监测数据源连接状态是否正常", Crontab: "@every 30s"},
 		{TaskKey: "gather_dbmeta", TaskName: "采集元数据信息", TaskDescription: "采集数据库、数据表、数据列等元数据信息", Crontab: "*/3 * * * *"},
-		{TaskKey: "ai_general_table_comment", TaskName: "AI生成表注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据表生成AI注释", Crontab: "*/30 * * * *"},
-		{TaskKey: "ai_general_column_comment", TaskName: "AI生成字段注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据字段生成AI注释", Crontab: "*/30 * * * *"},
-		{TaskKey: "ai_apply_table_comment", TaskName: "AI应用表注释", TaskDescription: "将待应用的AI注释应用到实际数据表", Crontab: "*/30 * * * *"},
-		{TaskKey: "ai_apply_column_comment", TaskName: "AI应用字段注释", TaskDescription: "将待应用的AI注释应用到实际数据字段", Crontab: "*/30 * * * *"},
-		{TaskKey: "ai_table_comment_accuracy", TaskName: "AI表注释准确度评估", TaskDescription: "基于表名和表注释评估注释准确度并写回 0-1 分值(1位小数)", Crontab: "*/30 * * * *"},
-		{TaskKey: "ai_column_comment_accuracy", TaskName: "AI字段注释准确度评估", TaskDescription: "基于字段名、字段注释等元数据评估字段注释准确度并写回 0-1 分值(1位小数)", Crontab: "*/30 * * * *"},
+		{TaskKey: "ai_general_table_comment", TaskName: "AI生成表注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据表生成AI注释", Crontab: "0 0 * * *"},
+		{TaskKey: "ai_general_column_comment", TaskName: "AI生成字段注释", TaskDescription: "接入AI大模型，自动为缺失注释的数据字段生成AI注释", Crontab: "0 1 * * *"},
+		{TaskKey: "ai_apply_table_comment", TaskName: "AI应用表注释", TaskDescription: "将待应用的AI注释应用到实际数据表", Crontab: "0 2 * * *"},
+		{TaskKey: "ai_apply_column_comment", TaskName: "AI应用字段注释", TaskDescription: "将待应用的AI注释应用到实际数据字段", Crontab: "0 3 * * *"},
+		{TaskKey: "ai_table_comment_accuracy", TaskName: "AI表注释准确度评估", TaskDescription: "基于表名和表注释评估注释准确度并写回 0-1 分值(1位小数)", Crontab: "0 4 * * *"},
+		{TaskKey: "ai_column_comment_accuracy", TaskName: "AI字段注释准确度评估", TaskDescription: "基于字段名、字段注释等元数据评估字段注释准确度并写回 0-1 分值(1位小数)", Crontab: "0 5 * * *"},
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "*/30 * * * *"},
 		{TaskKey: "ai_grading_batch", TaskName: "AI数据分级批处理", TaskDescription: "对无分级或低置信度(仅AI)的表/列调用大模型自动标注安全分级", Crontab: "*/30 * * * *"},
+	}
+
+	defaultTaskCrontabMap := make(map[string]string, len(defaultTasks))
+	for _, task := range defaultTasks {
+		defaultTaskCrontabMap[task.TaskKey] = task.Crontab
 	}
 
 	for _, task := range defaultTasks {
@@ -547,6 +552,13 @@ func InitDb() *gorm.DB {
 		if result.Error != nil {
 			// 如果不存在，创建
 			db.Create(&task)
+		} else {
+			// 仅把历史默认值迁移到新的默认计划，避免覆盖用户自定义 crontab
+			if existingTask.Crontab == "*/30 * * * *" {
+				if newCrontab, ok := defaultTaskCrontabMap[task.TaskKey]; ok && newCrontab != existingTask.Crontab {
+					db.Model(&model.TaskOption{}).Where("task_key = ?", task.TaskKey).Update("crontab", newCrontab)
+				}
+			}
 		}
 	}
 

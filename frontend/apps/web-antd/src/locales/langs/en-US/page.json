@@ -833,9 +833,13 @@
       "idc": "IDC",
       "env": "Environment",
       "enable": "Enabled",
-      "status": "Status",
-      "status_text": "Status Detail",
+      "status": "Connection",
+      "status_text": "Connection detail",
       "action": "Actions"
+    },
+    "conn": {
+      "ok": "OK",
+      "fail": "Unreachable"
     },
     "form": {
       "name": "Data Source",
