@@ -9,9 +9,25 @@ export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
     defaultHomePath: '/workspace',
+    layout: 'header-mixed-nav',
     name: import.meta.env.VITE_APP_TITLE,
     /** 水印改为仅企业版生效，开源版默认关闭 */
     watermark: false,
     watermarkContent: '',
+    
   },
+  "sidebar": {
+    "autoActivateChild": true,
+    "width": 228
+  },
+  "theme": {
+    "builtinType": "deep-blue",
+    "colorPrimary": "hsl(211 91% 39%)",
+    "radius": "0.25"
+  },
+  "widget": {
+    "globalSearch": false,
+    "languageToggle": true,
+    "themeToggle": true
+  }
 });

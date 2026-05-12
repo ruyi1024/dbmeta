@@ -1,40 +1,40 @@
 {
   "dictionary": {
     "title": "数据字典",
-    "overview": "元数据概览",
-    "quality": "元数据质量",
-    "instance": "实例信息",
-    "database": "数据库信息",
+    "overview": "概览",
+    "quality": "质量",
+    "instance": "实例",
+    "database": "数据库",
     "businessInfo": "业务信息",
-    "databaseBusiness": "数据库业务信息",
-    "table": "数据表信息",
-    "column": "数据字段信息"
+    "databaseBusiness": "数据库业务",
+    "table": "数据表",
+    "column": "字段信息"
   },
   "query": {
     "title": "数据查询"
   },
   "capacity": {
     "title": "数据容量",
-    "overview": "数据容量概览",
-    "database": "数据库容量",
-    "table": "数据表容量"
+    "overview": "概览",
+    "database": "库容量",
+    "table": "表容量"
   },
   "quality": {
     "title": "数据质量",
-    "overview": "数据质量概览",
-    "issues": "数据质量问题",
-    "rules": "数据规则配置",
-    "tasks": "质量评估任务"
+    "overview": "概览",
+    "issues": "数据问题",
+    "rules": "规则配置",
+    "tasks": "评估任务"
   },
   "patrol": {
     "title": "数据巡检",
-    "report": "巡检报告",
-    "config": "巡检配置"
+    "report": "报告",
+    "config": "配置"
   },
   "grading": {
     "title": "数据分级",
-    "gradeDict": "分级字典",
-    "asset": "资产分级",
+    "gradeDict": "字典",
+    "asset": "资产",
     "log": "变更记录"
   },
   "categorization": {
@@ -42,19 +42,19 @@
   },
   "insight": {
     "title": "数据洞察",
-    "report": "洞察报告",
-    "management": "洞察管理"
+    "report": "报告",
+    "management": "管理"
   },
   "audit": {
     "title": "审计中心",
-    "queryAudit": "数据查询审计"
+    "queryAudit": "查询审计"
   },
   "security": {
     "title": "数据安全",
-    "dashboard": "数据安全大盘",
-    "privilege": "数据查询授权",
-    "sensitiveInventory": "敏感信息盘点",
-    "sensitiveRule": "敏感信息探测规则"
+    "dashboard": "安全大盘",
+    "privilege": "查询授权",
+    "sensitiveInventory": "敏感盘点",
+    "sensitiveRule": "探测规则"
   },
   "task": {
     "title": "计划任务"
@@ -69,7 +69,7 @@
   },
   "users": {
     "title": "用户",
-    "manager": "用户管理"
+    "manager": "管理"
   },
   "vben": {
     "github": "Github"

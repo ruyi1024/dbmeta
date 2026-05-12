@@ -14,9 +14,9 @@ limitations under the License.
 package pumpkin
 
 import (
+	"fmt"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/model"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -116,8 +116,11 @@ func GetDatabaseCapacityTop10Chart(c *gin.Context) {
 }
 
 // GetDatabaseCapacityTop10 获取数据库容量信息（用于表格，支持分页、搜索、排序）
-// 从 pumpkin_database_growth 表获取今天的数据
+// 从 pumpkin_database_growth 取当天内每个库最新一条（按 gmt_created），兼容按小时写入的多条历史
 func GetDatabaseCapacityTop10(c *gin.Context) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 	// 获取查询参数
 	current := c.DefaultQuery("current", "1")
 	pageSize := c.DefaultQuery("pageSize", "10")
@@ -138,28 +141,40 @@ func GetDatabaseCapacityTop10(c *gin.Context) {
 	}
 	offset := (currentPage - 1) * pageSizeInt
 
-	// 构建WHERE条件 - 获取今天的数据
-	whereClause := "WHERE DATE(gmt_created) = CURDATE()"
-	args := []interface{}{}
+	fromJoin := `
+		FROM pumpkin_database_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, MAX(gmt_created) AS max_created
+			FROM pumpkin_database_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.gmt_created = t2.max_created
+	`
+	whereClause := "WHERE 1=1"
+	args := []interface{}{todayStart}
 	if databaseName != "" {
-		whereClause += " AND database_name LIKE ?"
+		whereClause += " AND t1.database_name LIKE ?"
 		args = append(args, "%"+databaseName+"%")
 	}
 	if datasourceType != "" {
-		whereClause += " AND datasource_type LIKE ?"
+		whereClause += " AND t1.datasource_type LIKE ?"
 		args = append(args, "%"+datasourceType+"%")
 	}
 	if host != "" {
-		whereClause += " AND host LIKE ?"
+		whereClause += " AND t1.host LIKE ?"
 		args = append(args, "%"+host+"%")
 	}
 	if port != "" {
-		whereClause += " AND port LIKE ?"
+		whereClause += " AND t1.port LIKE ?"
 		args = append(args, "%"+port+"%")
 	}
 
 	// 获取排序参数
-	orderBy := "database_size DESC" // 默认按数据大小降序
+	orderBy := "t1.database_size DESC" // 默认按数据大小降序
 	if sortField := c.Query("sortField"); sortField != "" {
 		sortOrder := c.DefaultQuery("sortOrder", "desc")
 		if sortOrder != "asc" && sortOrder != "desc" {
@@ -167,51 +182,51 @@ func GetDatabaseCapacityTop10(c *gin.Context) {
 		}
 		switch sortField {
 		case "databaseName":
-			orderBy = fmt.Sprintf("database_name %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_name %s", strings.ToUpper(sortOrder))
 		case "datasourceType":
-			orderBy = fmt.Sprintf("datasource_type %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.datasource_type %s", strings.ToUpper(sortOrder))
 		case "dataSize":
-			orderBy = fmt.Sprintf("database_size %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_size %s", strings.ToUpper(sortOrder))
 		case "rowCount":
-			orderBy = fmt.Sprintf("database_rows %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_rows %s", strings.ToUpper(sortOrder))
 		case "tableCount":
-			orderBy = fmt.Sprintf("table_count %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_count %s", strings.ToUpper(sortOrder))
 		case "dataSizeIncr":
-			orderBy = fmt.Sprintf("database_size_incr %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_size_incr %s", strings.ToUpper(sortOrder))
 		case "rowCountIncr":
-			orderBy = fmt.Sprintf("database_rows_incr %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_rows_incr %s", strings.ToUpper(sortOrder))
 		default:
-			orderBy = "database_size DESC"
+			orderBy = "t1.database_size DESC"
 		}
 	}
 
 	// 查询总数
 	var total int64
 	countSQL := fmt.Sprintf(`
-		SELECT COUNT(DISTINCT CONCAT(database_name, '-', datasource_type, '-', host, '-', port))
-		FROM pumpkin_database_growth
+		SELECT COUNT(*)
 		%s
-	`, whereClause)
+		%s
+	`, fromJoin, whereClause)
 	database.DB.Raw(countSQL, args...).Scan(&total)
 
-	// 查询数据 - 从 pumpkin_database_growth 表获取今天的数据
+	// 查询数据
 	querySQL := fmt.Sprintf(`
 		SELECT 
-			id,
-			database_name,
-			datasource_type,
-			host,
-			port,
-			database_size,
-			database_rows,
-			table_count,
-			database_size_incr,
-			database_rows_incr
-		FROM pumpkin_database_growth
+			t1.id,
+			t1.database_name,
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.database_size,
+			t1.database_rows,
+			t1.table_count,
+			t1.database_size_incr,
+			t1.database_rows_incr
+		%s
 		%s
 		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, whereClause, orderBy)
+	`, fromJoin, whereClause, orderBy)
 	args = append(args, pageSizeInt, offset)
 
 	var results []struct {
@@ -262,7 +277,7 @@ func GetDatabaseCapacityTop10(c *gin.Context) {
 	})
 }
 
-// GetTableCapacityTop10 获取数据表容量TOP10（用于图表，从pumpkin_table_size获取）
+// GetTableCapacityTop10 获取数据表容量TOP10（用于图表，从 pumpkin_table_growth 获取）
 func GetTableCapacityTop10(c *gin.Context) {
 	// 获取今天起始时间
 	now := time.Now()
@@ -330,8 +345,11 @@ func GetTableCapacityTop10(c *gin.Context) {
 }
 
 // GetTableCapacityGrowth 获取数据表容量信息（用于表格，支持分页、搜索、排序）
-// 从 pumpkin_table_growth 表获取今天的数据
+// 从 pumpkin_table_growth 取当天内每个表最新一条（按 gmt_created），兼容按小时写入的多条历史
 func GetTableCapacityGrowth(c *gin.Context) {
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 	// 获取查询参数
 	current := c.DefaultQuery("current", "1")
 	pageSize := c.DefaultQuery("pageSize", "10")
@@ -353,32 +371,45 @@ func GetTableCapacityGrowth(c *gin.Context) {
 	}
 	offset := (currentPage - 1) * pageSizeInt
 
-	// 构建WHERE条件 - 获取今天的数据
-	whereClause := "WHERE DATE(gmt_created) = CURDATE()"
-	args := []interface{}{}
+	fromJoin := `
+		FROM pumpkin_table_growth t1
+		INNER JOIN (
+			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) AS max_created
+			FROM pumpkin_table_growth
+			WHERE gmt_created >= ?
+			GROUP BY datasource_type, host, port, database_name, table_name
+		) t2 ON t1.datasource_type = t2.datasource_type
+			AND t1.host = t2.host
+			AND t1.port = t2.port
+			AND t1.database_name = t2.database_name
+			AND t1.table_name = t2.table_name
+			AND t1.gmt_created = t2.max_created
+	`
+	whereClause := "WHERE 1=1"
+	args := []interface{}{todayStart}
 	if databaseName != "" {
-		whereClause += " AND database_name LIKE ?"
+		whereClause += " AND t1.database_name LIKE ?"
 		args = append(args, "%"+databaseName+"%")
 	}
 	if tableName != "" {
-		whereClause += " AND table_name LIKE ?"
+		whereClause += " AND t1.table_name LIKE ?"
 		args = append(args, "%"+tableName+"%")
 	}
 	if datasourceType != "" {
-		whereClause += " AND datasource_type LIKE ?"
+		whereClause += " AND t1.datasource_type LIKE ?"
 		args = append(args, "%"+datasourceType+"%")
 	}
 	if host != "" {
-		whereClause += " AND host LIKE ?"
+		whereClause += " AND t1.host LIKE ?"
 		args = append(args, "%"+host+"%")
 	}
 	if port != "" {
-		whereClause += " AND port LIKE ?"
+		whereClause += " AND t1.port LIKE ?"
 		args = append(args, "%"+port+"%")
 	}
 
 	// 获取排序参数
-	orderBy := "table_size DESC" // 默认按数据大小降序
+	orderBy := "t1.table_size DESC" // 默认按数据大小降序
 	if sortField := c.Query("sortField"); sortField != "" {
 		sortOrder := c.DefaultQuery("sortOrder", "desc")
 		if sortOrder != "asc" && sortOrder != "desc" {
@@ -386,21 +417,21 @@ func GetTableCapacityGrowth(c *gin.Context) {
 		}
 		switch sortField {
 		case "databaseName":
-			orderBy = fmt.Sprintf("database_name %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.database_name %s", strings.ToUpper(sortOrder))
 		case "tableName":
-			orderBy = fmt.Sprintf("table_name %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_name %s", strings.ToUpper(sortOrder))
 		case "datasourceType":
-			orderBy = fmt.Sprintf("datasource_type %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.datasource_type %s", strings.ToUpper(sortOrder))
 		case "dataSize":
-			orderBy = fmt.Sprintf("table_size %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_size %s", strings.ToUpper(sortOrder))
 		case "rowCount":
-			orderBy = fmt.Sprintf("table_rows %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_rows %s", strings.ToUpper(sortOrder))
 		case "dataSizeIncr":
-			orderBy = fmt.Sprintf("table_size_incr %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_size_incr %s", strings.ToUpper(sortOrder))
 		case "rowCountIncr":
-			orderBy = fmt.Sprintf("table_rows_incr %s", strings.ToUpper(sortOrder))
+			orderBy = fmt.Sprintf("t1.table_rows_incr %s", strings.ToUpper(sortOrder))
 		default:
-			orderBy = "table_size DESC"
+			orderBy = "t1.table_size DESC"
 		}
 	}
 
@@ -408,29 +439,29 @@ func GetTableCapacityGrowth(c *gin.Context) {
 	var total int64
 	countSQL := fmt.Sprintf(`
 		SELECT COUNT(*)
-		FROM pumpkin_table_growth
 		%s
-	`, whereClause)
+		%s
+	`, fromJoin, whereClause)
 	database.DB.Raw(countSQL, args...).Scan(&total)
 
-	// 查询数据 - 从 pumpkin_table_growth 表获取今天的数据
+	// 查询数据
 	querySQL := fmt.Sprintf(`
 		SELECT 
-			id,
-			database_name,
-			table_name,
-			datasource_type,
-			host,
-			port,
-			table_size,
-			table_rows,
-			table_size_incr,
-			COALESCE(table_rows_incr, 0) as table_rows_incr
-		FROM pumpkin_table_growth
+			t1.id,
+			t1.database_name,
+			t1.table_name,
+			t1.datasource_type,
+			t1.host,
+			t1.port,
+			t1.table_size,
+			t1.table_rows,
+			t1.table_size_incr,
+			COALESCE(t1.table_rows_incr, 0) as table_rows_incr
+		%s
 		%s
 		ORDER BY %s
 		LIMIT ? OFFSET ?
-	`, whereClause, orderBy)
+	`, fromJoin, whereClause, orderBy)
 	args = append(args, pageSizeInt, offset)
 
 	var results []struct {
@@ -660,11 +691,11 @@ func GetDatabaseTypeDistribution(c *gin.Context) {
 	dataList := make([]map[string]interface{}, 0, len(results))
 	for _, item := range results {
 		dataList = append(dataList, map[string]interface{}{
-			"datasourceType":   item.DatasourceType,
-			"databaseCount":    item.DatabaseCount,
-			"totalDataSize":    formatSize(item.TotalDataSize),
+			"datasourceType":     item.DatasourceType,
+			"databaseCount":      item.DatabaseCount,
+			"totalDataSize":      formatSize(item.TotalDataSize),
 			"totalDataSizeBytes": item.TotalDataSize,
-			"totalRows":        item.TotalRows,
+			"totalRows":          item.TotalRows,
 		})
 	}
 
@@ -691,18 +722,18 @@ func GetTableFragmentationTop10(c *gin.Context) {
 			t1.database_name,
 			t1.table_name,
 			t1.free_size
-		FROM pumpkin_table_size t1
+		FROM pumpkin_table_size_history t1
 		INNER JOIN (
-			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
-			FROM pumpkin_table_size
-			WHERE gmt_created >= ?
+			SELECT datasource_type, host, port, database_name, table_name, MAX(snapshot_at) as max_created
+			FROM pumpkin_table_size_history
+			WHERE snapshot_at >= ?
 			GROUP BY datasource_type, host, port, database_name, table_name
 		) t2 ON t1.datasource_type = t2.datasource_type
 			AND t1.host = t2.host
 			AND t1.port = t2.port
 			AND t1.database_name = t2.database_name
 			AND t1.table_name = t2.table_name
-			AND t1.gmt_created = t2.max_created
+			AND t1.snapshot_at = t2.max_created
 		WHERE t1.free_size > 0
 		ORDER BY t1.free_size DESC
 		LIMIT 10
@@ -753,18 +784,18 @@ func GetTableRowsTop10(c *gin.Context) {
 			t1.database_name,
 			t1.table_name,
 			t1.table_rows
-		FROM pumpkin_table_size t1
+		FROM pumpkin_table_size_history t1
 		INNER JOIN (
-			SELECT datasource_type, host, port, database_name, table_name, MAX(gmt_created) as max_created
-			FROM pumpkin_table_size
-			WHERE gmt_created >= ?
+			SELECT datasource_type, host, port, database_name, table_name, MAX(snapshot_at) as max_created
+			FROM pumpkin_table_size_history
+			WHERE snapshot_at >= ?
 			GROUP BY datasource_type, host, port, database_name, table_name
 		) t2 ON t1.datasource_type = t2.datasource_type
 			AND t1.host = t2.host
 			AND t1.port = t2.port
 			AND t1.database_name = t2.database_name
 			AND t1.table_name = t2.table_name
-			AND t1.gmt_created = t2.max_created
+			AND t1.snapshot_at = t2.max_created
 		ORDER BY t1.table_rows DESC
 		LIMIT 10
 	`, todayStart).Scan(&tableSizes)

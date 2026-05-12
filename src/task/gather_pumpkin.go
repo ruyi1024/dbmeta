@@ -16,19 +16,22 @@ package task
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ruyi1024/dbmeta/log"
 	"github.com/ruyi1024/dbmeta/setting"
 	"github.com/ruyi1024/dbmeta/src/database"
 	"github.com/ruyi1024/dbmeta/src/libary/mongodb"
 	"github.com/ruyi1024/dbmeta/src/model"
 	"github.com/ruyi1024/dbmeta/src/utils"
-	"fmt"
-	"strings"
-	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -171,12 +174,8 @@ func doPumpkinTask() {
 		}
 	}
 
-	if failedCount == 0 {
-		taskLogger.Success(finalResult)
-	} else {
-		taskLogger.Failed(finalResult)
-	}
-
+	// 记录最终结果：脚本完整跑完即视为任务成功；单个数据源失败只记日志与结果摘要，不将整任务标为失败
+	taskLogger.Success(finalResult)
 	logger.Info(finalResult)
 }
 
@@ -228,6 +227,47 @@ func normalizePumpkinRowKeysToLower(data []map[string]interface{}) []map[string]
 		result = append(result, normalized)
 	}
 	return result
+}
+
+// savePumpkinTableSizeSnapshot 写入历史表，并在 pumpkin_table_size 中 upsert 该表最新一条容量（同事务）
+func savePumpkinTableSizeSnapshot(db *gorm.DB, record *model.PumpkinTableSize, snapshotAt time.Time) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		h := model.PumpkinTableSizeHistory{
+			DatasourceType: record.DatasourceType,
+			Host:           record.Host,
+			Port:           record.Port,
+			DatabaseName:   record.DatabaseName,
+			TableNameField: record.TableNameField,
+			DataSize:       record.DataSize,
+			IndexSize:      record.IndexSize,
+			FreeSize:       record.FreeSize,
+			TableRows:      record.TableRows,
+			AvgRowLength:   record.AvgRowLength,
+			SnapshotAt:     snapshotAt,
+		}
+		if err := tx.Create(&h).Error; err != nil {
+			return err
+		}
+
+		var existing model.PumpkinTableSize
+		err := tx.Where("datasource_type = ? AND host = ? AND port = ? AND database_name = ? AND table_name = ?",
+			record.DatasourceType, record.Host, record.Port, record.DatabaseName, record.TableNameField).Take(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return tx.Create(record).Error
+		}
+		if err != nil {
+			return err
+		}
+		now := time.Now()
+		return tx.Model(&existing).Updates(map[string]interface{}{
+			"data_size":      record.DataSize,
+			"index_size":     record.IndexSize,
+			"free_size":      record.FreeSize,
+			"table_rows":     record.TableRows,
+			"avg_row_length": record.AvgRowLength,
+			"gmt_updated":    now,
+		}).Error
+	})
 }
 
 func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid string) error {
@@ -439,6 +479,11 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 	}
 	tableSizeList = normalizePumpkinRowKeysToLower(tableSizeList)
 
+	snapshotAt := time.Now()
+	if err := database.EnsurePumpkinTableSizeHistorySchema(database.DB); err != nil {
+		return fmt.Errorf("容量历史表就绪失败: %w", err)
+	}
+
 	// 处理查询结果
 	for _, item := range tableSizeList {
 		// 检查必要字段是否存在
@@ -493,10 +538,9 @@ func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid str
 		record.TableRows = tableRows
 		record.AvgRowLength = avgRowLength
 
-		result := database.DB.Create(&record)
-		if result.Error != nil {
-			log.Logger.Error(fmt.Sprintf("Can't create table size record on %s:%s, %s", host, port, result.Error.Error()))
-			return fmt.Errorf("创建表容量记录失败: %s", result.Error.Error())
+		if err := savePumpkinTableSizeSnapshot(database.DB, &record, snapshotAt); err != nil {
+			log.Logger.Error(fmt.Sprintf("Can't save table size record on %s:%s, %s", host, port, err.Error()))
+			return fmt.Errorf("保存表容量记录失败: %s", err.Error())
 		}
 
 		time.Sleep(1 * time.Millisecond)
@@ -523,6 +567,10 @@ func doMongoPumpkinCollectorTask(host, port, user, origPass, dbid string) error 
 		return fmt.Errorf("查询MongoDB数据库列表失败: %v", err)
 	}
 
+	snapshotAt := time.Now()
+	if err := database.EnsurePumpkinTableSizeHistorySchema(database.DB); err != nil {
+		return fmt.Errorf("容量历史表就绪失败: %w", err)
+	}
 	insertedCount := 0
 	for _, databaseName := range databaseNames {
 		if isMongoSystemDatabase(databaseName) {
@@ -572,9 +620,8 @@ func doMongoPumpkinCollectorTask(host, port, user, origPass, dbid string) error 
 				TableRows:      tableRows,
 				AvgRowLength:   avgRowLength,
 			}
-			result := database.DB.Create(&record)
-			if result.Error != nil {
-				return fmt.Errorf("创建MongoDB表容量记录失败: %s", result.Error.Error())
+			if err := savePumpkinTableSizeSnapshot(database.DB, &record, snapshotAt); err != nil {
+				return fmt.Errorf("保存MongoDB表容量记录失败: %s", err.Error())
 			}
 			insertedCount++
 			time.Sleep(1 * time.Millisecond)

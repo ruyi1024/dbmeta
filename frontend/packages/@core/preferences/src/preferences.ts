@@ -87,6 +87,13 @@ class PreferenceManager {
       this.initialPreferences,
     );
 
+    // defu 合并时左侧 defaults 优先级更高：cachedPreferences 会覆盖 this.initialPreferences。
+    // 因此本地曾缓存的 app.name（如旧版「Vben Admin Antd」）会盖住 VITE_APP_TITLE；合并后强制采用构建时注入的名称。
+    const buildAppName = overrides?.app?.name;
+    if (typeof buildAppName === 'string' && buildAppName.trim() !== '') {
+      mergedPreference.app = { ...mergedPreference.app, name: buildAppName.trim() };
+    }
+
     // 更新偏好设置
     this.updatePreferences(mergedPreference);
 

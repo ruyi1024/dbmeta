@@ -178,12 +178,8 @@ func doDbMetaTask() {
 		}
 	}
 
-	if failedCount == 0 {
-		taskLogger.Success(finalResult)
-	} else {
-		taskLogger.Failed(finalResult)
-	}
-
+	// 记录最终结果：脚本完整跑完（含各数据源采集与清理过期元数据）即视为任务成功；单个数据源连接失败、解密失败或采集错误只记入日志与结果摘要，不将整任务标为失败
+	taskLogger.Success(finalResult)
 	logger.Info(finalResult)
 }
 

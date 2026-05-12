@@ -643,7 +643,7 @@ func (AlarmTrack) TableName() string {
 // 	return "status_mysql"
 // }
 
-// PumpkinTableSize 南瓜表容量监控数据
+// PumpkinTableSize 南瓜表容量监控数据（每个数据源+库+表仅保留最新一条）
 type PumpkinTableSize struct {
 	Id             int64     `gorm:"primarykey" json:"id"`
 	DatasourceType string    `gorm:"size:50" json:"datasource_type"`
@@ -664,20 +664,42 @@ func (PumpkinTableSize) TableName() string {
 	return "pumpkin_table_size"
 }
 
-// PumpkinTableGrowth 表容量增长数据
-type PumpkinTableGrowth struct {
+// PumpkinTableSizeHistory 表容量采集历史快照（与 PumpkinTableSize 同构，另含 snapshot_at）
+type PumpkinTableSizeHistory struct {
 	Id             int64     `gorm:"primarykey" json:"id"`
 	DatasourceType string    `gorm:"size:50" json:"datasource_type"`
 	Host           string    `gorm:"size:100" json:"host"`
 	Port           string    `gorm:"size:10" json:"port"`
 	DatabaseName   string    `gorm:"size:50" json:"database_name"`
-	TableNameX     string    `gorm:"column:table_name;size:50" json:"table_name"`
-	TableSize      int64     `gorm:"default:0" json:"table_size"`      // 表总大小(字节)
-	TableRows      int64     `gorm:"default:0" json:"table_rows"`      // 表行数
-	TableSizeIncr  int64     `gorm:"default:0" json:"table_size_incr"` // 表大小增量(字节)
-	TableRowsIncr  *int64    `gorm:"default:0" json:"table_rows_incr"` // 表行数增量
+	TableNameField string    `gorm:"column:table_name;size:50" json:"table_name"`
+	DataSize       int64     `gorm:"default:0" json:"data_size"`
+	IndexSize      int64     `gorm:"default:0" json:"index_size"`
+	FreeSize       int64     `gorm:"default:0" json:"free_size"`
+	TableRows      int64     `gorm:"default:0" json:"table_rows"`
+	AvgRowLength   int64     `gorm:"default:0" json:"avg_row_length"`
+	SnapshotAt     time.Time `gorm:"column:snapshot_at;index:idx_pumpkin_hist_snapshot_at;not null" json:"snapshot_at"`
 	CreatedAt      time.Time `gorm:"column:gmt_created" json:"gmt_created"`
-	UpdatedAt      time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (PumpkinTableSizeHistory) TableName() string {
+	return "pumpkin_table_size_history"
+}
+
+// PumpkinTableGrowth 表容量增长数据
+type PumpkinTableGrowth struct {
+	Id             int64      `gorm:"primarykey" json:"id"`
+	DatasourceType string     `gorm:"size:50" json:"datasource_type"`
+	Host           string     `gorm:"size:100" json:"host"`
+	Port           string     `gorm:"size:10" json:"port"`
+	DatabaseName   string     `gorm:"size:50" json:"database_name"`
+	TableNameX     string     `gorm:"column:table_name;size:50" json:"table_name"`
+	TableSize      int64      `gorm:"default:0" json:"table_size"`                                                                      // 表总大小(字节)
+	TableRows      int64      `gorm:"default:0" json:"table_rows"`                                                                      // 表行数
+	TableSizeIncr  int64      `gorm:"default:0" json:"table_size_incr"`                                                                 // 表大小增量(字节)
+	TableRowsIncr  *int64     `gorm:"default:0" json:"table_rows_incr"`                                                                 // 表行数增量
+	StatHour       *time.Time `gorm:"column:stat_hour;type:datetime;index:idx_pumpkin_tbl_growth_stat_hour" json:"stat_hour,omitempty"` // 当前统计所属日历小时整点（与上一小时末快照对比）
+	CreatedAt      time.Time  `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt      time.Time  `gorm:"column:gmt_updated" json:"gmt_updated"`
 }
 
 func (PumpkinTableGrowth) TableName() string {
@@ -686,18 +708,19 @@ func (PumpkinTableGrowth) TableName() string {
 
 // PumpkinDatabaseGrowth 数据库容量增长数据
 type PumpkinDatabaseGrowth struct {
-	Id               int64     `gorm:"primarykey" json:"id"`
-	DatasourceType   string    `gorm:"size:50" json:"datasource_type"`
-	Host             string    `gorm:"size:100" json:"host"`
-	Port             string    `gorm:"size:10" json:"port"`
-	DatabaseName     string    `gorm:"size:50" json:"database_name"`
-	DatabaseSize     int64     `gorm:"default:0" json:"database_size"`      // 数据库总大小(字节)
-	DatabaseRows     int64     `gorm:"default:0" json:"database_rows"`      // 数据库总行数
-	TableCount       int64     `gorm:"default:0" json:"table_count"`        // 数据库表数量
-	DatabaseSizeIncr int64     `gorm:"default:0" json:"database_size_incr"` // 数据库大小增量(字节)
-	DatabaseRowsIncr int64     `gorm:"default:0" json:"database_rows_incr"` // 数据库行数增量
-	CreatedAt        time.Time `gorm:"column:gmt_created" json:"gmt_created"`
-	UpdatedAt        time.Time `gorm:"column:gmt_updated" json:"gmt_updated"`
+	Id               int64      `gorm:"primarykey" json:"id"`
+	DatasourceType   string     `gorm:"size:50" json:"datasource_type"`
+	Host             string     `gorm:"size:100" json:"host"`
+	Port             string     `gorm:"size:10" json:"port"`
+	DatabaseName     string     `gorm:"size:50" json:"database_name"`
+	DatabaseSize     int64      `gorm:"default:0" json:"database_size"`                                                                  // 数据库总大小(字节)
+	DatabaseRows     int64      `gorm:"default:0" json:"database_rows"`                                                                  // 数据库总行数
+	TableCount       int64      `gorm:"default:0" json:"table_count"`                                                                    // 数据库表数量
+	DatabaseSizeIncr int64      `gorm:"default:0" json:"database_size_incr"`                                                             // 数据库大小增量(字节)
+	DatabaseRowsIncr int64      `gorm:"default:0" json:"database_rows_incr"`                                                             // 数据库行数增量
+	StatHour         *time.Time `gorm:"column:stat_hour;type:datetime;index:idx_pumpkin_db_growth_stat_hour" json:"stat_hour,omitempty"` // 与表级 growth 同一 stat_hour
+	CreatedAt        time.Time  `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt        time.Time  `gorm:"column:gmt_updated" json:"gmt_updated"`
 }
 
 func (PumpkinDatabaseGrowth) TableName() string {

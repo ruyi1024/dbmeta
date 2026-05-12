@@ -1,12 +1,12 @@
 {
   "dictionary": {
     "title": "Data Dictionary",
-    "overview": "Metadata Overview",
-    "quality": "Metadata Quality",
+    "overview": "Overview",
+    "quality": "Quality",
     "instance": "Instances",
     "database": "Databases",
-    "businessInfo": "Business Info",
-    "databaseBusiness": "Database Business",
+    "businessInfo": "Business",
+    "databaseBusiness": "DB Business",
     "table": "Tables",
     "column": "Columns"
   },
@@ -15,35 +15,35 @@
   },
   "capacity": {
     "title": "Capacity",
-    "overview": "Capacity Overview",
-    "database": "Database Capacity",
-    "table": "Table Capacity"
+    "overview": "Overview",
+    "database": "By Database",
+    "table": "By Table"
   },
   "quality": {
     "title": "Data Quality",
-    "overview": "Quality Overview",
-    "issues": "Quality Issues",
-    "rules": "Rule Configuration",
-    "tasks": "Assessment Tasks"
+    "overview": "Overview",
+    "issues": "Issues",
+    "rules": "Rules",
+    "tasks": "Tasks"
   },
   "patrol": {
     "title": "Data Patrol",
-    "report": "Patrol Reports",
-    "config": "Patrol Configuration"
+    "report": "Reports",
+    "config": "Config"
   },
   "grading": {
     "title": "Data Grading",
-    "gradeDict": "Grading Dictionary",
-    "asset": "Asset Grading",
-    "log": "Change Log"
+    "gradeDict": "Dictionary",
+    "asset": "Assets",
+    "log": "Changelog"
   },
   "categorization": {
     "title": "Data Categorization"
   },
   "insight": {
     "title": "Data Insight",
-    "report": "Insight Reports",
-    "management": "Insight Management"
+    "report": "Reports",
+    "management": "Management"
   },
   "audit": {
     "title": "Audit Center",
@@ -51,10 +51,10 @@
   },
   "security": {
     "title": "Data Security",
-    "dashboard": "Security Dashboard",
-    "privilege": "Query Privilege",
-    "sensitiveInventory": "Sensitive Data Inventory",
-    "sensitiveRule": "Sensitive Detection Rules"
+    "dashboard": "Dashboard",
+    "privilege": "Privileges",
+    "sensitiveInventory": "Inventory",
+    "sensitiveRule": "Detection Rules"
   },
   "task": {
     "title": "Scheduled Tasks"
@@ -69,7 +69,7 @@
   },
   "users": {
     "title": "Users",
-    "manager": "User Management"
+    "manager": "Management"
   },
   "vben": {
     "github": "Github"

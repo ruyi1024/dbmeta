@@ -537,7 +537,7 @@ func InitDb() *gorm.DB {
 		{TaskKey: "ai_column_comment_accuracy", TaskName: "AI字段注释准确度评估", TaskDescription: "基于字段名、字段注释等元数据评估字段注释准确度并写回 0-1 分值(1位小数)", Crontab: "0 5 * * *"},
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
-		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "*/30 * * * *"},
+		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "30 * * * *"},
 		{TaskKey: "ai_grading_batch", TaskName: "AI数据分级批处理", TaskDescription: "对无分级或低置信度(仅AI)的表/列调用大模型自动标注安全分级", Crontab: "*/30 * * * *"},
 	}
 
@@ -555,6 +555,10 @@ func InitDb() *gorm.DB {
 		} else {
 			// 仅把历史默认值迁移到新的默认计划，避免覆盖用户自定义 crontab
 			if existingTask.Crontab == "*/30 * * * *" {
+				if newCrontab, ok := defaultTaskCrontabMap[task.TaskKey]; ok && newCrontab != existingTask.Crontab {
+					db.Model(&model.TaskOption{}).Where("task_key = ?", task.TaskKey).Update("crontab", newCrontab)
+				}
+			} else if task.TaskKey == "gather_pumpkin_growth" && existingTask.Crontab == "0 2 * * *" {
 				if newCrontab, ok := defaultTaskCrontabMap[task.TaskKey]; ok && newCrontab != existingTask.Crontab {
 					db.Model(&model.TaskOption{}).Where("task_key = ?", task.TaskKey).Update("crontab", newCrontab)
 				}
@@ -758,6 +762,9 @@ func InitDb() *gorm.DB {
 	if err = db.AutoMigrate(&model.PumpkinTableSize{}); err != nil {
 		log.Error("db sync PumpkinTableSize error.", zap.Error(err))
 	}
+	if err := EnsurePumpkinTableSizeHistorySchema(db); err != nil {
+		log.Error("db ensure PumpkinTableSizeHistory error.", zap.Error(err))
+	}
 
 	// Pumpkin growth tables
 	if err = db.AutoMigrate(&model.PumpkinTableGrowth{}); err != nil {
@@ -786,6 +793,27 @@ func InitDb() *gorm.DB {
 	}
 
 	return db
+}
+
+// EnsurePumpkinTableSizeHistorySchema 确保 pumpkin_table_size_history 存在。
+// 部分环境下仅 AutoMigrate 可能未建表，此处增加 HasTable 检测与 CreateTable 兜底；采集任务启动前也会调用。
+func EnsurePumpkinTableSizeHistorySchema(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+	if db.Migrator().HasTable(&model.PumpkinTableSizeHistory{}) {
+		return nil
+	}
+	if err := db.AutoMigrate(&model.PumpkinTableSizeHistory{}); err != nil {
+		return err
+	}
+	if db.Migrator().HasTable(&model.PumpkinTableSizeHistory{}) {
+		return nil
+	}
+	if err := db.Migrator().CreateTable(&model.PumpkinTableSizeHistory{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func InitConnect() *sql.DB {
