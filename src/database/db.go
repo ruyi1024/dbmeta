@@ -537,6 +537,7 @@ func InitDb() *gorm.DB {
 		{TaskKey: "ai_column_comment_accuracy", TaskName: "AI字段注释准确度评估", TaskDescription: "基于字段名、字段注释等元数据评估字段注释准确度并写回 0-1 分值(1位小数)", Crontab: "0 5 * * *"},
 		{TaskKey: "data_quality_ai_analysis", TaskName: "数据质量AI分析", TaskDescription: "对数据质量评估结果进行AI智能分析，生成洞察和优化建议", Crontab: "0 * * * *"},
 		{TaskKey: "gather_pumpkin", TaskName: "容量数据采集", TaskDescription: "采集数据库容量数据", Crontab: "0 * * * *"},
+		{TaskKey: "gather_table_lifecycle", TaskName: "表生命周期采集", TaskDescription: "采集表创建时间、写入时间与生命周期状态（与容量采集独立）", Crontab: "15 * * * *"},
 		{TaskKey: "gather_pumpkin_growth", TaskName: "容量增长分析", TaskDescription: "分析数据库容量增长情况", Crontab: "30 * * * *"},
 		{TaskKey: "ai_grading_batch", TaskName: "AI数据分级批处理", TaskDescription: "对无分级或低置信度(仅AI)的表/列调用大模型自动标注安全分级", Crontab: "*/30 * * * *"},
 	}
@@ -579,6 +580,7 @@ func InitDb() *gorm.DB {
 		{HeartbeatKey: "check_datasource", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_dbmeta", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "gather_pumpkin", HeartbeatTime: t, HeartbeatEndTime: t},
+		{HeartbeatKey: "gather_table_lifecycle", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_general_column_comment", HeartbeatTime: t, HeartbeatEndTime: t},
 		{HeartbeatKey: "ai_apply_table_comment", HeartbeatTime: t, HeartbeatEndTime: t},
@@ -762,8 +764,14 @@ func InitDb() *gorm.DB {
 	if err = db.AutoMigrate(&model.PumpkinTableSize{}); err != nil {
 		log.Error("db sync PumpkinTableSize error.", zap.Error(err))
 	}
+	if err = db.AutoMigrate(&model.PumpkinTableLifecycle{}); err != nil {
+		log.Error("db sync PumpkinTableLifecycle error.", zap.Error(err))
+	}
 	if err := EnsurePumpkinTableSizeHistorySchema(db); err != nil {
 		log.Error("db ensure PumpkinTableSizeHistory error.", zap.Error(err))
+	}
+	if err := EnsurePumpkinTableLifecycleSchema(db); err != nil {
+		log.Error("db ensure PumpkinTableLifecycle error.", zap.Error(err))
 	}
 
 	// Pumpkin growth tables
@@ -814,6 +822,20 @@ func EnsurePumpkinTableSizeHistorySchema(db *gorm.DB) error {
 		return err
 	}
 	return nil
+}
+
+// EnsurePumpkinTableLifecycleSchema 确保 pumpkin_table_lifecycle 存在（生命周期任务写入前可再次调用）。
+func EnsurePumpkinTableLifecycleSchema(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+	if err := db.AutoMigrate(&model.PumpkinTableLifecycle{}); err != nil {
+		return err
+	}
+	if db.Migrator().HasTable(&model.PumpkinTableLifecycle{}) {
+		return nil
+	}
+	return db.Migrator().CreateTable(&model.PumpkinTableLifecycle{})
 }
 
 func InitConnect() *sql.DB {
@@ -945,7 +967,8 @@ func Connect(ops ...Option) (*sql.DB, error) {
 	//不同数据库构造不同的url
 	var url string
 	if opt.driver == "mysql" {
-		url = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?timeout=5s&readTimeout=10s", opt.username, opt.password, opt.host, opt.port, opt.database)
+		// parseTime=true 避免 DATETIME 等列 Scan 失败（QueryRemote 在 Scan 失败时会静默丢行，导致南瓜/生命周期采集结果为空）
+		url = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?timeout=5s&readTimeout=120s&parseTime=true&loc=Local", opt.username, opt.password, opt.host, opt.port, opt.database)
 	}
 	if opt.driver == "postgres" {
 		url = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", opt.host, opt.port, opt.username, opt.password, opt.database)
@@ -1007,6 +1030,7 @@ func QueryRemote(db *sql.DB, sql string) ([]map[string]interface{}, error) {
 	for rows.Next() {
 		err := rows.Scan(scanArgs...)
 		if err != nil {
+			log.Warn("QueryRemote row scan failed, row skipped", zap.Error(err))
 			continue
 		}
 
@@ -1022,6 +1046,9 @@ func QueryRemote(db *sql.DB, sql string) ([]map[string]interface{}, error) {
 			}
 		}
 		list = append(list, entry)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return list, nil
 }

@@ -48,6 +48,14 @@ func formatAvgRowLength(bytes int64) string {
 	}
 }
 
+// formatOptionalRFC3339 将可空时间格式化为 RFC3339 字符串，nil 时返回空串
+func formatOptionalRFC3339(t *time.Time) string {
+	if t == nil || t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
+}
+
 // GetDatabaseCapacityTop10Chart 获取数据库容量TOP10（用于图表）
 func GetDatabaseCapacityTop10Chart(c *gin.Context) {
 	// 获取今天起始时间
@@ -384,6 +392,11 @@ func GetTableCapacityGrowth(c *gin.Context) {
 			AND t1.database_name = t2.database_name
 			AND t1.table_name = t2.table_name
 			AND t1.gmt_created = t2.max_created
+		LEFT JOIN pumpkin_table_lifecycle lc ON lc.datasource_type = t1.datasource_type
+			AND lc.host = t1.host
+			AND lc.port = t1.port
+			AND lc.database_name = t1.database_name
+			AND lc.table_name = t1.table_name
 	`
 	whereClause := "WHERE 1=1"
 	args := []interface{}{todayStart}
@@ -430,6 +443,10 @@ func GetTableCapacityGrowth(c *gin.Context) {
 			orderBy = fmt.Sprintf("t1.table_size_incr %s", strings.ToUpper(sortOrder))
 		case "rowCountIncr":
 			orderBy = fmt.Sprintf("t1.table_rows_incr %s", strings.ToUpper(sortOrder))
+		case "lifecycleStatus":
+			orderBy = fmt.Sprintf("COALESCE(lc.lifecycle_status,'') %s", strings.ToUpper(sortOrder))
+		case "lastWriteAt":
+			orderBy = fmt.Sprintf("lc.last_write_at %s", strings.ToUpper(sortOrder))
 		default:
 			orderBy = "t1.table_size DESC"
 		}
@@ -456,7 +473,11 @@ func GetTableCapacityGrowth(c *gin.Context) {
 			t1.table_size,
 			t1.table_rows,
 			t1.table_size_incr,
-			COALESCE(t1.table_rows_incr, 0) as table_rows_incr
+			COALESCE(t1.table_rows_incr, 0) as table_rows_incr,
+			lc.table_created_at,
+			lc.data_write_start_at,
+			lc.last_write_at,
+			COALESCE(lc.lifecycle_status, '') as lifecycle_status
 		%s
 		%s
 		ORDER BY %s
@@ -465,16 +486,20 @@ func GetTableCapacityGrowth(c *gin.Context) {
 	args = append(args, pageSizeInt, offset)
 
 	var results []struct {
-		Id             int64  `gorm:"column:id"`
-		DatabaseName   string `gorm:"column:database_name"`
-		TableName      string `gorm:"column:table_name"`
-		DatasourceType string `gorm:"column:datasource_type"`
-		Host           string `gorm:"column:host"`
-		Port           string `gorm:"column:port"`
-		TableSize      int64  `gorm:"column:table_size"`
-		TableRows      int64  `gorm:"column:table_rows"`
-		TableSizeIncr  int64  `gorm:"column:table_size_incr"`
-		TableRowsIncr  int64  `gorm:"column:table_rows_incr"`
+		Id               int64      `gorm:"column:id"`
+		DatabaseName     string     `gorm:"column:database_name"`
+		TableName        string     `gorm:"column:table_name"`
+		DatasourceType   string     `gorm:"column:datasource_type"`
+		Host             string     `gorm:"column:host"`
+		Port             string     `gorm:"column:port"`
+		TableSize        int64      `gorm:"column:table_size"`
+		TableRows        int64      `gorm:"column:table_rows"`
+		TableSizeIncr    int64      `gorm:"column:table_size_incr"`
+		TableRowsIncr    int64      `gorm:"column:table_rows_incr"`
+		TableCreatedAt   *time.Time `gorm:"column:table_created_at"`
+		DataWriteStartAt *time.Time `gorm:"column:data_write_start_at"`
+		LastWriteAt      *time.Time `gorm:"column:last_write_at"`
+		LifecycleStatus  string     `gorm:"column:lifecycle_status"`
 	}
 
 	result := database.DB.Raw(querySQL, args...).Scan(&results)
@@ -502,6 +527,10 @@ func GetTableCapacityGrowth(c *gin.Context) {
 			"dataSizeIncr":      formatSize(item.TableSizeIncr), // 数据存储日增长（格式化）
 			"dataSizeIncrBytes": item.TableSizeIncr,             // 数据存储日增长（原始字节数，用于排序）
 			"rowCountIncr":      item.TableRowsIncr,             // 数据记录日增长
+			"tableCreatedAt":    formatOptionalRFC3339(item.TableCreatedAt),
+			"dataWriteStartAt":  formatOptionalRFC3339(item.DataWriteStartAt),
+			"lastWriteAt":       formatOptionalRFC3339(item.LastWriteAt),
+			"lifecycleStatus":   item.LifecycleStatus,
 		})
 	}
 

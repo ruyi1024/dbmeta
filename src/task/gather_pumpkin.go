@@ -183,24 +183,25 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 	var dbCon *sql.DB
 	var err error
 
-	switch datasourceType {
-	case "MySQL", "TiDB", "Doris", "MariaDB", "GreatSQL", "OceanBase":
+	t := strings.TrimSpace(datasourceType)
+	switch {
+	case strings.EqualFold(t, "MySQL") || strings.EqualFold(t, "TiDB") || strings.EqualFold(t, "Doris") || strings.EqualFold(t, "MariaDB") || strings.EqualFold(t, "GreatSQL") || strings.EqualFold(t, "OceanBase"):
 		dbCon, err = database.Connect(database.WithDriver("mysql"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("information_schema"))
-	case "PostgreSQL":
+	case strings.EqualFold(t, "PostgreSQL") || strings.EqualFold(t, "Postgres"):
 		pgDatabase := dbid
 		if pgDatabase == "" {
 			pgDatabase = "postgres"
 		}
 		dbCon, err = database.Connect(database.WithDriver("postgres"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(pgDatabase))
-	case "SQLServer":
+	case strings.EqualFold(t, "SQLServer") || strings.EqualFold(t, "Mssql"):
 		sqlServerDatabase := dbid
 		if sqlServerDatabase == "" {
 			sqlServerDatabase = "master"
 		}
 		dbCon, err = database.Connect(database.WithDriver("mssql"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(sqlServerDatabase))
-	case "ClickHouse":
+	case strings.EqualFold(t, "ClickHouse"):
 		dbCon, err = database.Connect(database.WithDriver("clickhouse"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase("system"))
-	case "达梦数据库":
+	case t == "达梦数据库":
 		dbCon, err = database.Connect(database.WithDriver("dm"), database.WithHost(host), database.WithPort(port), database.WithUsername(user), database.WithPassword(origPass), database.WithDatabase(dbid))
 	}
 
@@ -209,6 +210,63 @@ func getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid string) *s
 		return nil
 	}
 	return dbCon
+}
+
+// pumpkinTableGatherMeta 引擎侧表时间（可选），用于填充 pumpkin_table_lifecycle
+type pumpkinTableGatherMeta struct {
+	TableCreateTime *time.Time
+	TableUpdateTime *time.Time
+}
+
+func parsePumpkinOptionalTime(v interface{}) *time.Time {
+	if v == nil {
+		return nil
+	}
+	switch t := v.(type) {
+	case time.Time:
+		if t.IsZero() {
+			return nil
+		}
+		return &t
+	case []byte:
+		return parsePumpkinOptionalTime(string(t))
+	case string:
+		s := strings.TrimSpace(t)
+		if s == "" || strings.HasPrefix(s, "0000-00-00") {
+			return nil
+		}
+		layouts := []string{
+			"2006-01-02 15:04:05",
+			"2006-01-02 15:04:05.999999999",
+			"2006-01-02T15:04:05",
+			time.RFC3339,
+		}
+		for _, layout := range layouts {
+			if parsed, err := time.ParseInLocation(layout, s, time.Local); err == nil {
+				return &parsed
+			}
+		}
+	default:
+		return parsePumpkinOptionalTime(formatPumpkinInterface(v))
+	}
+	return nil
+}
+
+func metaFromPumpkinRow(item map[string]interface{}) *pumpkinTableGatherMeta {
+	if item == nil {
+		return nil
+	}
+	var c, u *time.Time
+	if v, ok := item["table_create_time"]; ok {
+		c = parsePumpkinOptionalTime(v)
+	}
+	if v, ok := item["table_update_time"]; ok {
+		u = parsePumpkinOptionalTime(v)
+	}
+	if c == nil && u == nil {
+		return nil
+	}
+	return &pumpkinTableGatherMeta{TableCreateTime: c, TableUpdateTime: u}
 }
 
 func normalizePumpkinRowKeysToLower(data []map[string]interface{}) []map[string]interface{} {
@@ -229,7 +287,8 @@ func normalizePumpkinRowKeysToLower(data []map[string]interface{}) []map[string]
 	return result
 }
 
-// savePumpkinTableSizeSnapshot 写入历史表，并在 pumpkin_table_size 中 upsert 该表最新一条容量（同事务）
+// savePumpkinTableSizeSnapshot 写入历史表，并在 pumpkin_table_size 中 upsert 该表最新一条容量（同事务）。
+// 表生命周期由独立任务 gather_table_lifecycle 维护，见 gather_table_lifecycle.go。
 func savePumpkinTableSizeSnapshot(db *gorm.DB, record *model.PumpkinTableSize, snapshotAt time.Time) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		h := model.PumpkinTableSizeHistory{
@@ -271,278 +330,29 @@ func savePumpkinTableSizeSnapshot(db *gorm.DB, record *model.PumpkinTableSize, s
 }
 
 func doPumpkinCollectorTask(datasourceType, host, port, user, origPass, dbid string) error {
-	if datasourceType == "MongoDB" {
+	if strings.EqualFold(strings.TrimSpace(datasourceType), "MongoDB") {
 		return doMongoPumpkinCollectorTask(host, port, user, origPass, dbid)
 	}
 
-	//var db = database.DB
-	var queryTableSizeSql string
-	var queryTableSizeSqlList []string
-
-	switch datasourceType {
-	case "MySQL", "TiDB", "Doris", "MariaDB", "GreatSQL", "OceanBase":
-		// MySQL系列数据库的表容量查询SQL
-		queryTableSizeSql = `
-			SELECT 
-				table_schema as database_name,
-				table_name as table_name,
-				data_length as data_size,
-				index_length as index_size,
-				data_free as free_size,
-				table_rows as table_rows,
-				avg_row_length as avg_row_length
-			FROM information_schema.tables 
-			WHERE table_schema NOT IN ('information_schema', 'performance_schema', 'sys', 'mysql', 'metrics_schema', '__internal_schema', 'sys_audit', 'lbacsys', 'oceanbase', 'ocs', 'oraauditor')
-			AND table_rows > 0
-			and table_type='BASE TABLE'
-		`
-	case "PostgreSQL":
-		queryTableSizeSql = `
-			SELECT
-				lower(current_database()) as database_name,
-				lower(concat(n.nspname, '.', c.relname)) as table_name,
-				(pg_total_relation_size(c.oid) - pg_indexes_size(c.oid))::bigint as data_size,
-				pg_indexes_size(c.oid)::bigint as index_size,
-				0::bigint as free_size,
-				coalesce(s.n_live_tup, 0)::bigint as table_rows,
-				CASE
-					WHEN coalesce(s.n_live_tup, 0) > 0 THEN (pg_total_relation_size(c.oid) / s.n_live_tup)::bigint
-					ELSE 0::bigint
-				END as avg_row_length
-			FROM pg_class c
-			JOIN pg_namespace n ON n.oid = c.relnamespace
-			LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
-			WHERE c.relkind IN ('r', 'm')
-			AND n.nspname NOT IN ('pg_catalog', 'information_schema')
-			AND n.nspname NOT LIKE 'pg_toast%'
-			AND n.nspname NOT LIKE 'pg_temp_%'
-		`
-	case "ClickHouse":
-		queryTableSizeSql = `
-			SELECT
-				lower(database) as database_name,
-				lower(table) as table_name,
-				sum(data_compressed_bytes) as data_size,
-				0 as index_size,
-				0 as free_size,
-				sum(rows) as table_rows,
-				CASE
-					WHEN sum(rows) > 0 THEN toInt64(sum(data_uncompressed_bytes) / sum(rows))
-					ELSE 0
-				END as avg_row_length
-			FROM system.parts
-			WHERE active = 1
-			AND lower(database) NOT IN ('information_schema', 'system')
-			GROUP BY database, table
-			HAVING sum(rows) > 0
-		`
-	case "SQLServer":
-		queryTableSizeSql = `
-			SELECT
-				lower(DB_NAME()) as database_name,
-				lower(t.name) as table_name,
-				SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END) * 8 * 1024 as data_size,
-				(SUM(a.used_pages) - SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END)) * 8 * 1024 as index_size,
-				(SUM(a.total_pages) - SUM(a.used_pages)) * 8 * 1024 as free_size,
-				SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) as table_rows,
-				CASE
-					WHEN SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) > 0
-					THEN (SUM(CASE WHEN i.index_id < 2 THEN a.data_pages ELSE 0 END) * 8 * 1024)
-						/ SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END)
-					ELSE 0
-				END as avg_row_length
-			FROM sys.tables t
-			JOIN sys.indexes i ON t.object_id = i.object_id
-			JOIN sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
-			JOIN sys.allocation_units a ON p.partition_id = a.container_id
-			WHERE t.is_ms_shipped = 0
-			GROUP BY t.name
-			HAVING SUM(CASE WHEN i.index_id < 2 THEN p.rows ELSE 0 END) > 0
-		`
-	case "达梦数据库":
-		queryTableSizeSqlList = []string{
-			`
-			SELECT
-				t.owner as database_name,
-				t.table_name as table_name,
-				COALESCE(ds.data_size, 0) as data_size,
-				COALESCE(idx.index_size, 0) as index_size,
-				0 as free_size,
-				COALESCE(t.num_rows, 0) as table_rows,
-				CASE
-					WHEN COALESCE(t.num_rows, 0) > 0 THEN (COALESCE(ds.data_size, 0) + COALESCE(idx.index_size, 0)) / t.num_rows
-					ELSE 0
-				END as avg_row_length
-			FROM all_tables t
-			LEFT JOIN (
-				SELECT owner, segment_name as table_name, SUM(bytes) as data_size
-				FROM dba_segments
-				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
-				GROUP BY owner, segment_name
-			) ds
-				ON ds.owner = t.owner AND ds.table_name = t.table_name
-			LEFT JOIN (
-				SELECT i.table_owner as owner, i.table_name, SUM(s.bytes) as index_size
-				FROM all_indexes i
-				JOIN dba_segments s ON s.owner = i.owner AND s.segment_name = i.index_name
-				GROUP BY i.table_owner, i.table_name
-			) idx
-				ON idx.owner = t.owner AND idx.table_name = t.table_name
-			WHERE t.owner NOT IN ('SYS', 'SYSTEM', 'SYSAUDITOR')
-			AND COALESCE(t.num_rows, 0) > 0
-			`,
-			`
-			SELECT
-				t.owner as database_name,
-				t.table_name as table_name,
-				COALESCE(ds.data_size, 0) as data_size,
-				0 as index_size,
-				0 as free_size,
-				COALESCE(t.num_rows, 0) as table_rows,
-				CASE
-					WHEN COALESCE(t.num_rows, 0) > 0 THEN COALESCE(ds.data_size, 0) / t.num_rows
-					ELSE 0
-				END as avg_row_length
-			FROM all_tables t
-			LEFT JOIN (
-				SELECT owner, segment_name as table_name, SUM(bytes) as data_size
-				FROM all_segments
-				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
-				GROUP BY owner, segment_name
-			) ds
-				ON ds.owner = t.owner AND ds.table_name = t.table_name
-			WHERE t.owner NOT IN ('SYS', 'SYSTEM', 'SYSAUDITOR')
-			AND COALESCE(t.num_rows, 0) > 0
-			`,
-			`
-			SELECT
-				USER as database_name,
-				t.table_name as table_name,
-				COALESCE(ds.data_size, 0) as data_size,
-				COALESCE(idx.index_size, 0) as index_size,
-				0 as free_size,
-				COALESCE(t.num_rows, 0) as table_rows,
-				CASE
-					WHEN COALESCE(t.num_rows, 0) > 0 THEN (COALESCE(ds.data_size, 0) + COALESCE(idx.index_size, 0)) / t.num_rows
-					ELSE 0
-				END as avg_row_length
-			FROM user_tables t
-			LEFT JOIN (
-				SELECT segment_name as table_name, SUM(bytes) as data_size
-				FROM user_segments
-				WHERE segment_type IN ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
-				GROUP BY segment_name
-			) ds
-				ON ds.table_name = t.table_name
-			LEFT JOIN (
-				SELECT i.table_name, SUM(s.bytes) as index_size
-				FROM user_indexes i
-				JOIN user_segments s ON s.segment_name = i.index_name
-				GROUP BY i.table_name
-			) idx
-				ON idx.table_name = t.table_name
-			WHERE COALESCE(t.num_rows, 0) > 0
-			`,
-		}
-	default:
-		return fmt.Errorf("不支持的数据库类型: %s", datasourceType)
+	tableSizeList, err := queryPumpkinRemoteTableRows(datasourceType, host, port, user, origPass, dbid)
+	if err != nil {
+		return err
 	}
-
-	// 连接数据库
-	dbCon := getPumpkinDbCon(datasourceType, host, port, user, origPass, dbid)
-	if dbCon == nil {
-		return fmt.Errorf("无法连接到数据库 %s:%s", host, port)
-	}
-	defer dbCon.Close()
-
-	// 查询表容量数据
-	var tableSizeList []map[string]interface{}
-	var err error
-	if len(queryTableSizeSqlList) > 0 {
-		var lastErr error
-		for _, oneSql := range queryTableSizeSqlList {
-			tableSizeList, err = database.QueryRemote(dbCon, oneSql)
-			if err == nil {
-				lastErr = nil
-				break
-			}
-			lastErr = err
-		}
-		if lastErr != nil {
-			return fmt.Errorf("查询表容量数据失败: %v", lastErr)
-		}
-	} else {
-		tableSizeList, err = database.QueryRemote(dbCon, queryTableSizeSql)
-		if err != nil {
-			return fmt.Errorf("查询表容量数据失败: %v", err)
-		}
-	}
-	tableSizeList = normalizePumpkinRowKeysToLower(tableSizeList)
 
 	snapshotAt := time.Now()
 	if err := database.EnsurePumpkinTableSizeHistorySchema(database.DB); err != nil {
 		return fmt.Errorf("容量历史表就绪失败: %w", err)
 	}
 
-	// 处理查询结果
 	for _, item := range tableSizeList {
-		// 检查必要字段是否存在
-		if item["database_name"] == nil || item["table_name"] == nil {
-			log.Logger.Warn("跳过无效记录：缺少必要字段", zap.Any("item", item))
+		record, _, ok := pumpkinRemoteRowToPumpkinRecord(datasourceType, host, port, item)
+		if !ok {
 			continue
 		}
-
-		databaseName := formatPumpkinInterface(item["database_name"])
-		tableName := formatPumpkinInterface(item["table_name"])
-
-		if databaseName == "" || tableName == "" {
-			log.Logger.Warn("跳过无效记录：字段为空", zap.String("database_name", databaseName), zap.String("table_name", tableName))
-			continue
-		}
-
-		// 安全转换数据类型，处理nil值
-		var dataSize int64 = 0
-		if item["data_size"] != nil {
-			dataSize = utils.StrToInt64(formatPumpkinInterface(item["data_size"]))
-		}
-
-		var indexSize int64 = 0
-		if item["index_size"] != nil {
-			indexSize = utils.StrToInt64(formatPumpkinInterface(item["index_size"]))
-		}
-
-		var freeSize int64 = 0
-		if item["free_size"] != nil {
-			freeSize = utils.StrToInt64(formatPumpkinInterface(item["free_size"]))
-		}
-
-		var tableRows int64 = 0
-		if item["table_rows"] != nil {
-			tableRows = utils.StrToInt64(formatPumpkinInterface(item["table_rows"]))
-		}
-
-		var avgRowLength int64 = 0
-		if item["avg_row_length"] != nil {
-			avgRowLength = utils.StrToInt64(formatPumpkinInterface(item["avg_row_length"]))
-		}
-
-		var record model.PumpkinTableSize
-		record.DatasourceType = datasourceType
-		record.Host = host
-		record.Port = port
-		record.DatabaseName = databaseName
-		record.TableNameField = tableName
-		record.DataSize = dataSize
-		record.IndexSize = indexSize
-		record.FreeSize = freeSize
-		record.TableRows = tableRows
-		record.AvgRowLength = avgRowLength
-
 		if err := savePumpkinTableSizeSnapshot(database.DB, &record, snapshotAt); err != nil {
 			log.Logger.Error(fmt.Sprintf("Can't save table size record on %s:%s, %s", host, port, err.Error()))
 			return fmt.Errorf("保存表容量记录失败: %s", err.Error())
 		}
-
 		time.Sleep(1 * time.Millisecond)
 	}
 

@@ -14,10 +14,6 @@ limitations under the License.
 package task
 
 import (
-	"github.com/ruyi1024/dbmeta/src/database"
-	"github.com/ruyi1024/dbmeta/src/model"
-	"github.com/ruyi1024/dbmeta/src/module"
-	taskRunner "github.com/ruyi1024/dbmeta/src/task"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,6 +21,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"github.com/ruyi1024/dbmeta/log"
+	"github.com/ruyi1024/dbmeta/src/database"
+	"github.com/ruyi1024/dbmeta/src/model"
+	"github.com/ruyi1024/dbmeta/src/module"
+	taskRunner "github.com/ruyi1024/dbmeta/src/task"
 )
 
 func OptionList(c *gin.Context) {
@@ -122,9 +125,15 @@ func ExecuteTask(c *gin.Context) {
 		return
 	}
 
+	// 计划任务 key 为 gather_table_lifecycle；pumpkin_table_lifecycle 是落库表名，易混淆为 task_key
+	taskKey := strings.TrimSpace(req.TaskKey)
+	if strings.EqualFold(taskKey, "pumpkin_table_lifecycle") {
+		taskKey = "gather_table_lifecycle"
+	}
+
 	var db = database.DB
 	var taskOption model.TaskOption
-	result := db.Where("task_key = ?", req.TaskKey).First(&taskOption)
+	result := db.Where("task_key = ?", taskKey).First(&taskOption)
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -150,14 +159,16 @@ func ExecuteTask(c *gin.Context) {
 	// 根据 task_key 调用对应的任务函数
 	go func() {
 		// 更新心跳时间
-		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", req.TaskKey).Updates(map[string]interface{}{
+		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", taskKey).Updates(map[string]interface{}{
 			"heartbeat_time": time.Now().Format("2006-01-02 15:04:05.999"),
 		})
 
 		// 调用对应的任务函数
-		switch req.TaskKey {
+		switch taskKey {
 		case "gather_pumpkin":
 			taskRunner.ExecutePumpkinTask()
+		case "gather_table_lifecycle":
+			taskRunner.ExecuteTableLifecycleTask()
 		case "gather_pumpkin_growth":
 			taskRunner.ExecutePumpkinGrowthTask()
 		case "gather_dbmeta":
@@ -181,11 +192,14 @@ func ExecuteTask(c *gin.Context) {
 		case "ai_column_comment_accuracy":
 			taskRunner.ExecuteAiColumnCommentAccuracyTask()
 		default:
-			module.RunCommercialTask(req.TaskKey)
+			if !module.RunCommercialTask(taskKey) {
+				log.Logger.Warn("手动执行任务未匹配内置分支且未注册企业版处理器，不会写入 task_log",
+					zap.String("task_key", taskKey))
+			}
 		}
 
 		// 更新心跳结束时间
-		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", req.TaskKey).Updates(map[string]interface{}{
+		db.Model(model.TaskHeartbeat{}).Where("heartbeat_key=?", taskKey).Updates(map[string]interface{}{
 			"heartbeat_end_time": time.Now().Format("2006-01-02 15:04:05.999"),
 		})
 	}()

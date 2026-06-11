@@ -664,6 +664,35 @@ func (PumpkinTableSize) TableName() string {
 	return "pumpkin_table_size"
 }
 
+// 表生命周期状态（存储为英文码值，前端可映射中文：未使用 / 使用中 / 下线中 / 已下线）
+const (
+	TableLifecycleUnused            = "unused"            // 未使用
+	TableLifecycleInUse             = "in_use"            // 使用中
+	TableLifecycleDecommissioning   = "decommissioning"   // 下线中
+	TableLifecycleDecommissioned    = "decommissioned"    // 已下线
+)
+
+// PumpkinTableLifecycle 表生命周期（与 pumpkin_table_size 同一业务维度：数据源 + 库 + 表）
+// 记录表创建时间、首次观测到写入、最后写入时间及治理状态，与容量采集任务联动更新。
+type PumpkinTableLifecycle struct {
+	Id               int64      `gorm:"primarykey" json:"id"`
+	DatasourceType   string     `gorm:"size:50;uniqueIndex:uniq_pumpkin_tbl_lifecycle" json:"datasource_type"`
+	Host             string     `gorm:"size:100;uniqueIndex:uniq_pumpkin_tbl_lifecycle" json:"host"`
+	Port             string     `gorm:"size:10;uniqueIndex:uniq_pumpkin_tbl_lifecycle" json:"port"`
+	DatabaseName     string     `gorm:"size:50;uniqueIndex:uniq_pumpkin_tbl_lifecycle" json:"database_name"`
+	TableNameField   string     `gorm:"column:table_name;size:50;uniqueIndex:uniq_pumpkin_tbl_lifecycle" json:"table_name"`
+	TableCreatedAt   *time.Time `gorm:"column:table_created_at" json:"table_created_at"`       // 表创建时间（引擎元数据，可能为空）
+	DataWriteStartAt *time.Time `gorm:"column:data_write_start_at" json:"data_write_start_at"` // 首次观测到存在数据写入的时间
+	LastWriteAt      *time.Time `gorm:"column:last_write_at" json:"last_write_at"`              // 最后写入时间（优先业务表时间列 MAX；其次引擎表更新时间；无信号时可用容量/行数增长推断采集时刻）
+	LifecycleStatus  string     `gorm:"column:lifecycle_status;size:32;default:unused;index:idx_pumpkin_tbl_lc_status" json:"lifecycle_status"`
+	CreatedAt        time.Time  `gorm:"column:gmt_created" json:"gmt_created"`
+	UpdatedAt        time.Time  `gorm:"column:gmt_updated" json:"gmt_updated"`
+}
+
+func (PumpkinTableLifecycle) TableName() string {
+	return "pumpkin_table_lifecycle"
+}
+
 // PumpkinTableSizeHistory 表容量采集历史快照（与 PumpkinTableSize 同构，另含 snapshot_at）
 type PumpkinTableSizeHistory struct {
 	Id             int64     `gorm:"primarykey" json:"id"`
